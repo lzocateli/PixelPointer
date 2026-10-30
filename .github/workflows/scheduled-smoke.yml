@@ -1,0 +1,78 @@
+name: Scheduled Smoke
+
+# Recompila o Native AOT e executa o selftest (Skia + SDL sem tela) nas imagens atuais dos runners,
+# detectando regressões de toolchain, de imagem do sistema ou de dependências nativas entre releases.
+on:
+  schedule:
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: scheduled-smoke
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: Native AOT selftest (linux-x64, container)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build, test and selftest
+        shell: pwsh
+        run: ./tools/scripts/Invoke-Validation.ps1 -Aot -Engine docker
+
+  package-linux:
+    name: Package smoke (linux-x64, clean distributions)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Publish package
+        shell: pwsh
+        run: ./tools/scripts/Publish-Aot.ps1 -Rid linux-x64 -Engine docker
+
+      - name: Smoke package and .deb
+        shell: pwsh
+        run: ./tools/scripts/Test-AotPackage.ps1 -Rid linux-x64 -Engine docker
+
+  native:
+    name: Native AOT selftest (${{ matrix.rid }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { rid: win-x64, runner: windows-2025 }
+          - { rid: osx-arm64, runner: macos-15 }
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Build, test and selftest
+        shell: pwsh
+        run: ./tools/scripts/Invoke-Validation.ps1 -Native -Aot

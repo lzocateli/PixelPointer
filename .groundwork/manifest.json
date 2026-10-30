@@ -1,0 +1,203 @@
+{
+  "schemaVersion": 1,
+  "toolVersion": "0.5.1",
+  "catalogVersion": "0.5.1",
+  "parameters": {
+    "auto_deploy_environment": "",
+    "commit_scopes": "app,core,rendering,capture,hotkeys,overlay,ipc,platform,linux,windows,macos,packaging,tests,docs,tooling,deps,actions,repo",
+    "default_branch": "main",
+    "dependabot_ecosystems": "github-actions,nuget,docker:/tools/build",
+    "deploy_environments": "",
+    "deploy_reviewers": "lzocateli",
+    "dotnet_sdk_image": "lzocateli/dotnet-sdk:10.0.402-noble-v1",
+    "dotnet_solution": "",
+    "github_owner": "lzocateli",
+    "github_repo": "PixelPointer",
+    "initial_version": "0.0.1",
+    "issue_areas": "Zoom e desenho,Captura de tela,Atalhos globais,Sobreposi\u00E7\u00E3o,Linux,Windows,macOS,Seguran\u00E7a,Empacotamento,CI/CD,Documenta\u00E7\u00E3o,Testes",
+    "legacy_rulesets": "",
+    "license": "MIT",
+    "project_description": "O PixelPointer \u00E9 uma ferramenta Native AOT de zoom, anota\u00E7\u00E3o e grava\u00E7\u00E3o de tela para apresenta\u00E7\u00F5es, com atalhos globais no Linux (X11 e Wayland), Windows e macOS.",
+    "project_name": "PixelPointer",
+    "project_slug": "pixelpointer",
+    "publish_snapshots": "false",
+    "release_app_id": "5441343",
+    "release_reviewers": "lzocateli",
+    "release_type": "simple",
+    "require_signed_commits": "false",
+    "required_approvals": "1",
+    "secrets_dir_name": "PixelPointer",
+    "version_files": "Directory.Build.props"
+  },
+  "components": [
+    "core",
+    "secret-scanning",
+    "ci",
+    "release",
+    "publish-github-assets",
+    "dependency-updates",
+    "repository-policy"
+  ],
+  "files": {
+    ".gitattributes": {
+      "component": "core",
+      "sha256": "a9732bc6b25deabf2dc6755dbb5176c089fd4c7dfb01f07e8e87097aa3cbe858"
+    },
+    ".githooks/pre-commit": {
+      "component": "secret-scanning",
+      "sha256": "d408939728e26495f5ba552beb495998b44a5c4383290bd494f9a4c115c998f0"
+    },
+    ".github/ADR_TEMPLATE.md": {
+      "component": "core",
+      "sha256": "fd2950265886441f484fb56783a0a3ba21097fef633a5da7119c956b1768267b"
+    },
+    ".github/CI-CD.md": {
+      "component": "ci",
+      "sha256": "06bd0f8546ab9616f5e29962dc2cf57f48ecfd21d6ac01bae6c26147fbcb0ad5"
+    },
+    ".github/CODEOWNERS": {
+      "component": "core",
+      "sha256": "b856db5c064a34191407a878db09f9bf7d7d00af024adaa927e867e0562941c4"
+    },
+    ".github/COMMIT_CONVENTIONS.md": {
+      "component": "core",
+      "sha256": "f072d6bce5c36815ce281240a070d7cb618ad8b2721263499a4d3850173fe6c8"
+    },
+    ".github/CONTRIBUTING.md": {
+      "component": "core",
+      "sha256": "2f8696c364b1cd8c98a5c42dc44ca46f8d4617fac485ae17dfca9f03e8b4d833"
+    },
+    ".github/ISSUE_TEMPLATE/architecture-spike.yml": {
+      "component": "core",
+      "sha256": "a4010b430a77b0b16751233dbdc2c476cf15a01efd97370758fc7f4c5e475b73"
+    },
+    ".github/ISSUE_TEMPLATE/bug.yml": {
+      "component": "core",
+      "sha256": "f6a2496962df60076a4a2a64c535c891392bcdc31f73dbd43a16186ea9aba3de"
+    },
+    ".github/ISSUE_TEMPLATE/config.yml": {
+      "component": "core",
+      "sha256": "e94fc910d1d3a6bffcea55cf8bece51c04fe81ba6389452f8fe86474b4cc98f0"
+    },
+    ".github/ISSUE_TEMPLATE/feature.yml": {
+      "component": "core",
+      "sha256": "48adc792f7edbafb279d001a53f2b409a124ff79de74aef8888c291402018343"
+    },
+    ".github/ISSUE_TEMPLATE/technical-task.yml": {
+      "component": "core",
+      "sha256": "cde57363184ed6e9b040ac916dc49ec14860a0fba8f448d2529137ca4c962daa"
+    },
+    ".github/PULL_REQUEST_TEMPLATE.md": {
+      "component": "core",
+      "sha256": "d37caaa0278630f5d62df81ab30f9c0870058d94a7cf5b0a04368aaf08e33031"
+    },
+    ".github/REPOSITORY-POLICY.md": {
+      "component": "repository-policy",
+      "sha256": "6c0e6e50fbccd3b21ed9a1e67e34ed4f9a1e816b551f243a2d2124ca23b75c6b"
+    },
+    ".github/SECRET-SCANNING.md": {
+      "component": "secret-scanning",
+      "sha256": "8a40b4795a3efe8134262a18ba40e7663dec158f9dc4c53f52daee93c00c8559"
+    },
+    ".github/SECURITY.md": {
+      "component": "core",
+      "sha256": "b0931dc697572a7eeb1431f5b6b0cf14d7e9bdd463b9e52f240e0cc2eb292b89"
+    },
+    ".github/copilot-instructions.md": {
+      "component": "core",
+      "sha256": "8867ad07a2e904f037c26e9dfdb065d01d7d74c99b5f73541da3ddd99ae1b4dd"
+    },
+    ".github/instructions/conventional-commits.instructions.md": {
+      "component": "core",
+      "sha256": "a1196fe04aaa6736dc2d4231acc07d7ebb2319ef84f310c632d83f3f516a2e4d"
+    },
+    ".github/instructions/documentation.instructions.md": {
+      "component": "core",
+      "sha256": "40821c312da34b89ec88b63873136db795bbe9467d63228a8d59ce583edd7919"
+    },
+    ".github/labels.json": {
+      "component": "core",
+      "sha256": "85c0f3bb5a6d53088ed2604d8e75254b6397d0530ca7e4ec90145c8937fbd182"
+    },
+    ".github/repository-policy.json": {
+      "component": "repository-policy",
+      "sha256": "147460728b2b03239e0fe4077d9aab68d3fc6475e66d31c3730207c65ae17df0"
+    },
+    ".github/workflows/gw-dotnet.yml": {
+      "component": "ci",
+      "sha256": "78bd46ca2ef0bccbac37549e1167b34512e4117f3e4cfcd89a47714d9c5c8aa0"
+    },
+    ".github/workflows/gw-github-assets.yml": {
+      "component": "publish-github-assets",
+      "sha256": "c70f20dfbacc327c343fd555992cbb8ce607bbee02937168d7d937f3bb983c4b"
+    },
+    ".github/workflows/gw-gitleaks.yml": {
+      "component": "ci",
+      "sha256": "4a1cf6b0ca1225468c58ec1f555eb2d3a60ab1d62a081b305a33331d44418047"
+    },
+    ".github/workflows/gw-node.yml": {
+      "component": "ci",
+      "sha256": "d1dd2d5eb4b5997fd92d77056ba6355b413717a05c2d693c5d1e1c8f89297546"
+    },
+    ".github/workflows/gw-pr-hygiene.yml": {
+      "component": "ci",
+      "sha256": "b884f9ddac4a9ea19006c06269c76e3032572c30a4b17e630543fe13cbb88ca9"
+    },
+    ".github/workflows/gw-release.yml": {
+      "component": "release",
+      "sha256": "cd884359cc0eafea8bd7c75ab96606c7fd88c3a2095d77ed8dafea66826a097c"
+    },
+    ".gitleaks.toml": {
+      "component": "secret-scanning",
+      "sha256": "de9544e772d44eec8cdbd1163e428c07d160821967075916034ff339d18e0285"
+    },
+    "docs/runbooks/release.md": {
+      "component": "release",
+      "sha256": "62a989f20f40c9d8d3bd594cce5c8f49a7848f2cdf9acf1a63dac4227c2e7678"
+    },
+    "tools/scripts/ci/Assert-ArtifactVersion.ps1": {
+      "component": "release",
+      "sha256": "0fca851b62cfaab991da7367bb94dd5aef3d2d8775f85d37a1442ff0bf40374f"
+    },
+    "tools/scripts/ci/Assert-ReleaseTag.ps1": {
+      "component": "release",
+      "sha256": "5a28cce85718d55573e2c935503bfc672a216a478e5058e8b4b17641003bb458"
+    },
+    "tools/scripts/ci/Get-BuildVersion.ps1": {
+      "component": "release",
+      "sha256": "9f00894b538b2f833db672ee23f310e1ded32c2127db0e7eaed798742614f9ca"
+    },
+    "tools/scripts/ci/GroundworkRelease.psm1": {
+      "component": "release",
+      "sha256": "64108e3406d38dd2de8c5c51faec0cd09b17b077f2b8bbf5ceb96fda830d1e18"
+    },
+    "tools/scripts/ci/New-ReleaseManifest.ps1": {
+      "component": "release",
+      "sha256": "7a175f4edba84cbe33820372bbe249a64e8ca3da0e5e28c3a081eba2a3b4d06e"
+    },
+    "tools/scripts/ci/Publish-ReleaseAssets.ps1": {
+      "component": "publish-github-assets",
+      "sha256": "45d8381cb22ca825e25c921b2ea5224debdeb2abd7a1aa97631a81b0dd9b084a"
+    },
+    "tools/scripts/ci/Test-ManagedFiles.ps1": {
+      "component": "ci",
+      "sha256": "55516208cd8ea7d550fecde7d0a4891d9f550e18f96d7a28a4e3e39776f0efc5"
+    },
+    "tools/scripts/ci/Test-PublishedRelease.ps1": {
+      "component": "release",
+      "sha256": "6794e5f375e7f17ad5c8f1b871e71f9f5bc833cdf6be9472ea2ee930eedd288a"
+    },
+    "tools/scripts/ci/Test-PullRequestTitle.ps1": {
+      "component": "ci",
+      "sha256": "bc0273227b343cfa1089a945d4f4ed38963d76e5a99f637b923d9d339bc8f7fa"
+    },
+    "tools/scripts/install-gitleaks-hook.ps1": {
+      "component": "secret-scanning",
+      "sha256": "b7e6b19d0fd47cfa272a331e849b86ac3dea77f64b6088efe6321a2a588774a3"
+    },
+    "tools/scripts/test-gitleaks.ps1": {
+      "component": "secret-scanning",
+      "sha256": "0f9c49397ccbfa677d4be2d0ed40f73fbd248997150ebefc651a779d9e96c52b"
+    }
+  }
+}

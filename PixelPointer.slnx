@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PixelPointer.App/PixelPointer.App.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PixelPointer.UnitTests/PixelPointer.UnitTests.csproj" />
+  </Folder>
+</Solution>

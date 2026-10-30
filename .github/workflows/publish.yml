@@ -1,0 +1,287 @@
+# Semente do Altivy.Groundwork (componente release), adaptada do antigo release.yml.
+# Publica o pixelpointer em Native AOT para todos os RIDs suportados (ver docs/release.md),
+# com SDL3 e libSkiaSharp ao lado do executavel.
+# - workflow_call (gw-release.yml, apos o merge humano do Release PR): build, smoke e testes
+#   dos instaladores na tag, SBOM atestado e assets anexados a GitHub Release em rascunho no
+#   Environment `release` (gw-github-assets.yml, com atestacao de proveniencia). Homebrew e
+#   winget rodam em post-release.yml, com a release ja publica.
+# - pull_request que altera a cadeia de release e workflow_dispatch: build, smoke e testes
+#   dos instaladores, sem publicar.
+name: Publish
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: Tag da release (vX.Y.Z)
+        type: string
+        required: true
+      version:
+        description: Versao da release (X.Y.Z)
+        type: string
+        required: true
+      republish:
+        description: Reenvio de artefatos ausentes de uma release existente
+        type: boolean
+        default: false
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/publish.yml"
+      - ".github/workflows/post-release.yml"
+      - ".config/dotnet-tools.json"
+      - "install/**"
+      - "tests/installers/**"
+      - "tools/build/**"
+      - "tools/scripts/New-HomebrewFormula.ps1"
+      - "tools/scripts/Update-HomebrewTap.ps1"
+      - "tools/scripts/Publish-Aot.ps1"
+      - "tools/scripts/Test-AotPackage.ps1"
+      - "tools/scripts/Test-Installers.ps1"
+      - "tools/scripts/ReleaseGovernance.psm1"
+      - "tools/scripts/Assert-WingetSubmissionSource.ps1"
+      - "tools/scripts/Test-WingetSubmissionPolicy.ps1"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: publish-${{ github.event.pull_request.number || inputs.tag || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  validate:
+    name: Version check, build and tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    outputs:
+      publish: ${{ steps.version.outputs.publish }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag && format('refs/tags/{0}', inputs.tag) || '' }}
+          persist-credentials: false
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          [xml] $props = Get-Content -LiteralPath Directory.Build.props -Raw
+          $prefix = @($props.Project.PropertyGroup | ForEach-Object { $_.VersionPrefix } | Where-Object { $_ })[0]
+          $publish = 'false'
+          if ($env:TAG) {
+            # gw-release.yml ja validou tag, versoes e ancestralidade; aqui confirma o checkout da tag.
+            if ($env:TAG -cne "v$prefix") {
+              Write-Output "::error::Tag '$($env:TAG)' difere de VersionPrefix $prefix em Directory.Build.props."
+              exit 1
+            }
+            $publish = 'true'
+          }
+          "publish=$publish" >> $env:GITHUB_OUTPUT
+          Write-Output "Versao: $prefix (publicar: $publish)"
+
+      - name: Build and tests in container
+        shell: pwsh
+        run: |
+          ./tools/scripts/Test-WingetSubmissionPolicy.ps1
+          ./tools/scripts/Invoke-Validation.ps1 -Engine docker
+
+  build:
+    name: Publish ${{ matrix.rid }}
+    needs: validate
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { rid: linux-x64, runner: ubuntu-24.04 }
+          - { rid: linux-arm64, runner: ubuntu-24.04 }
+          - { rid: win-x64, runner: windows-2025 }
+          - { rid: win-arm64, runner: windows-11-arm }
+          - { rid: osx-arm64, runner: macos-15 }
+          - { rid: osx-x64, runner: macos-15-intel }
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag && format('refs/tags/{0}', inputs.tag) || '' }}
+          persist-credentials: false
+
+      - name: Setup .NET (native toolchain)
+        if: ${{ !startsWith(matrix.rid, 'linux-') }}
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Publish Native AOT package
+        shell: pwsh
+        env:
+          RID: ${{ matrix.rid }}
+        run: |
+          $arguments = @{ Rid = $env:RID }
+          if ($IsLinux) { $arguments.Engine = 'docker' }
+          ./tools/scripts/Publish-Aot.ps1 @arguments
+          exit $LASTEXITCODE
+
+      - name: Upload package
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: package-${{ matrix.rid }}
+          path: artifacts/release/pixelpointer-${{ matrix.rid }}.*
+          if-no-files-found: error
+          retention-days: 7
+
+
+  verify:
+    name: Smoke and installers (${{ matrix.runner }})
+    needs: [validate, build]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: ubuntu-24.04, rids: "linux-x64" }
+          - { runner: ubuntu-24.04-arm, rids: "linux-arm64" }
+          - { runner: windows-2025, rids: "win-x64" }
+          - { runner: windows-11-arm, rids: "win-arm64" }
+          - { runner: macos-15, rids: "osx-arm64" }
+          - { runner: macos-15-intel, rids: "osx-x64" }
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag && format('refs/tags/{0}', inputs.tag) || '' }}
+          persist-credentials: false
+
+      - name: Download packages
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: package-*
+          merge-multiple: true
+          path: artifacts/release
+
+      - name: Smoke test packages
+        shell: pwsh
+        env:
+          RIDS: ${{ matrix.rids }}
+        run: |
+          ./tools/scripts/Publish-Aot.ps1 -ChecksumsOnly
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          foreach ($rid in $env:RIDS -split ' ') {
+            $arguments = @{ Rid = $rid }
+            if ($IsLinux) { $arguments.Engine = 'docker' }
+            ./tools/scripts/Test-AotPackage.ps1 @arguments
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+
+      - name: Test installers
+        shell: pwsh
+        run: |
+          $arguments = @{}
+          if ($IsLinux) { $arguments.Engine = 'docker' }
+          ./tools/scripts/Test-Installers.ps1 @arguments
+          exit $LASTEXITCODE
+
+
+  attest-sbom:
+    # Antes dos assets e da aprovacao: a release so fica publica com o SBOM de cada pacote atestado.
+    name: Attest SBOM ${{ matrix.rid }}
+    needs: [validate, build, verify]
+    if: ${{ needs.validate.outputs.publish == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { rid: linux-x64, subjects: "dist/pixelpointer-linux-x64.tar.gz,dist/pixelpointer-linux-x64.deb" }
+          - { rid: linux-arm64, subjects: "dist/pixelpointer-linux-arm64.tar.gz,dist/pixelpointer-linux-arm64.deb" }
+          - { rid: win-x64, subjects: "dist/pixelpointer-win-x64.zip" }
+          - { rid: win-arm64, subjects: "dist/pixelpointer-win-arm64.zip" }
+          - { rid: osx-arm64, subjects: "dist/pixelpointer-osx-arm64.tar.gz" }
+          - { rid: osx-x64, subjects: "dist/pixelpointer-osx-x64.tar.gz" }
+    steps:
+      - name: Download package
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: package-${{ matrix.rid }}
+          path: dist
+
+      - name: Attest SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: ${{ matrix.subjects }}
+          sbom-path: dist/pixelpointer-${{ matrix.rid }}.spdx.json
+
+  release-assets:
+    name: Prepare release assets
+    needs: [validate, build, verify, attest-sbom]
+    if: ${{ needs.validate.outputs.publish == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag && format('refs/tags/{0}', inputs.tag) || '' }}
+          persist-credentials: false
+
+      - name: Download packages
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: package-*
+          merge-multiple: true
+          path: dist
+
+      - name: Add installers and checksums
+        shell: pwsh
+        run: |
+          Copy-Item -LiteralPath install/install.sh, install/install.ps1 -Destination dist
+          ./tools/scripts/Publish-Aot.ps1 -ChecksumsOnly -OutputDirectory dist
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # 6 pacotes + 6 SBOMs SPDX + 2 .deb + 2 instaladores.
+          $expected = 16
+          $count = @(Get-ChildItem -LiteralPath dist -File | Where-Object Name -ne 'SHA256SUMS').Count
+          if ($count -ne $expected) {
+            Write-Output "::error::Esperados $expected arquivos de release, encontrados $count."
+            exit 1
+          }
+          Get-Content -LiteralPath dist/SHA256SUMS
+
+      - name: Upload release assets
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-assets
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+  publish-assets:
+    name: Publish release assets
+    needs: release-assets
+    uses: ./.github/workflows/gw-github-assets.yml
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    with:
+      tag: ${{ inputs.tag }}
+      artifact-name: release-assets

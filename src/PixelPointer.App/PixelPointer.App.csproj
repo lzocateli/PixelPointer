@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>PixelPointer.App</RootNamespace>
+    <AssemblyName>pixelpointer</AssemblyName>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PublishAot>true</PublishAot>
+    <StripSymbols>true</StripSymbols>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ppy.SDL3-CS" />
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" />
+    <PackageReference Include="Tmds.DBus.Protocol" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="PixelPointer.UnitTests" />
+  </ItemGroup>
+
+</Project>

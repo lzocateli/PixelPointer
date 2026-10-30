@@ -1,0 +1,14 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Licenças verificadas no nuspec da versão exata: ppy.SDL3-CS MIT (SDL3 zlib), SkiaSharp MIT, Tmds.DBus.Protocol MIT, xunit.v3.mtp-v2 Apache-2.0. -->
+    <PackageVersion Include="ppy.SDL3-CS" Version="2026.1002.1" />
+    <PackageVersion Include="SkiaSharp" Version="4.154.0" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="4.154.0" />
+    <PackageVersion Include="Tmds.DBus.Protocol" Version="0.95.2" />
+    <PackageVersion Include="xunit.v3.mtp-v2" Version="4.0.2" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,144 @@
+# Semente do Altivy.Groundwork (componente ci): pertence ao projeto.
+# Jobs do PixelPointer (antigo pr-validation.yml) mais higiene e Gitleaks gerenciados. Todo job
+# novo entra em "needs" do job Result, o ÚNICO check obrigatório da main (ver .github/CI-CD.md).
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions: {}
+
+# Em PRs, uma execução nova espera a anterior: cancelar uma execução em andamento deixa um check
+# Result com falha no mesmo commit, e o ruleset considera todas as execuções do check, bloqueando o merge.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'pull_request' }}
+
+jobs:
+  hygiene:
+    name: Hygiene
+    uses: ./.github/workflows/gw-pr-hygiene.yml
+    permissions:
+      contents: read
+
+  gitleaks:
+    name: Gitleaks
+    uses: ./.github/workflows/gw-gitleaks.yml
+    permissions:
+      contents: read
+
+  validate:
+    name: Build, tests and Native AOT (linux-x64)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate in container
+        shell: pwsh
+        run: ./tools/scripts/Invoke-Validation.ps1 -Aot -Engine docker
+
+      - name: Upload Native AOT build
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pixelpointer-linux-x64
+          path: |
+            artifacts/aot/linux-x64/pixelpointer
+            artifacts/aot/linux-x64/*.so
+          if-no-files-found: error
+          retention-days: 7
+
+  validate-windows:
+    name: Build, tests and Native AOT (win-x64)
+    runs-on: windows-2025
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Validate on host
+        shell: pwsh
+        run: ./tools/scripts/Invoke-Validation.ps1 -Native -Aot
+
+      # Build para o roteiro de teste manual (docs/f0-relatorio.md, seção 6).
+      - name: Upload Native AOT build
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pixelpointer-win-x64
+          path: |
+            artifacts/aot/win-x64/pixelpointer.exe
+            artifacts/aot/win-x64/*.dll
+          if-no-files-found: error
+          retention-days: 7
+
+  validate-macos:
+    name: Build, tests and Native AOT (osx-arm64)
+    runs-on: macos-15
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Validate on host
+        shell: pwsh
+        run: ./tools/scripts/Invoke-Validation.ps1 -Native -Aot
+
+      # Build para o roteiro de teste manual (docs/f0-relatorio.md, seção 6).
+      - name: Upload Native AOT build
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pixelpointer-osx-arm64
+          path: |
+            artifacts/aot/osx-arm64/pixelpointer
+            artifacts/aot/osx-arm64/*.dylib
+          if-no-files-found: error
+          retention-days: 7
+
+  result:
+    name: Result
+    if: ${{ always() }}
+    needs: [hygiene, gitleaks, validate, validate-windows, validate-macos]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Evaluate required jobs
+        shell: bash
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          failed=$(jq -r 'to_entries[] | select(.value.result != "success") | "\(.key)=\(.value.result)"' <<<"$NEEDS")
+          if [[ -n "$failed" ]]; then
+            echo "::error::Jobs obrigatórios sem sucesso: ${failed//$'\n'/, }"
+            exit 1
+          fi
+          echo "Todos os jobs obrigatórios terminaram com sucesso."
