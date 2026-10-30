@@ -125,9 +125,13 @@ e aguarde o alinhamento de escopo antes de implementar.
 - [Relatos privados de vulnerabilidade](.github/SECURITY.md).
 - [Histórico de versões](https://github.com/lzocateli/PixelPointer/releases).
 
-A infraestrutura de `.github/`, `.githooks/` e `tools/scripts/ci/` foi gerada
-pelo Altivy.Groundwork e adaptada a este projeto; `.groundwork/manifest.json`
-registra a origem de cada arquivo.
+A infraestrutura gerenciada (workflows `gw-*`, `.githooks/`, `tools/scripts/ci/`,
+templates e políticas em `.github/`) foi gerada pelo Altivy.Groundwork;
+`.groundwork/manifest.json` lista esses arquivos e `groundwork status` confere sua
+integridade. Os workflows e scripts de build, publicação e distribuição
+(`ci.yml`, `publish.yml`, `post-release.yml`, `winget.yml`, `tools/scripts/*.ps1`,
+`install/`) e os documentos de governança foram adaptados do DotnetScope e
+pertencem ao projeto.
 
 ## Licença
 
