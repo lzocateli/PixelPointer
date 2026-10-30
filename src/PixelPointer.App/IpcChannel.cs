@@ -27,7 +27,15 @@ internal static class IpcChannel
         var bound = false;
         try
         {
-            listener.Bind(new UnixDomainSocketEndPoint(SocketPath));
+            try
+            {
+                listener.Bind(new UnixDomainSocketEndPoint(SocketPath));
+            }
+            catch (SocketException ex) when (ex.SocketErrorCode == SocketError.AddressAlreadyInUse)
+            {
+                throw new InvalidOperationException("O caminho do socket IPC já está reservado por outra instância.", ex);
+            }
+
             bound = true;
             if (OperatingSystem.IsLinux())
             {
@@ -224,6 +232,9 @@ internal static class IpcChannel
             {
                 throw new InvalidOperationException("O caminho do socket IPC existe, mas não é um socket obsoleto.", ex);
             }
+        }
+        catch (SocketException ex) when (OperatingSystem.IsWindows() && ex.SocketErrorCode == SocketError.ConnectionRefused)
+        {
         }
         catch (SocketException ex)
         {
