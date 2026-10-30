@@ -1,0 +1,35 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "e2e: imagem X11",
+			"type": "shell",
+			"command": "podman",
+			"args": [
+				"build",
+				"--tag",
+				"localhost/pixelpointer-e2e:x11-v1",
+				"--file",
+				"tests/e2e/Containerfile",
+				"tests/e2e"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "e2e: validar X11",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoProfile",
+				"-File",
+				"tools/scripts/Test-GraphicalE2E.ps1",
+				"-Build",
+				"-Engine",
+				"podman"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		}
+	]
+}

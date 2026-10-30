@@ -19,7 +19,7 @@ internal static class NativeLibraries
             return;
         }
 
-        foreach (var assembly in new[] { typeof(SDL3).Assembly, typeof(SKBitmap).Assembly })
+        foreach (var assembly in new[] { typeof(SDL3).Assembly, typeof(SKBitmap).Assembly, typeof(NativeLibraries).Assembly })
         {
             NativeLibrary.SetDllImportResolver(assembly, (name, _, _) => TryLoad(directory, name));
         }

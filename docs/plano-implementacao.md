@@ -9,6 +9,20 @@
 | Repositório | <https://github.com/lzocateli/PixelPointer> |
 | Licença | MIT |
 
+**Aceite complementar em 2026-10-30:** o solicitante confirmou desenho
+transparente, zoom, exportação PNG com alfa, CapsLock/NumLock e uso nos dois
+monitores 1920×1080 em escala 1 no Ubuntu 24.04.5/GNOME X11, autorizando considerar
+esses testes concluídos. O [registro de evidências e limites](plano-e2e-grafico-uv.md#aceite-manual-do-desenho-transparente-em-gnome-x11)
+separa esse aceite manual do E2E automatizado. Não conclui a fase F3 inteira:
+formas, texto, blur, HiDPI e paridade entre plataformas continuam no escopo futuro,
+assim como o aceite real de Zoom/Desenhar pela tray, do launcher e a
+revisão dos vídeos automatizados. Prints complementares do solicitante, na mesma
+data, registram anotações no monitor 1 e comprovam o ícone da tray GNOME visível
+com o menu Zoom/Desenhar/Sair aberto; esse recorte visual está verificado.
+O solicitante também confirmou o encerramento por Sair e forneceu print com
+retorno ao prompt e `status` informando ausência do daemon; esse fluxo está
+concluído por aceite manual no mesmo GNOME/X11, sem comprovar abertura sem terminal.
+
 ## 1. Objetivo
 
 O PixelPointer é uma ferramenta de apresentação Native AOT (`pixelpointer`) para Linux, Windows e macOS, com as
@@ -33,7 +47,7 @@ pode servir de referência de comportamento, com atribuição quando algo for ad
 | D9 | Primeiro uso no GNOME (da F0) | A permissão de captura e o vínculo de atalhos exigem uma janela do PixelPointer focada e o `.desktop` instalado com o app id; o instalador e a janela de boas-vindas cuidam disso |
 | D10 | Sinais (da F0) | `SDL_HINT_NO_SIGNAL_HANDLERS=1`; o app trata SIGINT/SIGTERM com `PosixSignalRegistration` |
 | D11 | Idiomas da documentação (2026-10-30) | pt-BR é a referência (`README.md`, `docs/*.md`); traduções em `README.en.md`, `README.es.md`, `docs/en/` e `docs/es/` para as jornadas de entrada e uso, como previsto no plano de internacionalização do DotnetScope; planos e relatórios ficam em pt-BR |
-| D12 | Pacotes e plataformas (2026-10-30) | Pacotes levam executável, SDL3, libSkiaSharp, `LICENSE` e `THIRD-PARTY-NOTICES.md`; instaladores criam diretório do aplicativo e link do comando. Mínimo Linux glibc 2.34 (exigência da libSDL3 distribuída) e sem `linux-musl` (SDL3-CS sem binário musl) |
+| D12 | Pacotes e plataformas (2026-10-30) | Pacotes levam executável, SDL3, libSkiaSharp, ícone SVG, `LICENSE` e `THIRD-PARTY-NOTICES.md`; instaladores criam diretório do aplicativo e link do comando. Mínimo Linux glibc 2.34 (exigência da libSDL3 distribuída) e sem `linux-musl` (SDL3-CS sem binário musl) |
 
 ## 3. Arquitetura
 

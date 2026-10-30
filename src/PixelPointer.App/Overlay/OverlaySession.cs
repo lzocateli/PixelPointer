@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using SDL;
 using SkiaSharp;
 using static SDL.SDL3;
@@ -19,15 +20,15 @@ internal sealed record OverlayMetrics(string VideoDriver, string Renderer, int P
 /// Janela de sobreposição em tela cheia: SDL3 cria a janela e entrega a entrada; o Skia desenha em CPU
 /// num buffer que é enviado como textura. Implementa o essencial do Zoom (Ctrl+1) e do Desenho (Ctrl+2).
 /// </summary>
-internal sealed unsafe class OverlaySession
+internal sealed unsafe partial class OverlaySession
 {
     private static readonly SKColor[] PenColors =
     [
         SKColors.Red, SKColors.LimeGreen, SKColors.DodgerBlue, SKColors.Yellow, SKColors.Orange, SKColors.HotPink,
     ];
 
-    private readonly SKBitmap _screenshot;
-    private readonly SKImage _image;
+    private readonly SKBitmap? _screenshot;
+    private readonly SKImage? _image;
     private readonly List<Stroke> _strokes = [];
     private readonly List<double> _frameTimes = [];
     private OverlayMode _mode;
@@ -44,24 +45,38 @@ internal sealed unsafe class OverlaySession
     private SKColor _color = SKColors.Red;
     private float _penWidth = 6f;
     private SKColor? _board;
+    private readonly bool _transparentBackground;
     private bool _penDown;
     private float _pressure = 1f;
     private int _penEvents;
     private float _maxPressure;
+    private string? _saveMessage;
+    private bool _saveFailed;
 
-    internal OverlaySession(SKBitmap screenshot, OverlayMode mode)
+    internal OverlaySession(SKBitmap? screenshot, OverlayMode mode, bool transparentBackground = false)
     {
+        if (screenshot is null && (!transparentBackground || mode != OverlayMode.Draw))
+        {
+            throw new ArgumentException("Uma captura é obrigatória, exceto no desenho transparente.", nameof(screenshot));
+        }
+
         _screenshot = screenshot;
-        _image = SKImage.FromBitmap(screenshot);
+        _image = screenshot is null ? null : SKImage.FromBitmap(screenshot);
         _mode = mode;
+        _transparentBackground = transparentBackground;
         _targetZoom = mode == OverlayMode.Zoom ? 2f : 1f;
     }
 
-    internal OverlayMetrics Run()
+    internal OverlayMetrics Run(CancellationToken cancellationToken = default)
     {
         var opened = Stopwatch.StartNew();
         var flags = SDL_WindowFlags.SDL_WINDOW_FULLSCREEN | SDL_WindowFlags.SDL_WINDOW_HIGH_PIXEL_DENSITY
             | SDL_WindowFlags.SDL_WINDOW_BORDERLESS | SDL_WindowFlags.SDL_WINDOW_ALWAYS_ON_TOP;
+        if (_transparentBackground)
+        {
+            flags |= (SDL_WindowFlags)0x0000000040000000UL;
+        }
+
         var window = SDL_CreateWindow("PixelPointer", 0, 0, flags);
         if (window is null)
         {
@@ -87,7 +102,8 @@ internal sealed unsafe class OverlaySession
 
         try
         {
-            while (running)
+            AppIcon.SetWindowIcon(window);
+            while (running && !cancellationToken.IsCancellationRequested)
             {
                 int pw, ph;
                 SDL_GetWindowSizeInPixels(window, &pw, &ph);
@@ -106,6 +122,11 @@ internal sealed unsafe class OverlaySession
                         SDL_TextureAccess.SDL_TEXTUREACCESS_STREAMING, width, height);
                     surface = SKSurface.Create(new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul));
                     _crop = ComputeCrop(window, width, height);
+                    if (_transparentBackground && OverlayNative.SetTextureBlendMode(texture, 0x10) == 0)
+                    {
+                        throw new InvalidOperationException($"SDL_SetTextureBlendMode: {SDL_GetError()}");
+                    }
+
                     dirty = true;
                 }
 
@@ -141,6 +162,13 @@ internal sealed unsafe class OverlaySession
                     SDL_UpdateTexture(texture, null, pixmap.GetPixels(), pixmap.RowBytes);
                 }
 
+                if (_transparentBackground
+                    && (OverlayNative.SetRenderDrawColor(renderer, 0, 0, 0, 0) == 0
+                        || OverlayNative.RenderClear(renderer) == 0))
+                {
+                    throw new InvalidOperationException($"SDL_RenderClear: {SDL_GetError()}");
+                }
+
                 SDL_RenderTexture(renderer, texture, null, null);
                 _frameTimes.Add(frame.Elapsed.TotalMilliseconds);
                 SDL_RenderPresent(renderer);
@@ -159,7 +187,7 @@ internal sealed unsafe class OverlaySession
         }
         finally
         {
-            _image.Dispose();
+            _image?.Dispose();
             surface?.Dispose();
             if (texture is not null)
             {
@@ -176,11 +204,18 @@ internal sealed unsafe class OverlaySession
     /// <summary>A captura cobre a área de trabalho inteira; recorta o monitor onde a janela está.</summary>
     private SKRect ComputeCrop(SDL_Window* window, int width, int height)
     {
+        if (_transparentBackground)
+        {
+            return SKRect.Create(0, 0, width, height);
+        }
+
+        var screenshot = _screenshot ?? throw new InvalidOperationException("A captura não está disponível nesta sobreposição.");
         SDL_Rect bounds;
         var display = SDL_GetDisplayForWindow(window);
-        if (_screenshot.Width == width && _screenshot.Height == height || !SDL_GetDisplayBounds(display, &bounds) || bounds.w == 0)
+        if (screenshot.Width == width && screenshot.Height == height
+            || !SDL_GetDisplayBounds(display, &bounds) || bounds.w == 0)
         {
-            return new SKRect(0, 0, _screenshot.Width, _screenshot.Height);
+            return new SKRect(0, 0, screenshot.Width, screenshot.Height);
         }
 
         var scale = (float)width / bounds.w;
@@ -372,11 +407,46 @@ internal sealed unsafe class OverlaySession
             using var cursor = new SKPaint { Color = _color, IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 2 };
             canvas.DrawCircle(_mouseX, _mouseY, _penWidth / 2, cursor);
         }
+
+        if (_saveMessage is not null)
+        {
+            DrawSaveMessage(canvas, width);
+        }
+    }
+
+    private void DrawSaveMessage(SKCanvas canvas, int width)
+    {
+        var padding = 12 * _density;
+        using var font = new SKFont(SKTypeface.Default, 16 * _density);
+        using var paint = new SKPaint { Color = SKColors.White, IsAntialias = true };
+        var lines = new List<string>();
+        var line = string.Empty;
+        foreach (var character in _saveMessage!)
+        {
+            if (line.Length > 0 && font.MeasureText(line + character) > width - (padding * 4))
+            {
+                lines.Add(line);
+                line = string.Empty;
+            }
+
+            line += character;
+        }
+
+        lines.Add(line);
+        var lineHeight = 22 * _density;
+        paint.Color = _saveFailed ? new SKColor(0x9C, 0x20, 0x20) : new SKColor(0x20, 0x3A, 0x5E);
+        canvas.DrawRect(padding, padding, width - (padding * 2), (lines.Count * lineHeight) + padding, paint);
+        paint.Color = SKColors.White;
+        for (var index = 0; index < lines.Count; index++)
+        {
+            canvas.DrawText(lines[index], padding * 2, (padding * 2) + ((index + 0.6f) * lineHeight),
+                SKTextAlign.Left, font, paint);
+        }
     }
 
     private void DrawScene(SKCanvas canvas, SKRect view, int outputWidth)
     {
-        canvas.Clear(SKColors.Black);
+        canvas.Clear(_transparentBackground ? SKColors.Transparent : SKColors.Black);
         canvas.Save();
         canvas.Scale(outputWidth / view.Width);
         canvas.Translate(-view.Left, -view.Top);
@@ -385,7 +455,7 @@ internal sealed unsafe class OverlaySession
             using var fill = new SKPaint { Color = board };
             canvas.DrawRect(_crop, fill);
         }
-        else
+        else if (_image is not null)
         {
             canvas.DrawImage(_image, 0, 0, new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None));
         }
@@ -442,16 +512,44 @@ internal sealed unsafe class OverlaySession
 
     private void SaveSnapshot()
     {
-        using var surface = SKSurface.Create(new SKImageInfo(_width, _height));
-        DrawScene(surface.Canvas, _view, _width);
-        using var data = surface.Snapshot().Encode(SKEncodedImageFormat.Png, 100);
-        var path = Path.Combine(Environment.CurrentDirectory, $"pixelpointer-{DateTime.Now:yyyyMMdd-HHmmss}.png");
-        using var file = File.Create(path);
-        data.SaveTo(file);
-        Console.Error.WriteLine($"Salvo: {path}");
+        try
+        {
+            var directory = SnapshotStorage.GetDirectory();
+            using var surface = SKSurface.Create(new SKImageInfo(_width, _height, SKColorType.Bgra8888, SKAlphaType.Premul))
+                ?? throw new InvalidOperationException("Não foi possível preparar a imagem da captura.");
+            DrawScene(surface.Canvas, _view, _width);
+            using var data = surface.Snapshot().Encode(SKEncodedImageFormat.Png, 100)
+                ?? throw new InvalidOperationException("Não foi possível codificar a captura como PNG.");
+            var path = SnapshotStorage.Save(directory, data.SaveTo);
+            _saveMessage = $"Salvo: {path}";
+            _saveFailed = false;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException
+            or NotSupportedException or ArgumentException)
+        {
+            _saveMessage = $"Não foi possível salvar a captura: {ex.Message}";
+            _saveFailed = true;
+        }
+
+        Console.Error.WriteLine(_saveMessage);
     }
 
     private readonly record struct StrokePoint(SKPoint Position, float Pressure);
 
     private sealed record Stroke(SKColor Color, float Width, List<StrokePoint> Points);
+
+    private static partial class OverlayNative
+    {
+        [LibraryImport("SDL3", EntryPoint = "SDL_SetTextureBlendMode")]
+        [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
+        internal static partial byte SetTextureBlendMode(SDL_Texture* texture, uint blendMode);
+
+        [LibraryImport("SDL3", EntryPoint = "SDL_SetRenderDrawColor")]
+        [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
+        internal static partial byte SetRenderDrawColor(SDL_Renderer* renderer, byte red, byte green, byte blue, byte alpha);
+
+        [LibraryImport("SDL3", EntryPoint = "SDL_RenderClear")]
+        [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
+        internal static partial byte RenderClear(SDL_Renderer* renderer);
+    }
 }

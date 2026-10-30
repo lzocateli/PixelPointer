@@ -3,6 +3,15 @@ using Tmds.DBus.Protocol;
 
 namespace PixelPointer.App.Linux;
 
+internal enum AppIdRegistrationStatus
+{
+    Registered,
+    RegistryUnavailable,
+    Failed,
+}
+
+internal sealed record AppIdRegistrationResult(AppIdRegistrationStatus Status, string? Detail = null);
+
 /// <summary>Cliente mínimo dos portais XDG (Registry, Screenshot e GlobalShortcuts) sobre o barramento de sessão.</summary>
 internal sealed class PortalClient : IDisposable
 {
@@ -50,7 +59,7 @@ internal sealed class PortalClient : IDisposable
     /// Associa esta conexão a um app id (org.freedesktop.host.portal.Registry, xdg-desktop-portal 1.19+).
     /// Apps fora de sandbox não têm app id; sem ele, permissões e atalhos não ficam associados ao PixelPointer.
     /// </summary>
-    internal async Task<string?> TryRegisterAppIdAsync()
+    internal async Task<AppIdRegistrationResult> TryRegisterAppIdAsync()
     {
         try
         {
@@ -62,13 +71,19 @@ internal sealed class PortalClient : IDisposable
                 writer.WriteDictionaryEnd(dict);
             });
             await _connection.CallMethodAsync(message, static (_, _) => 0).ConfigureAwait(false);
-            return null;
+            return new AppIdRegistrationResult(AppIdRegistrationStatus.Registered);
         }
         catch (DBusErrorReplyException ex)
         {
-            return $"{ex.ErrorName}: {ex.ErrorMessage}";
+            var status = ClassifyRegistryError(ex.ErrorName);
+            return new AppIdRegistrationResult(status, $"{ex.ErrorName}: {ex.ErrorMessage}");
         }
     }
+
+    internal static AppIdRegistrationStatus ClassifyRegistryError(string errorName) =>
+        errorName is "org.freedesktop.DBus.Error.UnknownMethod" or "org.freedesktop.DBus.Error.UnknownInterface"
+            ? AppIdRegistrationStatus.RegistryUnavailable
+            : AppIdRegistrationStatus.Failed;
 
     /// <summary>Captura a tela inteira sem diálogo interativo e devolve o URI do PNG gerado pelo portal.</summary>
     internal async Task<string> ScreenshotAsync(CancellationToken cancellationToken)

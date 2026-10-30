@@ -66,10 +66,26 @@ pixelpointer grant                  # GNOME/Wayland: permissão de captura (uma 
 pixelpointer daemon                 # Ctrl+1 zoom, Ctrl+2 desenho
 ```
 
+O comando `daemon` permanece em **primeiro plano**: mantém os atalhos e o IPC
+ativos, mas não libera o terminal automaticamente. Isso é esperado, não um
+travamento; Ctrl+C encerra o processo. No Linux, para liberar o prompt:
+
+```bash
+pixelpointer daemon &
+```
+
+O `&` coloca o processo em segundo plano, mas ele ainda pode escrever no terminal
+e encerrar quando a janela do terminal for fechada. Para usar sem terminal no
+Linux, execute `pixelpointer install-desktop-file` e abra **PixelPointer** pelo
+menu de aplicativos. Encerre por **Sair** na tray ou por `pixelpointer quit`.
+Essa integração não configura início automático com a sessão.
+
 | Atalho ou tecla | Ação |
 | --- | --- |
 | **Ctrl+1** | Zoom: congela a tela ampliada; o mouse percorre a imagem |
 | **Ctrl+2** | Desenho sem zoom |
+| `pixelpointer status` | Consulta se o daemon está em execução |
+| `pixelpointer quit` | Encerra o daemon e a sobreposição ativa |
 | Roda do mouse / setas | Mais ou menos zoom |
 | Clique e arraste | Desenhar (caneta com pressão é suportada) |
 | R G B Y O P | Vermelho, verde, azul, amarelo, laranja, rosa |
@@ -82,7 +98,17 @@ pixelpointer daemon                 # Ctrl+1 zoom, Ctrl+2 desenho
 No Wayland, o primeiro `daemon` pede a confirmação dos atalhos ao desktop.
 Sem o portal de atalhos, use um atalho do próprio desktop chamando
 `pixelpointer zoom` ou `pixelpointer draw`. Detalhes, permissões por sistema e
-solução de problemas: [guia de uso](docs/uso.md).
+solução de problemas: [guia de uso](docs/uso.md). Esc fecha somente a
+sobreposição; o menu da tray oferece **Sair** quando disponível, e
+`pixelpointer quit` encerra o daemon. O aplicativo não inicia automaticamente
+com a sessão. O desenho ao vivo requer compositor X11; no Wayland usa captura
+congelada.
+
+Ctrl+S respeita a pasta de capturas do usuário: Imagens/`Screenshots` no Windows,
+preferência de captura ou Área de Trabalho no macOS e `PICTURES/Screenshots`
+conforme XDG no Linux. Não sobrescreve arquivos e informa o destino na
+sobreposição. Detalhes e exportação com alfa:
+[onde o Ctrl+S salva](docs/uso.md#onde-o-ctrls-salva).
 
 ## Como funciona
 

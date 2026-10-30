@@ -17,6 +17,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="Assets/pixelpointer.svg" Link="pixelpointer.svg" TargetPath="pixelpointer.svg"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="PixelPointer.UnitTests" />
   </ItemGroup>
 
