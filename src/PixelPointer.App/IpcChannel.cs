@@ -23,7 +23,7 @@ internal static class IpcChannel
         using var instanceLock = AcquireInstanceLock();
         RemoveStaleSocket();
 
-        using var listener = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+        var listener = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
         var bound = false;
         try
         {
@@ -78,6 +78,7 @@ internal static class IpcChannel
         }
         finally
         {
+            listener.Dispose();
             if (bound)
             {
                 File.Delete(SocketPath);
@@ -117,7 +118,7 @@ internal static class IpcChannel
             return await ReceiveCommandAsync(socket, timeout.Token).ConfigureAwait(false)
                 ?? throw new InvalidOperationException("O daemon encerrou a conexão sem responder ao comando IPC.");
         }
-        catch (SocketException ex) when (ex.SocketErrorCode is SocketError.AddressNotAvailable or SocketError.HostNotFound
+        catch (SocketException ex) when (ex.SocketErrorCode is SocketError.AddressNotAvailable or SocketError.HostNotFound or SocketError.ConnectionRefused
             && !File.Exists(SocketPath))
         {
             return null;
