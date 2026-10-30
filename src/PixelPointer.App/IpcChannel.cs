@@ -220,7 +220,7 @@ internal static class IpcChannel
             probe.Connect(new UnixDomainSocketEndPoint(SocketPath));
             throw new InvalidOperationException("Já existe um daemon ativo usando o socket IPC.");
         }
-        catch (SocketException ex) when (ex.SocketErrorCode == SocketError.ConnectionRefused)
+        catch (SocketException ex) when (!OperatingSystem.IsWindows() && ex.SocketErrorCode == SocketError.ConnectionRefused)
         {
             throw new InvalidOperationException(
                 "O socket IPC existe, mas não aceita conexões. Verifique se o daemon terminou antes de removê-lo.",
