@@ -58,6 +58,28 @@ Cada pacote traz o SBOM SPDX e atestações de proveniência:
 `gh attestation verify <arquivo> --repo lzocateli/PixelPointer`
 ([verificação](docs/release.md#verificação-pelo-usuário)).
 
+## Desinstalar
+
+Se estiver em execução, encerre primeiro o daemon com `pixelpointer quit`. Depois,
+remova o PixelPointer pelo mesmo método usado para instalá-lo:
+
+| Instalação | Comando ou ação |
+| --- | --- |
+| `install.sh` (Linux/macOS, prefixo padrão) | No Linux, `pixelpointer uninstall-desktop-file` se registrou a entrada do menu; depois `rm -f -- "$HOME/.local/bin/pixelpointer"` e `rm -r -- "$HOME/.local/lib/pixelpointer"` |
+| `install.sh --prefix <dir>` | Remova `<dir>/bin/pixelpointer` e `<dir>/lib/pixelpointer`; substitua `<dir>` pelo prefixo usado na instalação |
+| `install.sh --global` | Remova `/usr/local/bin/pixelpointer` e `/usr/local/lib/pixelpointer` com `sudo`; antes, remova a entrada desktop no Linux pelo próprio binário |
+| `install.ps1` | PowerShell: `Remove-Item -LiteralPath "$env:LOCALAPPDATA\Programs\pixelpointer" -Recurse` |
+| `.deb` | `sudo apt remove pixelpointer` |
+| Homebrew | `brew uninstall lzocateli/tap/pixelpointer` |
+| winget | `winget uninstall lzocateli.PixelPointer` |
+
+Se adicionou manualmente a linha de inicialização ao perfil do PowerShell, remova
+essa linha do `$PROFILE.CurrentUserAllHosts`. A integração desktop Linux deve ser
+removida antes do executável com `pixelpointer uninstall-desktop-file`, usando o
+mesmo `XDG_DATA_HOME`; o comando preserva arquivos modificados. A desinstalação
+não apaga capturas PNG. Detalhes e limites por método estão no
+[guia de uso](docs/uso.md#desinstalar).
+
 ## Primeiros passos
 
 ```bash

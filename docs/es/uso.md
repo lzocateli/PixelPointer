@@ -12,10 +12,13 @@
 | `pixelpointer daemon` | Se mantiene en ejecución, registra los atajos globales (Ctrl+1 zoom, Ctrl+2 dibujo) y el canal local de comandos; Ctrl+C o SIGTERM lo detienen |
 | `pixelpointer zoom` | Abre el zoom ahora; con el `daemon` en ejecución, le envía el comando |
 | `pixelpointer draw` | Abre el dibujo sin zoom; misma regla que `zoom` |
+| `pixelpointer status` | Informa si el daemon está en ejecución, sin abrir una superposición |
+| `pixelpointer quit` | Detiene el daemon y una superposición activa |
 | `pixelpointer overlay [--image archivo.png] [--mode zoom\|draw]` | Abre la superposición sobre una captura nueva o sobre una imagen |
 | `pixelpointer capture [--out archivo.png]` | Captura la pantalla e informa la latencia |
 | `pixelpointer probe` | Diagnóstico: SO, sesión, monitores, versiones de los portales |
 | `pixelpointer install-desktop-file` | Linux: instala el `.desktop` con el app id `io.github.lzocateli.PixelPointer` |
+| `pixelpointer uninstall-desktop-file` | Linux: elimina recursos del usuario solo si no se modificaron; conserva los archivos cambiados |
 | `pixelpointer grant` | GNOME/Wayland: pide el permiso de captura desde una ventana enfocada |
 | `pixelpointer selftest` | Verifica las bibliotecas nativas sin pantalla (lo usan las pruebas de paquete) |
 | `pixelpointer --version` / `--help` | Versión y ayuda |
@@ -23,7 +26,36 @@
 Teclas en la superposición: rueda del mouse o flechas para el zoom, clic y
 arrastrar para dibujar, R/G/B/Y/O/P para colores, Ctrl+rueda para el grosor,
 Ctrl+Z para deshacer, E para borrar, W/K para pizarra blanca/negra, Ctrl+S para
-guardar un PNG en el directorio actual, Esc o clic derecho para salir.
+guardar un PNG en la carpeta de capturas del usuario, Esc o clic derecho para salir.
+
+## Dónde guarda Ctrl+S
+
+| Sistema | Destino |
+| --- | --- |
+| Windows | Carpeta especial **Imágenes** del usuario + `Screenshots`, respetando redirecciones como OneDrive |
+| macOS | Preferencia `location` de `com.apple.screencapture`; si no existe, el Escritorio del usuario |
+| Linux (X11 y Wayland) | Carpeta `PICTURES` de XDG User Directories + `Screenshots` |
+
+En Linux, la configuración se lee de `$XDG_CONFIG_HOME/user-dirs.dirs` o, si
+`XDG_CONFIG_HOME` no está definido, de `~/.config/user-dirs.dirs`. Por ejemplo,
+`XDG_PICTURES_DIR="$HOME/Imágenes"` se resuelve como `~/Imágenes/Screenshots`.
+Si la carpeta de imágenes falta o está deshabilitada, configúrala en las
+preferencias del escritorio o con la herramienta XDG de la distribución antes
+de guardar. No existe un destino universal compartido por otras herramientas de
+captura.
+
+La configuración se consulta en cada Ctrl+S. La aplicación crea el destino si
+es necesario, usa nombres únicos y nunca sobrescribe capturas existentes. En
+Linux y macOS, los PNG nuevos solo permiten lectura y escritura al usuario
+(0600). La ruta final o el error aparece en la superposición y, si está
+disponible, en la terminal. Si falla, no guarda silenciosamente en el directorio
+actual ni en otra carpeta.
+
+El PNG contiene la escena y las anotaciones de la superposición, sin cursor ni
+mensaje de guardado. En el dibujo transparente X11, el fondo del PNG también es
+transparente: exporta las anotaciones sin volver a capturar el escritorio. Para
+guardar la pantalla congelada con anotaciones, usa el zoom; W/K exportan
+explícitamente la pizarra blanca/negra.
 
 ## Permisos por sistema
 
@@ -31,6 +63,8 @@ guardar un PNG en el directorio actual, Esc o clic derecho para salir.
 
 Wayland no permite que un programa vea la pantalla o el teclado de otros;
 PixelPointer usa los portales XDG del escritorio.
+El dibujo en Wayland usa la captura autorizada por el portal y permanece
+congelado; este backend no implementa transparencia sobre contenido en vivo.
 
 1. `pixelpointer install-desktop-file`: sin el `.desktop`, el escritorio no
    asocia permisos ni atajos a PixelPointer. El paquete `.deb` ya lo instala.
@@ -57,6 +91,34 @@ socket local (`$XDG_RUNTIME_DIR/pixelpointer.sock`) y termina en milisegundos.
 ### Linux con X11
 
 Los atajos y la captura funcionan sin permisos adicionales (XGrabKey y XGetImage).
+En X11 no hace falta ejecutar `pixelpointer grant`. Si otra aplicación ya
+registró Ctrl+1 o Ctrl+2, el daemon informa el conflicto y no anuncia ese atajo
+como disponible. En el modo de dibujo, un compositor X11 detectado permite
+anotaciones transparentes sobre el contenido actual. Sin compositor, la
+aplicación avisa y usa una captura congelada; eso no es transparencia en vivo.
+
+### Ejecución en segundo plano y salida
+
+Esc o cerrar la superposición termina solo la sesión visual; el daemon sigue
+activo. Usa `pixelpointer status` para consultar su estado y `pixelpointer quit`
+para detenerlo, incluso si hay una superposición abierta. El menú de la bandeja
+ofrece **Zoom**, **Desenhar** y **Sair** cuando SDL y el escritorio disponen de
+ella. Ctrl+C o SIGTERM también detienen el daemon. Si la bandeja no está
+disponible, usa `status` y `quit`; GNOME puede requerir una extensión de bandeja.
+
+`Tray registrada` confirma el registro en el backend, no que el panel muestre el
+icono. El daemon debe seguir ejecutándose después de ese mensaje. Al iniciarlo
+desde una terminal, `pixelpointer daemon` se ejecuta en primer plano y ocupa esa
+terminal; Ctrl+C lo detiene. En Linux, agrega `&` para liberar el indicador:
+
+```bash
+pixelpointer daemon &
+```
+
+El proceso aún puede escribir en esa terminal y puede detenerse al cerrar su
+ventana. Para usarlo sin terminal, instala la entrada del escritorio y abre
+**PixelPointer** desde el menú de aplicaciones. Esto no activa el inicio
+automático.
 
 ### macOS
 
@@ -91,6 +153,27 @@ gh attestation verify pixelpointer-linux-x64.tar.gz --repo lzocateli/PixelPointe
 | Homebrew | `brew uninstall pixelpointer` |
 | winget | `winget uninstall lzocateli.PixelPointer` |
 
+Si el daemon está en ejecución, detenlo primero con `pixelpointer quit`. Después,
+desinstala PixelPointer con el mismo método que usaste para instalarlo:
+
+| Instalado con | Comando o acción |
+| --- | --- |
+| `install.sh` (Linux/macOS, prefijo predeterminado) | En Linux, ejecuta `pixelpointer uninstall-desktop-file` si registraste la entrada del menú; luego ejecuta `rm -f -- "$HOME/.local/bin/pixelpointer"` y `rm -r -- "$HOME/.local/lib/pixelpointer"` |
+| `install.sh --prefix <dir>` | Elimina `<dir>/bin/pixelpointer` y `<dir>/lib/pixelpointer`, sustituyendo `<dir>` por el prefijo usado durante la instalación |
+| `install.sh --global` | Ejecuta `sudo rm -f -- /usr/local/bin/pixelpointer` y `sudo rm -r -- /usr/local/lib/pixelpointer`; en Linux, elimina primero la entrada del escritorio con el binario instalado |
+| `install.ps1` | En PowerShell, ejecuta `Remove-Item -LiteralPath "$env:LOCALAPPDATA\Programs\pixelpointer" -Recurse` |
+| `.deb` | `sudo apt remove pixelpointer` |
+| Homebrew | `brew uninstall pixelpointer` |
+| winget | `winget uninstall lzocateli.PixelPointer` |
+
+Si agregaste manualmente la línea de inicio de PowerShell al perfil, elimínala
+de `$PROFILE.CurrentUserAllHosts`. En Linux, elimina la integración del escritorio
+antes del ejecutable con `pixelpointer uninstall-desktop-file`, usando el mismo
+`XDG_DATA_HOME`; el comando conserva los archivos modificados. La desinstalación
+no borra las capturas PNG. El paquete `.deb` administra por separado los recursos
+instalados en `/usr/share`. En GNOME, los atajos vinculados se eliminan en
+Configuración; el permiso de captura, con:
+
 En Linux, elimina también `~/.local/share/applications/io.github.lzocateli.PixelPointer.desktop`
 si usaste `install-desktop-file`. En GNOME, los atajos vinculados se eliminan en
 Configuración; el permiso de captura, con:
@@ -108,14 +191,29 @@ gdbus call --session --dest org.freedesktop.impl.portal.PermissionStore \
 | --- | --- |
 | `erro: O portal recusou a solicitação (código 2)` | Falta el permiso de captura en GNOME: ejecuta `pixelpointer grant` |
 | `aviso: registro do app id falhou` | Falta el `.desktop`: ejecuta `pixelpointer install-desktop-file` |
+| Falló el registro del app id en Registry | Consulta `pixelpointer probe`; la ausencia de Registry se informa como limitación del portal, no como motivo para reinstalar la entrada del escritorio |
 | Atajos no disponibles en Wayland | Escritorio sin el portal GlobalShortcuts: usa un atajo del escritorio (tabla anterior) |
 | La ventana se abre pero no recibe el teclado | Compositor sin activation token; haz clic en la ventana una vez |
+| Bandeja registrada, pero no aparece el icono en GNOME | Confirma que `pixelpointer status` responde y que el daemon no se haya abortado. La visibilidad depende del soporte StatusNotifier/AppIndicator del panel; usa la CLI si no está disponible. La aplicación no instala extensiones. |
+| Ctrl+S informa un destino inválido o inaccesible | Revisa la configuración de la carpeta de capturas y sus permisos; la aplicación no guarda en otra ubicación alternativa |
+| El daemon aborta tras registrar la bandeja con `_dbus_check_is_valid_utf8` | Usa un paquete reconstruido con la corrección de vida útil de textos de tray de SDL 3.5.0; el abort también libera los atajos |
 | `selftest falhou` en Linux | glibc anterior a 2.34 o falta `libfontconfig`: usa Ubuntu 22.04, Debian 12, RHEL 9 o posteriores e instala `libfontconfig1` |
 | Retraso de ~0,5 s al abrir en Wayland | Costo del portal Screenshot; la captura continua por PipeWire está prevista para la F2 |
 
 Por ahora, los mensajes del programa están en portugués. Para informar un
 problema, incluye la salida de `pixelpointer probe` y sigue el
 [soporte](../../.github/SUPPORT.md).
+
+### Recuperarse tras un abort del daemon
+
+Un abort nativo puede dejar el socket en el disco aunque el proceso y los grabs
+X11 hayan terminado. Por seguridad, el siguiente daemon rechaza esa ruta y no la
+elimina automáticamente. Ejecuta `pixelpointer status` y revisa los procesos de
+tu usuario con el monitor del sistema. Solo después de confirmar que no hay un
+daemon activo y que la ruta pertenece a tu usuario, elimina **solo**
+`$XDG_RUNTIME_DIR/pixelpointer.sock` (si `XDG_RUNTIME_DIR` está definido) o
+`~/.cache/pixelpointer/run/pixelpointer.sock` (alternativa). No elimines
+directorios ni sockets de otras aplicaciones. Reinicia con el paquete corregido.
 
 ## Limitaciones actuales
 
@@ -124,3 +222,70 @@ problema, incluye la salida de `pixelpointer probe` y sigue el
   [plan](../plano-implementacao.md).
 - Con varios monitores en Wayland, el compositor elige el monitor de la ventana.
 - macOS sin atajos globales nativos y sin firma en la versión 1.
+
+## Guion de aceptación manual en X11
+
+Usa una sesión **X11 real**, sin `SDL_VIDEODRIVER=dummy`, con contenido de
+prueba que no incluya datos personales. Se necesita el binario Native AOT
+`linux-x64` compilado localmente (genera el RID correspondiente para otra
+arquitectura). Desde la raíz del repositorio, compila y valida en contenedores:
+
+```bash
+pwsh ./tools/scripts/Invoke-Validation.ps1 -Aot -Engine podman
+pwsh ./tools/scripts/Publish-Aot.ps1 -Rid linux-x64 -Engine podman
+pwsh ./tools/scripts/Test-AotPackage.ps1 -Rid linux-x64 -Engine podman
+```
+
+Resultado esperado: compilación y pruebas aprobadas, paquete válido. Los comandos
+generan artefactos locales; no instalan la aplicación en el host ni validan el
+flujo gráfico. Docker puede sustituir Podman con `-Engine docker`.
+
+En la sesión gráfica del usuario, desde la raíz del repositorio, usa el paquete
+generado, sin `sudo`:
+
+```bash
+./artifacts/publish/linux-x64/pixelpointer probe
+./artifacts/publish/linux-x64/pixelpointer grant
+./artifacts/publish/linux-x64/pixelpointer daemon
+```
+
+1. **Diagnóstico:** `probe` debe identificar X11 e informar si hay compositor.
+  `grant` debe explicar que la captura nativa X11 no necesita permiso del
+  portal. La ausencia de Registry no debe recomendar reinstalar la entrada del
+  escritorio; los errores reales de registro deben seguir distinguiéndose.
+2. **Atajos y captura:** pulsa Ctrl+1, anota sobre una imagen conocida, amplía y
+  cierra con Esc. El daemon debe seguir activo. Compara con
+  `./artifacts/publish/linux-x64/pixelpointer zoom` en otra terminal. Repite
+  Ctrl+1 y Ctrl+2 con las cuatro combinaciones de CapsLock/NumLock.
+3. **Dibujo en vivo:** con compositor, muestra un reloj o una animación y pulsa
+  Ctrl+2. El contenido debe seguir moviéndose bajo los trazos, sin fondo opaco.
+  W/K solo deben cambiar las pizarras seleccionadas explícitamente. Sin
+  compositor, espera un aviso y una captura congelada, no transparencia.
+4. **PNG:** pulsa Ctrl+S dos veces y comprueba el mensaje, dos archivos distintos
+  y el destino XDG. En el zoom, el PNG debe incluir la captura y los trazos; en
+  el dibujo transparente debe conservar el alfa. Si el destino no permite
+  escritura, espera un error en la superposición y ningún archivo en otra
+  carpeta. Usa una cuenta sin privilegios para esta prueba.
+5. **Bandeja y salida:** abre y cierra Zoom/Desenhar desde la bandeja. Elige
+  **Sair** con y sin una superposición abierta. Si la bandeja no está disponible,
+  confirma el aviso y ejecuta `./artifacts/publish/linux-x64/pixelpointer quit`
+  en otra terminal. Consulta `status` antes y después; tras salir debe devolver
+  1 y no debe quedar ningún daemon.
+6. **Instancia única y reinicio:** con el daemon activo, ejecuta `daemon` desde
+  otra terminal. Debe fallar sin afectar la primera instancia. Detén y reinicia
+  la primera; los atajos deben volver sin grabs residuales.
+7. **Menú sin terminal:** detén el daemon, ejecuta `install-desktop-file` con el
+  mismo binario y abre **PixelPointer** desde el menú de aplicaciones. Comprueba
+  el icono, el aviso de Ctrl+S y la salida por bandeja/CLI, sin terminal. Si hay
+  conflicto con una entrada existente, consérvala y revisa el mensaje; no borres
+  archivos para forzar la instalación. Para deshacer solo esta integración,
+  ejecuta `uninstall-desktop-file` con el mismo binario.
+8. **Conflictos y monitores:** en una sesión de prueba, reserva Ctrl+1 para otra
+  aplicación antes de iniciar el daemon; confirma el conflicto y que Ctrl+2 siga
+  funcionando si está libre. Repite la captura, la alineación de los trazos y el
+  guardado en monitores con distintas escalas/resoluciones y posiciones negativas.
+
+Registra SO, arquitectura, escritorio/compositor, versión de PixelPointer,
+escala, monitores y resultado de cada paso. No publiques capturas sensibles,
+tokens ni registros completos. Compositor, bandeja, atajos físicos y varios
+monitores requieren aceptación manual; SDL dummy no los valida.

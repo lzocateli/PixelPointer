@@ -1,6 +1,11 @@
 # PixelPointer - Instruções globais
 
-Toda documentação produzida ou atualizada deve estar em português brasileiro (pt-BR). Preserve
+O português brasileiro (pt-BR) é a fonte normativa da documentação autoral do
+projeto. Sempre que criar ou alterar documentação para usuários, colaboradores ou
+operadores, atualize também as versões em inglês (en) e espanhol (es) no mesmo
+conjunto de mudanças. Isso vale para todo o projeto, inclusive README, guias,
+planos, relatórios, runbooks e instruções de contribuição/operação; siga o mapa e
+as exceções em `.github/instructions/documentation.instructions.md`. Preserve
 comandos, identificadores, caminhos e marcadores literais exigidos pelas ferramentas.
 
 ## Contexto obrigatório
