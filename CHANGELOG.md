@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/lzocateli/PixelPointer/compare/v0.1.0...v0.1.1) (2026-10-30)
+
+
+### Corrigido
+
+* **linux:** corrija integração X11 e ciclo de vida do desktop ([#4](https://github.com/lzocateli/PixelPointer/issues/4)) ([456d1df](https://github.com/lzocateli/PixelPointer/commit/456d1df4c711386f3bfcbbd0e179b58db70febc3))
+
 ## [0.1.0](https://github.com/lzocateli/PixelPointer/compare/v0.0.1...v0.1.0) (2026-10-30)
 
 

@@ -147,11 +147,14 @@ Depois, remova o PixelPointer pelo mesmo método usado para instalá-lo:
 | winget | `winget uninstall lzocateli.PixelPointer` |
 
 Se adicionou manualmente a linha de inicialização ao perfil do PowerShell, remova
-essa linha de `$PROFILE.CurrentUserAllHosts`. No Linux, remova a integração
-desktop antes do executável com `pixelpointer uninstall-desktop-file`, usando o
-mesmo `XDG_DATA_HOME`; o comando preserva arquivos modificados. A desinstalação
-não apaga capturas PNG. O pacote `.deb` gerencia separadamente os recursos
-instalados em `/usr/share`.
+essa linha de `$PROFILE.CurrentUserAllHosts`. No Linux, se tiver usado
+`install-desktop-file`, execute `pixelpointer uninstall-desktop-file` **antes de
+remover o executável**, com o mesmo binário e `XDG_DATA_HOME`. O comando remove
+somente a entrada e o ícone idênticos aos recursos esperados pela instalação
+atual. Se encontrar arquivo modificado, link simbólico ou recurso de outra
+versão/localização, recusa a operação e preserva os arquivos para revisão manual.
+Não remove diretórios nem capturas PNG. O pacote `.deb` gerencia separadamente os
+recursos instalados em `/usr/share`.
 No GNOME, os atalhos vinculados podem ser
 removidos nas Configurações; a permissão de captura, com:
 
