@@ -1,0 +1,79 @@
+FROM docker.io/library/python@sha256:57b29a7c050c4e679e4bea572e14b3965cf4b5839de2da49d55e49ffc4024f39 AS native-build
+RUN rm /etc/apt/sources.list.d/debian.sources && \
+    printf 'deb [check-valid-until=no] https://snapshot.debian.org/archive/debian/20261029T000000Z/ trixie main\ndeb [check-valid-until=no] https://snapshot.debian.org/archive/debian-security/20261029T000000Z/ trixie-security main\ndeb-src [check-valid-until=no] https://snapshot.debian.org/archive/debian/20261029T000000Z/ trixie main\ndeb-src [check-valid-until=no] https://snapshot.debian.org/archive/debian-security/20261029T000000Z/ trixie-security main\n' > /etc/apt/sources.list && \
+    apt-get -o APT::Sandbox::User=root update -qq && \
+    apt-get -o APT::Sandbox::User=root install -y --no-install-recommends \
+      gcc libc6-dev pkg-config meson ninja-build dpkg-dev libpixman-1-dev \
+      libxfont-dev libxkbfile-dev libxau-dev libxdmcp-dev xtrans-dev x11proto-dev \
+      libssl-dev libexpat1-dev xfonts-utils x11-xkb-utils xkb-data && \
+    mkdir /build /native-bin /native-notices
+WORKDIR /build
+RUN apt-get -o APT::Sandbox::User=root source xorg-server=2:21.1.16-1.3+deb13u4 dbus=1.16.2-2 && \
+    meson setup xserver-build xorg-server-* --prefix=/usr/local \
+      -Dxorg=false -Dxnest=false -Dxephyr=false -Dxwin=false -Dxquartz=false \
+      -Dxvfb=true -Dglx=false -Dglamor=false -Ddrm=false -Ddri1=false -Ddri2=false -Ddri3=false \
+      -Dudev=false -Dudev_kms=false -Dsystemd_logind=false -Dxselinux=false -Dlibunwind=false \
+      -Dsha1=libcrypto -Dsecure-rpc=false -Ddocs=false -Ddevel-docs=false \
+      -Dxkb_dir=/usr/share/X11/xkb -Dxkb_bin_dir=/usr/bin -Dxkb_output_dir=/tmp && \
+    meson compile -C xserver-build -j 2 && \
+    cp xserver-build/hw/vfb/Xvfb /native-bin/ && \
+    cp xorg-server-*/COPYING /native-notices/Xvfb-COPYING && \
+    meson setup dbus-build dbus-1.16.2 --prefix=/usr/local --libdir=lib \
+      -Dapparmor=disabled -Dselinux=disabled -Dsystemd=disabled -Dlibaudit=disabled \
+      -Dmodular_tests=disabled -Dtools=false -Dtraditional_activation=false \
+      -Ddoxygen_docs=disabled -Dducktype_docs=disabled -Dxml_docs=disabled && \
+    meson compile -C dbus-build -j 2 && \
+    DESTDIR=/dbus-runtime meson install -C dbus-build --no-rebuild && \
+    cp dbus-1.16.2/COPYING /native-notices/DBus-COPYING && \
+    dpkg-query -W -f='${Package}\t${Version}\n' > /native-notices/build-packages.tsv
+RUN apt-get -o APT::Sandbox::User=root install -y --no-install-recommends make && \
+    apt-get -o APT::Sandbox::User=root source nginx=1.26.3-3+deb13u10 && \
+    cd nginx-1.26.3 && \
+    ./configure --prefix=/usr/local --without-http_auth_basic_module \
+      --without-http_gzip_module --without-http_rewrite_module --without-pcre && \
+    make -j 2 && cp objs/nginx /native-bin/nginx && \
+    cp LICENSE /native-notices/nginx-LICENSE && \
+    printf 'Xvfb\t2:21.1.16-1.3+deb13u4\nD-Bus\t1.16.2-2\nnginx\t1.26.3-3+deb13u10\n' > /native-notices/components.tsv
+
+FROM docker.io/library/python@sha256:57b29a7c050c4e679e4bea572e14b3965cf4b5839de2da49d55e49ffc4024f39
+RUN rm /etc/apt/sources.list.d/debian.sources && \
+    printf 'deb [check-valid-until=no] https://snapshot.debian.org/archive/debian/20261029T000000Z/ trixie main\ndeb [check-valid-until=no] https://snapshot.debian.org/archive/debian-security/20261029T000000Z/ trixie-security main\n' > /etc/apt/sources.list && \
+    apt-get -o APT::Sandbox::User=root update -qq && \
+    apt-get -o APT::Sandbox::User=root install -y --no-install-recommends \
+      xcompmgr=1.1.8-1 libxtst6=2:1.2.5-1 libx11-6=2:1.8.12-1 \
+      libpixman-1-0=0.44.0-3 libxfont2=1:2.0.6-1+deb13u1 \
+      x11-xkb-utils=7.7+9 xkb-data=2.42-1 \
+      libfontconfig1=2.15.0-2.3 libxmu6=2:1.1.3-3+b4 libsm6=2:1.2.6-1 \
+      libxrandr2=2:1.5.4-1+b3 libxaw7=2:1.0.16-1 && \
+    mkdir /tmp/extract && cd /tmp/extract && \
+    apt-get -o APT::Sandbox::User=root download twm=1:1.0.10-1+b1 && \
+    dpkg-deb --fsys-tarfile twm*.deb | tar -xOf - ./usr/bin/twm > /usr/local/bin/twm && \
+    chmod 755 /usr/local/bin/twm && \
+    for package in *.deb; do dpkg-deb -x "$package" /tmp/extract/notices; done && \
+    cp -r /tmp/extract/notices/usr/share/doc/twm /opt/ && \
+    cd / && rm -rf /tmp/extract && \
+    dpkg-query -W -f='${Package}\t${Version}\n' > /opt/native-packages.tsv && \
+    rm -rf /var/lib/apt/lists/*
+  COPY --from=native-build /native-bin/ /usr/local/bin/
+  COPY --from=native-build /dbus-runtime/usr/local/bin/dbus-daemon /usr/local/bin/dbus-daemon
+  COPY --from=native-build /dbus-runtime/usr/local/lib/libdbus-1.so* /usr/local/lib/
+  COPY --from=native-build /dbus-runtime/usr/local/share/dbus-1/ /usr/local/share/dbus-1/
+  COPY --from=native-build /native-notices/ /opt/native-notices/
+  RUN ldconfig && \
+    ldd /usr/local/bin/Xvfb /usr/local/bin/dbus-daemon /usr/local/lib/libdbus-1.so.3 \
+      /usr/local/bin/nginx /usr/local/bin/twm /usr/bin/xcompmgr /usr/bin/xkbcomp > /opt/native-links.txt && \
+    ! grep -E 'not found|lib(net(tle)?|systemd|apparmor|audit|elf|GL|crypt\.)' /opt/native-links.txt
+RUN pip install --no-cache-dir uv==0.13.6
+WORKDIR /opt/e2e
+COPY pyproject.toml uv.lock .python-version ./
+RUN uv sync --locked --no-dev --no-python-downloads && uv pip list --format json > /opt/python-packages.json
+COPY *.py ./
+COPY nginx.conf /opt/nginx.conf
+RUN mkdir /evidence && chown 1000:1000 /evidence
+ENV PATH="/opt/e2e/.venv/bin:$PATH" PYTHONDONTWRITEBYTECODE=1 UV_OFFLINE=1 \
+    UV_NO_CACHE=1 UV_PYTHON_DOWNLOADS=never LANG=C.UTF-8 TZ=UTC \
+    SDL_VIDEODRIVER=x11 SDL_RENDER_DRIVER=software DISPLAY=:99 \
+    XDG_SESSION_TYPE=x11 HOME=/tmp/home XDG_RUNTIME_DIR=/tmp/runtime \
+    XDG_CONFIG_HOME=/tmp/home/.config XDG_DATA_HOME=/tmp/home/.local/share
+USER 1000:1000
+ENTRYPOINT ["uv", "run", "--locked", "--no-sync", "python", "runner.py"]

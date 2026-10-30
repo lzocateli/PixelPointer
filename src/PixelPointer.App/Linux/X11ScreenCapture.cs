@@ -43,8 +43,8 @@ internal sealed partial class X11ScreenCapture : IScreenCapture
                     var dst = (byte*)bitmap.GetPixels();
                     for (var y = 0; y < height; y++)
                     {
-                        Buffer.MemoryCopy((byte*)header->data + (y * header->bytes_per_line), dst + (y * bitmap.RowBytes),
-                            bitmap.RowBytes, width * 4);
+                        CopyOpaquePixels(new ReadOnlySpan<byte>((byte*)header->data + (y * header->bytes_per_line), width * 4),
+                            new Span<byte>(dst + (y * bitmap.RowBytes), width * 4));
                     }
 
                     return Task.FromResult(bitmap);
@@ -60,12 +60,36 @@ internal sealed partial class X11ScreenCapture : IScreenCapture
             Xlib.XCloseDisplay(display);
         }
     }
+
+    internal static void CopyOpaquePixels(ReadOnlySpan<byte> source, Span<byte> destination)
+    {
+        source.CopyTo(destination);
+        for (var offset = 3; offset < source.Length; offset += 4)
+        {
+            destination[offset] = byte.MaxValue;
+        }
+    }
 }
 
 internal static partial class Xlib
 {
     private const string Lib = "libX11.so.6";
     internal const int ZPixmap = 2;
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct XErrorEvent
+    {
+        public int Type;
+        public nint Display;
+        public nuint ResourceId;
+        public nuint Serial;
+        public byte ErrorCode;
+        public byte RequestCode;
+        public byte MinorCode;
+    }
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    internal delegate int XErrorHandler(nint display, nint errorEvent);
 
     [StructLayout(LayoutKind.Sequential)]
     internal struct XImage
@@ -121,5 +145,17 @@ internal static partial class Xlib
     internal static partial int XNextEvent(nint display, nint eventBuffer);
 
     [LibraryImport(Lib)]
+    internal static partial int XPending(nint display);
+
+    [LibraryImport(Lib)]
     internal static partial int XSelectInput(nint display, nint window, long mask);
+
+    [LibraryImport(Lib)]
+    internal static partial int XUngrabKey(nint display, int keycode, uint modifiers, nint grabWindow);
+
+    [LibraryImport(Lib)]
+    internal static partial int XSync(nint display, int discard);
+
+    [LibraryImport(Lib)]
+    internal static partial nint XSetErrorHandler(nint handler);
 }

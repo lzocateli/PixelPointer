@@ -22,6 +22,7 @@ internal static unsafe class PermissionWindow
         var opened = Environment.TickCount64;
         try
         {
+            AppIcon.SetWindowIcon(window);
             var running = true;
             while (running)
             {

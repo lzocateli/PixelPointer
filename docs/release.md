@@ -14,10 +14,10 @@ Homebrew e pelo winget. Cada etapa tem um comando local equivalente em
 
 | Arquivo | Conteúdo |
 | --- | --- |
-| `pixelpointer-<rid>.tar.gz` | `pixelpointer` (modo 0755), `libSDL3` e `libSkiaSharp` (`.so` ou `.dylib`), `LICENSE` e `THIRD-PARTY-NOTICES.md`, dono `0:0`; Linux e macOS |
-| `pixelpointer-<rid>.zip` | `pixelpointer.exe`, `SDL3.dll`, `libSkiaSharp.dll`, `LICENSE` e `THIRD-PARTY-NOTICES.md`; Windows |
+| `pixelpointer-<rid>.tar.gz` | `pixelpointer` (modo 0755), `libSDL3` e `libSkiaSharp` (`.so` ou `.dylib`), `pixelpointer.svg`, `LICENSE` e `THIRD-PARTY-NOTICES.md`, dono `0:0`; Linux e macOS |
+| `pixelpointer-<rid>.zip` | `pixelpointer.exe`, `SDL3.dll`, `libSkiaSharp.dll`, `pixelpointer.svg`, `LICENSE` e `THIRD-PARTY-NOTICES.md`; Windows |
 | `pixelpointer-<rid>.spdx.json` | SBOM SPDX 2.2 do pacote do RID: arquivos do pacote e dependências NuGet do build |
-| `pixelpointer-linux-x64.deb`, `pixelpointer-linux-arm64.deb` | aplicativo em `/usr/lib/pixelpointer`, link `/usr/bin/pixelpointer`, `/usr/share/applications/io.github.lzocateli.PixelPointer.desktop` e documentação em `/usr/share/doc/pixelpointer`, dono `root`; `Depends: libc6 (>= 2.34), libstdc++6, libfontconfig1` |
+| `pixelpointer-linux-x64.deb`, `pixelpointer-linux-arm64.deb` | aplicativo em `/usr/lib/pixelpointer`, link `/usr/bin/pixelpointer`, entrada desktop em `/usr/share/applications`, ícone próprio em `/usr/share/icons/hicolor/scalable/apps` e documentação em `/usr/share/doc/pixelpointer`, dono `root`; `Depends: libc6 (>= 2.34), libstdc++6, libfontconfig1` |
 | `install.sh` | instalador POSIX (Linux e macOS) |
 | `install.ps1` | instalador Windows PowerShell 5.1+ e PowerShell 7 |
 | `SHA256SUMS` | SHA-256 de todos os arquivos acima, formato `sha256sum` |
@@ -95,7 +95,10 @@ montado com `dpkg-deb --root-owner-group` em `docker.io/library/debian:12`.
 O smoke (`Test-AotPackage.ps1`) confere o SHA-256, o conteúdo do pacote e
 executa `--version`, `--help` e `selftest` (Skia codifica um PNG e o SDL
 inicializa com o driver `dummy`) diretamente e por um link simbólico, em
-containers sem .NET que instalam somente `libfontconfig` e `libstdc++`. Quando
+containers sem .NET que instalam `libfontconfig`, `libstdc++` e `libX11`. No Linux,
+valida também instalação desktop por usuário idempotente, preservação de conflitos,
+remoção segura, instância única, `status`, `quit` e reinício com SDL dummy. Esses
+testes não comprovam atalhos físicos, tray ou transparência do compositor. Quando
 presentes, confere também o SBOM (SPDX 2.2, nome `pixelpointer <versão>` e
 SHA-256 do executável) e instala, executa e remove o `.deb` com `apt-get` em
 `ubuntu:22.04` e `debian:12`. `Test-Installers.ps1` serve os

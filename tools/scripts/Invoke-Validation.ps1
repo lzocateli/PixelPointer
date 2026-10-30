@@ -5,10 +5,11 @@ Valida o PixelPointer em container (ou no host com -Native): restore, formatacao
 .DESCRIPTION
 Executa a mesma validacao usada no CI dentro da imagem fixada
 docker.io/lzocateli/dotnet-sdk:10.0.402-noble-v1, montando o repositorio em
-/workspace. Etapas: dotnet restore, dotnet format --verify-no-changes,
+/workspace. Instala libfontconfig1 para os testes de PNG/Skia em CPU.
+Etapas: dotnet restore, dotnet format --verify-no-changes,
 dotnet build -c Release, dotnet test --solution PixelPointer.slnx -c Release
-com Microsoft Testing Platform e, com -Aot, instala clang,
-zlib1g-dev e libfontconfig1 no container, publica linux-x64 com PublishAot e
+com Microsoft Testing Platform e, com -Aot, instala clang e
+zlib1g-dev no container, publica linux-x64 com PublishAot e
 executa 'pixelpointer --version' e 'pixelpointer selftest' (bibliotecas nativas
 sem tela) como smoke test.
 
@@ -45,7 +46,7 @@ Aceita somente --help; outros valores retornam erro de uso.
 ./tools/scripts/Invoke-Validation.ps1 -Native -Aot
 
 .NOTES
-Requer PowerShell 7+, Docker ou Podman e acesso a NuGet (e ao APT do Ubuntu com -Aot).
+Requer PowerShell 7+, Docker ou Podman e acesso a NuGet e ao APT do Ubuntu.
 Pacotes NuGet ficam em cache em artifacts/.nuget, ignorado pelo Git.
 Codigos: 0 sucesso; 2 erro de uso; demais valores vem da etapa que falhou.
 
@@ -151,17 +152,17 @@ if ($containerEngine -notin @('docker', 'podman') -or $null -eq (Get-Command $co
 
 $steps = [System.Collections.Generic.List[string]]::new()
 $steps.Add('set -eu')
+# O Podman rootless pode não dispor de faixa subordinada para o usuário _apt.
+$steps.Add('mkdir -p /tmp/apt/lists/partial /tmp/apt/archives/partial')
+$steps.Add('apt_opts="-o APT::Sandbox::User=root -o Dir::State::Lists=/tmp/apt/lists -o Dir::Cache::Archives=/tmp/apt/archives"')
+$steps.Add('apt-get $apt_opts update -qq')
+$steps.Add('DEBIAN_FRONTEND=noninteractive apt-get $apt_opts install -y -qq --no-install-recommends libfontconfig1 >/dev/null')
 $steps.Add('dotnet restore PixelPointer.slnx')
 $steps.Add('dotnet format PixelPointer.slnx --verify-no-changes --no-restore')
 $steps.Add('dotnet build PixelPointer.slnx --configuration Release --no-restore')
 $steps.Add('dotnet test --solution PixelPointer.slnx --configuration Release --no-build')
 if ($Aot) {
-    # Sem faixa subordinada (Podman rootless), o APT nao pode usar o usuario _apt nem seus diretorios;
-    # sandbox, listas e cache passam a usar root e /tmp dentro do container descartavel.
-    $steps.Add('mkdir -p /tmp/apt/lists/partial /tmp/apt/archives/partial')
-    $steps.Add('apt_opts="-o APT::Sandbox::User=root -o Dir::State::Lists=/tmp/apt/lists -o Dir::Cache::Archives=/tmp/apt/archives"')
-    $steps.Add('apt-get $apt_opts update -qq')
-    $steps.Add('DEBIAN_FRONTEND=noninteractive apt-get $apt_opts install -y -qq --no-install-recommends clang zlib1g-dev libfontconfig1 >/dev/null')
+    $steps.Add('DEBIAN_FRONTEND=noninteractive apt-get $apt_opts install -y -qq --no-install-recommends clang zlib1g-dev >/dev/null')
     $steps.Add('dotnet publish src/PixelPointer.App/PixelPointer.App.csproj --configuration Release --runtime linux-x64 --output artifacts/aot/linux-x64')
     $steps.Add('./artifacts/aot/linux-x64/pixelpointer --version')
     $steps.Add('./artifacts/aot/linux-x64/pixelpointer selftest')

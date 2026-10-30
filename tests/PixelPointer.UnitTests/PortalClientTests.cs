@@ -13,4 +13,13 @@ public sealed class PortalClientTests
     [Fact]
     public void AppId_IsReverseDnsUsedByDesktopFile() =>
         Assert.Equal("io.github.lzocateli.PixelPointer", PortalClient.AppId);
+
+    [Theory]
+    [InlineData("org.freedesktop.DBus.Error.UnknownMethod", "RegistryUnavailable")]
+    [InlineData("org.freedesktop.DBus.Error.UnknownInterface", "RegistryUnavailable")]
+    [InlineData("org.freedesktop.DBus.Error.AccessDenied", "Failed")]
+    [InlineData("org.freedesktop.portal.Error.Failed", "Failed")]
+    public void ClassifyRegistryError_DistinguishesUnsupportedRegistryFromFailures(
+        string errorName, string expected) =>
+        Assert.Equal(Enum.Parse<AppIdRegistrationStatus>(expected), PortalClient.ClassifyRegistryError(errorName));
 }

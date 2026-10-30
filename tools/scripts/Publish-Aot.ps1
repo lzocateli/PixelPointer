@@ -6,8 +6,8 @@ Publica o pixelpointer em Native AOT por RID e empacota os artefatos de release.
 Para cada RID informado, executa dotnet publish em Release com Native AOT e gera
 em -OutputDirectory um pacote sem versao no nome:
 
-  pixelpointer-<rid>.tar.gz  (Linux e macOS: pixelpointer, bibliotecas nativas, LICENSE e THIRD-PARTY-NOTICES.md)
-  pixelpointer-<rid>.zip     (Windows: pixelpointer.exe, SDL3.dll, libSkiaSharp.dll, LICENSE e THIRD-PARTY-NOTICES.md)
+  pixelpointer-<rid>.tar.gz  (Linux e macOS: pixelpointer, bibliotecas nativas, ícone SVG, LICENSE e THIRD-PARTY-NOTICES.md)
+  pixelpointer-<rid>.zip     (Windows: pixelpointer.exe, SDL3.dll, libSkiaSharp.dll, ícone SVG, LICENSE e THIRD-PARTY-NOTICES.md)
 
 As bibliotecas nativas (SDL3 e libSkiaSharp) vem dos pacotes NuGet e ficam ao lado do
 executavel; o aplicativo as encontra mesmo quando chamado por link simbolico.
@@ -344,10 +344,12 @@ function New-DebPackage {
     }
 
     $root = Join-Path $tree 'root'
-    $null = New-Item -ItemType Directory -Force -Path (Join-Path $root 'DEBIAN'), (Join-Path $root 'usr/bin'), (Join-Path $root 'usr/lib/pixelpointer'), (Join-Path $root 'usr/share/applications'), (Join-Path $root 'usr/share/doc/pixelpointer')
-    foreach ($name in @('pixelpointer') + (Get-NativeLibraryNames -TargetRid $TargetRid)) {
+    $iconDirectory = Join-Path $root 'usr/share/icons/hicolor/scalable/apps'
+    $null = New-Item -ItemType Directory -Force -Path (Join-Path $root 'DEBIAN'), (Join-Path $root 'usr/bin'), (Join-Path $root 'usr/lib/pixelpointer'), (Join-Path $root 'usr/share/applications'), (Join-Path $root 'usr/share/doc/pixelpointer'), $iconDirectory
+    foreach ($name in @('pixelpointer') + (Get-NativeLibraryNames -TargetRid $TargetRid) + @('pixelpointer.svg')) {
         Copy-Item -LiteralPath (Join-Path $repositoryRoot "artifacts/package/$TargetRid/$name") -Destination (Join-Path $root "usr/lib/pixelpointer/$name")
     }
+    Copy-Item -LiteralPath (Join-Path $repositoryRoot "artifacts/package/$TargetRid/pixelpointer.svg") -Destination (Join-Path $iconDirectory "$appId.svg")
     Copy-Item -LiteralPath $license -Destination (Join-Path $root 'usr/share/doc/pixelpointer/copyright')
     Copy-Item -LiteralPath $notices -Destination (Join-Path $root 'usr/share/doc/pixelpointer/THIRD-PARTY-NOTICES.md')
     # O app id do .desktop identifica o PixelPointer nos portais XDG (permissao de captura e atalhos globais).
@@ -359,7 +361,7 @@ function New-DebPackage {
         'Comment[pt_BR]=Zoom e anotacao de tela para apresentacoes',
         'Comment[es]=Zoom y anotacion de pantalla para presentaciones',
         'Exec=/usr/bin/pixelpointer daemon',
-        'Icon=zoom-in',
+        "Icon=$appId",
         'Terminal=false',
         'Categories=Utility;Graphics;Presentation;',
         'Keywords=zoom;annotate;draw;presentation;screen;'
@@ -438,9 +440,14 @@ function Build-Package {
         }
         Copy-Item -LiteralPath $source -Destination (Join-Path $staging $library)
     }
+    $iconSource = Join-Path $repositoryRoot "artifacts/publish/$TargetRid/pixelpointer.svg"
+    if (-not (Test-Path -LiteralPath $iconSource -PathType Leaf)) {
+        throw "Ícone não encontrado após publicação: $iconSource"
+    }
+    Copy-Item -LiteralPath $iconSource -Destination (Join-Path $staging 'pixelpointer.svg')
     Copy-Item -LiteralPath $license -Destination (Join-Path $staging 'LICENSE')
     Copy-Item -LiteralPath $notices -Destination (Join-Path $staging 'THIRD-PARTY-NOTICES.md')
-    $entries = @($binaryName) + $libraries + @('LICENSE', 'THIRD-PARTY-NOTICES.md')
+    $entries = @($binaryName) + $libraries + @('pixelpointer.svg', 'LICENSE', 'THIRD-PARTY-NOTICES.md')
 
     if ($isWindowsRid) {
         $package = Join-Path $OutputDirectory "pixelpointer-$TargetRid.zip"
