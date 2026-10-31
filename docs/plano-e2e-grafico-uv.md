@@ -109,6 +109,7 @@ Esperar condições com deadlines; evitar sequências baseadas apenas em `sleep`
 | Transparência | Desenhar sobre cena animada com compositor | Fundo segue mudando; traços persistem; PNG contém alfa |
 | Sem compositor | Repetir desenho em ambiente sem compositor | Aviso explícito e captura congelada, sem alegar transparência |
 | Salvamento | Ctrl+S repetido, destino XDG personalizado com espaços e acentos | PNG decodificável, pasta correta, nomes exclusivos e arquivos anteriores intactos |
+| Configurações | `settings.json` com cor, espessura e zoom inicial; depois arquivo inválido | `probe` carrega o arquivo; zoom 4x, traço azul espesso; arquivo inválido gera aviso, usa padrões e permanece intacto |
 | Falha de salvamento | Configuração inválida ou destino sem acesso | Feedback de erro visível, ausência de destino alternativo e processo utilizável |
 | Saída da sobreposição | Esc e botão direito nos modos aplicáveis | Transições conforme contrato, possibilidade de reabrir e daemon preservado |
 | Tray gráfica | Clicar no ícone e nas opções Zoom, Desenhar e Sair | Ícone visível, menu correto, ação correspondente e encerramento limpo |

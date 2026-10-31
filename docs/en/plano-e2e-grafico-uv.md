@@ -108,6 +108,7 @@ deadlines; avoid sequences relying only on `sleep`.
 | Transparency | Draw over animated scene with compositor | Background keeps changing; strokes persist; PNG has alpha |
 | No compositor | Draw without compositor | Explicit warning and frozen capture; no transparency claim |
 | Saving | Repeated Ctrl+S, custom XDG destination with spaces/accents | Decodable PNG, correct folder, unique names, existing files preserved |
+| Settings | `settings.json` with color, width and initial zoom; then an invalid file | `probe` loads the file; 4x zoom, thick blue stroke; the invalid file produces a warning, uses defaults and stays untouched |
 | Save failure | Invalid configuration or inaccessible destination | Visible error, no alternative destination, usable process |
 | Overlay exit | Esc and right click where applicable | Contractual transitions, reopening possible, daemon preserved |
 | Graphical tray | Click icon and Zoom/Desenhar/Sair entries | Visible icon, correct menu/action, clean shutdown |
