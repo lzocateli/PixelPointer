@@ -2,6 +2,13 @@
 
 **Português (Brasil)** · [English](en/usage.md) · [Español](es/uso.md)
 
+**Versão funcional de referência:** `v0.1.2`, primeira versão funcional aceita
+como estável pelo mantenedor em 2026-10-30 no Ubuntu 24.04.5/GNOME X11 e Ubuntu
+26.04/GNOME Wayland. O aceite é manual e limitado aos fluxos exercitados;
+Windows/macOS, outros compositores e a matriz completa permanecem pendentes.
+Consulte o [registro de evidências](plano-e2e-grafico-uv.md). O relatório da F0
+é histórico; esse aceite não altera os limites dos backends descritos abaixo.
+
 ## Comandos
 
 | Comando | Função |

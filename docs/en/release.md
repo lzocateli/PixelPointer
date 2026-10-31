@@ -12,6 +12,34 @@ builds Native AOT packages for all supported RIDs, and
 through Homebrew and winget. Every step has a local equivalent under
 `tools/scripts/`.
 
+## First Functional Version
+
+`v0.1.2` is the first functional version accepted as stable by the maintainer on
+2026-10-30 on Ubuntu 24.04.5/GNOME X11 and Ubuntu 26.04/GNOME Wayland. The
+[E2E plan](plano-e2e-grafico-uv.md) records manual acceptance and its limits;
+it does not mean native Windows/macOS validation or completion of F2/F3.
+
+Release `v0.1.1` bundles the SVG, but its installer does not copy it. Version
+`v0.1.2` includes the PR #8 fix: `install.sh` and `install.ps1` require and
+copy `pixelpointer.svg`. Do not overwrite older assets or move their tags.
+To reproduce the accepted version, from any Linux/macOS directory with
+`curl`, `sh` and the native dependencies listed in the README available:
+
+```bash
+curl -fsSL https://github.com/lzocateli/PixelPointer/releases/download/v0.1.2/install.sh | sh -s -- --version 0.1.2
+```
+
+The installer verifies SHA-256 and installs/replaces the package in the default
+prefix, without changing profiles or PATH. Check `pixelpointer --version` and
+on Linux run `pixelpointer install-desktop-file`. A modified older desktop entry
+is preserved and requires explicit migration, not silent overwriting.
+
+GitHub publication and winget submission are separate stages. A winget job
+awaiting approval may occupy `release-main` even after public release; if the
+maintainer defers submission, reject only the older run's `winget` approval
+to unblock the next Release PR. Do not approve winget just to unblock a release.
+The structural concurrency fix belongs to the Groundwork catalog, not local `gw-*` edits.
+
 ## Artifacts
 
 | File | Contents |

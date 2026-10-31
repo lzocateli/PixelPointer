@@ -5,6 +5,13 @@
 > Translation of the Portuguese reference [docs/uso.md](../uso.md). If they
 > differ, the Portuguese version and the implemented behavior prevail.
 
+**Functional reference version:** `v0.1.2`, the first functional version accepted
+as stable by the maintainer on 2026-10-30 on Ubuntu 24.04.5/GNOME X11 and Ubuntu
+26.04/GNOME Wayland. Acceptance is manual and limited to exercised flows;
+Windows/macOS, other compositors and the complete matrix remain pending.
+See the [evidence record](plano-e2e-grafico-uv.md). The F0 report is historical;
+this acceptance does not change backend limitations described below.
+
 ## Commands
 
 | Command | Purpose |

@@ -1,9 +1,12 @@
 # Plano de implementação — PixelPointer
 
+**Português (Brasil)** · [English](en/plano-implementacao.md) · [Español](es/plano-implementacao.md)
+
 | Campo | Valor |
 | --- | --- |
 | Status inicial | aprovado para F0 (decisões de 2026-10-29) |
 | Estado de entrega | F0 validada no Linux/GNOME Wayland, inclusive Native AOT; Windows e macOS pendentes do roteiro manual ([relatório](f0-relatorio.md)). F1 (fundação: repositório, governança, CI/CD e distribuição) entregue em 2026-10-30 |
+| Primeira versão funcional | v0.1.2, aceita como estável pelo mantenedor em 2026-10-30 no Ubuntu 24.04.5/GNOME X11 e Ubuntu 26.04/GNOME Wayland; aceite manual limitado aos fluxos e ambientes registrados, sem concluir F2/F3 ou validar Windows/macOS |
 | Origem | IA assistida |
 | Revisor humano | Lincoln Zocateli |
 | Repositório | <https://github.com/lzocateli/PixelPointer> |
@@ -22,6 +25,27 @@ com o menu Zoom/Desenhar/Sair aberto; esse recorte visual está verificado.
 O solicitante também confirmou o encerramento por Sair e forneceu print com
 retorno ao prompt e `status` informando ausência do daemon; esse fluxo está
 concluído por aceite manual no mesmo GNOME/X11, sem comprovar abertura sem terminal.
+
+**Aceite manual Ubuntu 26.04/GNOME Wayland em 2026-10-30:** após a instalação
+da release `v0.1.2`, o solicitante informou “tudo funcionando” e anexou seis
+prints nesta conversa. O aceite cobre os fluxos exercitados nessa sessão,
+conforme relato humano. Os prints mostram anotações sobre a imagem da área de
+trabalho, quadros branco e preto com os mesmos traços, retorno ao fundo da
+captura, ícone próprio no launcher e menu Zoom/Desenhar/Sair na tray.
+O [registro detalhado](plano-e2e-grafico-uv.md#aceite-manual-no-ubuntu-2604gnome-wayland)
+separa observação visual de relato: imagens estáticas não comprovam fundo ao vivo,
+alfa do PNG, acionamento pelo launcher/tray, latência ou o backend de captura.
+Esse resultado não conclui F2/F3, nem estende o aceite a outros compositores,
+monitores, escalas, Windows ou macOS. A cobertura E2E automatizada Wayland
+continua pendente. Os anexos permanecem na conversa, sem cópia para o repositório.
+
+**Evidência complementar de transparência, na mesma data:** o solicitante anexou
+mais dois prints e os identificou como evidências de desenho com transparência.
+Ambos mostram traços vermelhos sobre um vídeo visível no navegador, em conteúdos
+diferentes. O desenho transparente fica aceito manualmente nessa sessão
+Ubuntu 26.04/GNOME Wayland, com relato humano e evidência visual da sobreposição.
+Os prints não demonstram reprodução contínua sob um mesmo traço nem alfa do PNG;
+essas verificações objetivas continuam distintas do aceite manual.
 
 ## 1. Objetivo
 
@@ -46,7 +70,7 @@ pode servir de referência de comportamento, com atribuição quando algo for ad
 | D8 | Threading (da F0) | `Main` síncrono; SDL sempre na thread principal; trabalho assíncrono (D-Bus, IPC) em outras threads, entregue à thread principal por fila. Um laço de janela na continuação de um `await` bloqueia a thread de leitura do D-Bus |
 | D9 | Primeiro uso no GNOME (da F0) | A permissão de captura e o vínculo de atalhos exigem uma janela do PixelPointer focada e o `.desktop` instalado com o app id; o instalador e a janela de boas-vindas cuidam disso |
 | D10 | Sinais (da F0) | `SDL_HINT_NO_SIGNAL_HANDLERS=1`; o app trata SIGINT/SIGTERM com `PosixSignalRegistration` |
-| D11 | Idiomas da documentação (2026-10-30) | pt-BR é a referência (`README.md`, `docs/*.md`); traduções em `README.en.md`, `README.es.md`, `docs/en/` e `docs/es/` para as jornadas de entrada e uso, como previsto no plano de internacionalização do DotnetScope; planos e relatórios ficam em pt-BR |
+| D11 | Idiomas da documentação (2026-10-30) | pt-BR é a referência (`README.md`, `docs/*.md`); traduções em `README.en.md`, `README.es.md`, `docs/en/` e `docs/es/`. A regra vigente em `.github/instructions/documentation.instructions.md` inclui também planos e relatórios, substituindo o escopo anterior restrito às jornadas de entrada e uso |
 | D12 | Pacotes e plataformas (2026-10-30) | Pacotes levam executável, SDL3, libSkiaSharp, ícone SVG, `LICENSE` e `THIRD-PARTY-NOTICES.md`; instaladores criam diretório do aplicativo e link do comando. Mínimo Linux glibc 2.34 (exigência da libSDL3 distribuída) e sem `linux-musl` (SDL3-CS sem binário musl) |
 
 ## 3. Arquitetura

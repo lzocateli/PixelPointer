@@ -1,0 +1,141 @@
+# Plan de implementación — PixelPointer
+
+[Português (Brasil)](../plano-implementacao.md) · [English](../en/plano-implementacao.md) · **Español**
+
+| Campo | Valor |
+| --- | --- |
+| Estado inicial | Aprobado para F0 (decisiones del 2026-10-29) |
+| Estado de entrega | F0 validada en Linux/GNOME Wayland, incluido Native AOT; Windows y macOS pendientes del recorrido manual ([informe, pt-BR](../f0-relatorio.md)). F1 (repositorio, gobernanza, CI/CD y distribución) entregada el 2026-10-30 |
+| Primera versión funcional | v0.1.2, aceptada como estable por el mantenedor el 2026-10-30 en Ubuntu 24.04.5/GNOME X11 y Ubuntu 26.04/GNOME Wayland; aceptación manual limitada a flujos/entornos registrados, sin completar F2/F3 ni validar Windows/macOS |
+| Origen | Asistido por IA |
+| Revisor humano | Lincoln Zocateli |
+| Repositorio | <https://github.com/lzocateli/PixelPointer> |
+| Licencia | MIT |
+
+**Aceptación complementaria del 2026-10-30:** el solicitante confirmó dibujo
+transparente, zoom, exportación PNG con alfa, CapsLock/NumLock y uso en ambos
+monitores 1920×1080 con escala 1 en Ubuntu 24.04.5/GNOME X11, autorizando dar
+esas pruebas por concluidas. El [registro de evidencias y límites](plano-e2e-grafico-uv.md#aceptaci%C3%B3n-manual-del-dibujo-transparente-en-gnome-x11)
+separa la aceptación manual del E2E automatizado. No completa toda la fase F3:
+formas, texto, blur, HiDPI y paridad entre plataformas siguen como alcance futuro,
+al igual que la aceptación real de Zoom/Desenhar desde la bandeja, del lanzador
+y la revisión de vídeos automatizados. Capturas complementarias de la misma fecha
+muestran anotaciones en el monitor 1 y el icono de bandeja GNOME visible con el
+menú Zoom/Desenhar/Sair abierto; ese alcance visual está verificado. El solicitante
+también confirmó el cierre mediante Sair y aportó una captura con regreso al prompt
+y `status` indicando ausencia del daemon. Ese flujo tiene aceptación manual en
+la misma sesión GNOME/X11, sin demostrar inicio sin terminal.
+
+**Aceptación manual Ubuntu 26.04/GNOME Wayland del 2026-10-30:** tras instalar
+la release `v0.1.2`, el solicitante informó que todo funcionaba y adjuntó seis
+capturas a esta conversación. La aceptación cubre los flujos ejercitados en esa
+sesión según el relato humano. Las capturas muestran anotaciones sobre la imagen
+del escritorio, pizarras blanca y negra conservando los mismos trazos, regreso
+al fondo capturado, icono propio en el lanzador y menú Zoom/Desenhar/Sair en la
+bandeja. El [registro detallado](plano-e2e-grafico-uv.md#aceptaci%C3%B3n-manual-en-ubuntu-2604gnome-wayland)
+separa observación visual y relato: imágenes estáticas no demuestran fondo en vivo,
+alfa del PNG, activación desde lanzador/bandeja, latencia ni backend de captura.
+No completa F2/F3 ni extiende la aceptación a otros compositores, monitores,
+escalas, Windows o macOS. El E2E Wayland automatizado sigue pendiente. Los adjuntos
+permanecen en la conversación, sin copia al repositorio.
+
+**Evidencia complementaria de transparencia en la misma fecha:** el solicitante
+adjuntó otras dos capturas, identificándolas como evidencia de dibujo transparente.
+Ambas muestran trazos rojos sobre un vídeo visible en el navegador, con contenidos
+diferentes. El dibujo transparente tiene aceptación manual en esta sesión Ubuntu
+26.04/GNOME Wayland, con relato humano y evidencia visual de la superposición.
+Las capturas no demuestran reproducción continua bajo el mismo trazo ni alfa PNG;
+esas comprobaciones objetivas siguen separadas de la aceptación manual.
+
+## 1. Objetivo
+
+PixelPointer es una herramienta de presentación Native AOT (`pixelpointer`)
+para Linux, Windows y macOS, con funcionalidades de ZoomIt (Sysinternals/PowerToys):
+zoom de pantalla, anotación, temporizador de descanso, Live Zoom, recorte,
+grabación y DemoType, activadas mediante atajos globales.
+
+No pretende reproducir la marca, los iconos ni la interfaz de ZoomIt. Su código
+en PowerToys es MIT y puede servir de referencia de comportamiento, con
+atribución cuando se adapte algo.
+
+## 2. Decisiones registradas
+
+| # | Decisión | Valor |
+| --- | --- | --- |
+| D1 | Nombre del producto y del binario | PixelPointer / `pixelpointer`; app id `io.github.lzocateli.PixelPointer` |
+| D2 | Licencia | MIT |
+| D3 | Stack | .NET 10 Native AOT; SDL3 (ppy.SDL3-CS) para ventana y entrada; SkiaSharp para dibujo; Tmds.DBus.Protocol para portales XDG. Avalonia descartado: en Linux usa XWayland y el producto es principalmente una ventana de superposición |
+| D4 | Wayland | X11 nativo → portal GlobalShortcuts → `pixelpointer hotkeys install` (atajo del escritorio llamando la CLI mediante IPC). Live Zoom y DemoType con soporte de mejor esfuerzo |
+| D5 | macOS | Primera versión sin firmar; firma y notarización con Developer ID cuando esté disponible |
+| D6 | MP4 en Linux | `ffmpeg` del sistema cuando exista (no incluido); GIF nativo en C# en las tres plataformas |
+| D7 | Ubicación | `~/projetos/PixelPointer`, proceso y gobernanza como en DotnetScope |
+| D8 | Threading (F0) | `Main` síncrono; SDL siempre en el hilo principal; trabajo asíncrono D-Bus/IPC en otros hilos, entregado por cola. Un bucle de ventana en la continuación de un `await` bloquea el hilo de lectura de D-Bus |
+| D9 | Primer uso en GNOME (F0) | Permiso de captura y asociación de atajos requieren una ventana PixelPointer enfocada y el `.desktop` instalado con el app id; el instalador y la ventana de bienvenida lo gestionan |
+| D10 | Señales (F0) | `SDL_HINT_NO_SIGNAL_HANDLERS=1`; SIGINT/SIGTERM gestionados mediante `PosixSignalRegistration` |
+| D11 | Idiomas de documentación (2026-10-30) | pt-BR es la referencia (`README.md`, `docs/*.md`); traducciones en `README.en.md`, `README.es.md`, `docs/en/` y `docs/es/`. La regla vigente de `.github/instructions/documentation.instructions.md` también incluye planes e informes, sustituyendo el alcance anterior limitado a incorporación y uso |
+| D12 | Paquetes y plataformas (2026-10-30) | Paquetes con ejecutable, SDL3, libSkiaSharp, icono SVG, `LICENSE` y `THIRD-PARTY-NOTICES.md`; instaladores crean directorio de aplicación y enlace del comando. Linux mínimo glibc 2.34 (requerido por libSDL3 incluida); sin `linux-musl` (SDL3-CS no publica binario musl) |
+
+## 3. Arquitectura
+
+```text
+src/
+  PixelPointer.Core/              modelo de anotaciones, herramientas, undo/redo, configuración (JSON source-gen), comandos
+  PixelPointer.Rendering/         Skia: trazos, formas, texto, blur, zoom/pan, temporizador; CPU y GPU (GL)
+  PixelPointer.Platform/          interfaces: IHotkeyService, IScreenCapture, ILiveCapture, IClipboard, IInputInjector, IRecorder
+  PixelPointer.Platform.Windows/  Win32 RegisterHotKey, DXGI/Windows.Graphics.Capture, Media Foundation, SendInput
+  PixelPointer.Platform.MacOS/    Carbon RegisterEventHotKey, ScreenCaptureKit, AVFoundation, CGEventPost
+  PixelPointer.Platform.Linux/    X11 (XGrabKey/XShm/XTest), portales (GlobalShortcuts/Screenshot/ScreenCast/RemoteDesktop), PipeWire
+  PixelPointer.App/               ejecutable AOT: bandeja, superposición, configuración, CLI/IPC (concentra el código promovido del spike)
+tests/
+  PixelPointer.UnitTests/         xunit.v3 + Microsoft.Testing.Platform
+  PixelPointer.IntegrationTests/  renderizado determinista comparado con imágenes de referencia
+```
+
+El mismo binario es aplicación y CLI: `pixelpointer zoom|draw|timer <min>|snip`
+envía el comando mediante socket Unix (`$XDG_RUNTIME_DIR` o directorio temporal;
+AF_UNIX también en Windows 10+) a la instancia en ejecución.
+
+## 4. Matriz de capacidades por plataforma
+
+| Capacidad | Windows | macOS | Linux X11 | Linux Wayland |
+| --- | --- | --- | --- | --- |
+| Atajo global | RegisterHotKey | RegisterEventHotKey | XGrabKey | Portal GlobalShortcuts (**validado en GNOME 50**); alternativa de atajo del escritorio + IPC |
+| Captura estática | DXGI/WGC | ScreenCaptureKit (permiso de grabación de pantalla) | XShm | Portal Screenshot (**validado**, ~550 ms) → ScreenCast/PipeWire continuo |
+| Superposición a pantalla completa | SDL3 | SDL3 + nivel de ventana | SDL3 | SDL3 Wayland nativo (**validado**, escala fraccionaria funcional) |
+| Live Zoom | Magnification API o WGC | ScreenCaptureKit excluyendo la propia ventana | XComposite (complejo) | ScreenCast + layer-shell donde exista; GNOME con mejor esfuerzo |
+| Grabación | Media Foundation | AVFoundation | ffmpeg del sistema / GIF | ScreenCast + ffmpeg / GIF |
+| DemoType | SendInput | CGEventPost (Accesibilidad) | XTest | Portal RemoteDesktop/libei, mejor esfuerzo |
+
+## 5. Fases
+
+| Fase | Entrega | Criterio de salida |
+| --- | --- | --- |
+| **F0 — Spike** | SDL3+Skia+AOT, captura, atajos, IPC por plataforma | Informe go/no-go ([pt-BR](../f0-relatorio.md)) |
+| F1 — Fundación | Repositorio público, Altivy.Groundwork (gobernanza, release-please, gitleaks, política), matriz CI, publicación de 6 RIDs con SBOM y atestaciones, `.deb`, instaladores, Homebrew y winget, documentación pt/en/es; spike pasa a `src/PixelPointer.App` | CI verde en los 3 SO |
+| F2 — Core + captura rápida | Modelo de anotaciones, Skia en **GPU**, configuración, abstracciones de plataforma, IPC/CLI, **ScreenCast/PipeWire en Wayland** (meta: atajo → primer cuadro < 150 ms), ScreenCaptureKit en macOS, bienvenida (D9) | Pruebas unitarias y de imagen; latencia medida |
+| F3 — Zoom + Dibujo | Ctrl+1/Ctrl+2 completos: formas (línea, flecha, rectángulo, elipse), resaltador, blur, texto, multimonitor, HiDPI, copiar/guardar | Paridad funcional validada manualmente |
+| F4 — Temporizador + Recorte | Ctrl+3 y Ctrl+6 (portapapeles y archivo) | — |
+| F5 — Live Zoom | Windows → macOS → X11; Wayland con mejor esfuerzo | Matriz documentada |
+| F6 — Grabación | GIF nativo; MP4 por plataforma; ffmpeg opcional en Linux; audio | — |
+| F7 — DemoType | Windows, macOS, X11; Wayland mediante portal | — |
+| F8 — Distribución | winget/zip, `.dmg` (sin firmar en v1) + Homebrew cask, `.deb`/AppImage/Flatpak, inicio automático, `.desktop` | Instalación limpia en los 3 SO |
+| F9 — i18n y documentación | pt-BR y en, guía de permisos por SO | — |
+
+## 6. Riesgos
+
+| Riesgo | Mitigación |
+| --- | --- |
+| Latencia de captura Wayland (~550 ms por Screenshot) | ScreenCast con PipeWire y restore token en F2 |
+| Dibujo CPU insuficiente en 4K | Skia sobre OpenGL (GRContext) en F2; CPU como alternativa |
+| GNOME exige ventana enfocada para permisos | Ventana de bienvenida (D9) |
+| macOS sin firma: permisos TCC perdidos entre versiones | Documentar; firmar cuando exista Developer ID (D5) |
+| Portales diferentes en KDE/Hyprland/Sway | Probar en F2; alternativa IPC siempre disponible |
+| Bibliotecas SDL3/libSkiaSharp junto al ejecutable | Incluirlas; evaluar enlace estático en F8 |
+
+## 7. Preguntas abiertas
+
+1. Multimonitor en Wayland: la captura cubre todo el escritorio y el compositor
+   decide el monitor de pantalla completa; seleccionar el monitor del cursor
+   requiere ScreenCast por monitor (F2).
+2. Tamaño AOT en Windows/macOS (Linux: 19,2 MB con SDL3 y Skia; inicio < 10 ms).
+3. Comportamiento Windows/macOS (pendiente del recorrido manual, sección 6 del informe).

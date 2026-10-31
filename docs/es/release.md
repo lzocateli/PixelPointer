@@ -11,6 +11,35 @@ publica paquetes Native AOT para todos los RIDs compatibles y
 [`post-release.yml`](../../.github/workflows/post-release.yml) distribuye por
 Homebrew y winget. Cada etapa tiene un equivalente local en `tools/scripts/`.
 
+## Primera versión funcional
+
+`v0.1.2` es la primera versión funcional aceptada como estable por el mantenedor
+el 2026-10-30 en Ubuntu 24.04.5/GNOME X11 y Ubuntu 26.04/GNOME Wayland. El
+[plan E2E](plano-e2e-grafico-uv.md) registra aceptación manual y límites;
+no significa validación nativa Windows/macOS ni finalización de F2/F3.
+
+La release `v0.1.1` incluye el SVG en el paquete, pero su instalador no lo copia.
+La `v0.1.2` incluye la corrección del PR #8: `install.sh` e `install.ps1`
+exigen y copian `pixelpointer.svg`. No sobrescriba assets ni mueva etiquetas
+anteriores. Para reproducir la versión aceptada, desde cualquier directorio
+Linux/macOS con `curl`, `sh` y dependencias nativas del README disponibles:
+
+```bash
+curl -fsSL https://github.com/lzocateli/PixelPointer/releases/download/v0.1.2/install.sh | sh -s -- --version 0.1.2
+```
+
+El instalador verifica SHA-256 e instala/sustituye paquete en el prefijo por defecto,
+sin cambiar perfiles ni PATH. Compruebe `pixelpointer --version` y en Linux ejecute
+`pixelpointer install-desktop-file`. Una entrada desktop anterior modificada
+se conserva y exige migración explícita, no sobrescritura silenciosa.
+
+Publicación GitHub y envío winget son etapas distintas. Un job winget esperando
+aprobación puede ocupar `release-main` tras la publicación; si el mantenedor
+aplaza el envío, rechace solo la aprobación `winget` de la ejecución anterior
+para liberar el siguiente Release PR. No apruebe winget para desbloquear una release.
+La corrección estructural de concurrencia corresponde al catálogo Groundwork,
+no a modificaciones locales de `gw-*`.
+
 ## Artefactos
 
 | Archivo | Contenido |
