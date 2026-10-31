@@ -64,6 +64,41 @@ transparente: exporta las anotaciones sin volver a capturar el escritorio. Para
 guardar la pantalla congelada con anotaciones, usa el zoom; W/K exportan
 explícitamente la pizarra blanca/negra.
 
+## Configuración
+
+El archivo `settings.json` es opcional; sin él, se aplican los valores
+predeterminados de abajo. La aplicación solo lee el archivo, en cada
+superposición, y nunca lo crea ni lo reescribe. `pixelpointer probe` muestra la
+ruta efectiva y si el archivo se cargó.
+
+| Sistema | Ruta |
+| --- | --- |
+| Windows | `%APPDATA%\PixelPointer\settings.json` |
+| macOS | `~/Library/Application Support/PixelPointer/settings.json` |
+| Linux | `$XDG_CONFIG_HOME/pixelpointer/settings.json` o `~/.config/pixelpointer/settings.json` |
+
+```json
+{
+  "version": 1,
+  "pen": { "color": "red", "width": 6 },
+  "zoom": { "initial": 2 }
+}
+```
+
+| Campo | Valores | Predeterminado |
+| --- | --- | --- |
+| `version` | `1` | `1` |
+| `pen.color` | `red`, `green`, `blue`, `yellow`, `orange`, `pink` | `red` |
+| `pen.width` | 1 a 60 | 6 |
+| `zoom.initial` | 1 a 16, ampliación al abrir el zoom | 2 |
+
+Los campos omitidos usan el valor predeterminado; se aceptan comentarios `//` y
+comas finales. Un campo desconocido, un valor fuera de rango, JSON mal formado,
+un archivo de más de 64 KiB o que no sea UTF-8 invalidan todo el archivo: la
+superposición se abre con los valores predeterminados y el motivo aparece en la
+terminal y en `probe`. Las teclas siguen cambiando color y grosor durante la
+sesión sin escribir en el archivo.
+
 ## Permisos por sistema
 
 ### Linux con Wayland (GNOME, KDE, Hyprland)

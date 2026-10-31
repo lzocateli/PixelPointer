@@ -93,8 +93,10 @@ tests/
 **F2 in progress (2026-10-31):** `src/PixelPointer.Core` now holds the annotation
 model (`AnnotationDocument`: strokes, color, width, board, undo and clear), without
 SDL or Skia, covered by unit tests. The overlay uses this model without changing
-hotkeys or appearance. Shapes, text, settings and the other modules above remain
-pending.
+hotkeys or appearance. Read-only settings in `settings.json` (initial color and
+width, initial zoom; JSON with a source generator) are described in the
+[usage guide](usage.md#settings). Shapes, text, configurable hotkeys and the
+other modules above remain pending.
 
 The same binary is both app and CLI: `pixelpointer zoom|draw|timer <min>|snip`
 sends a command through a Unix socket (`$XDG_RUNTIME_DIR` or temporary directory;

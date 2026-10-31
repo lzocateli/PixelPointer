@@ -61,6 +61,39 @@ message. In transparent X11 draw mode, the PNG background is transparent and
 exports annotations without recapturing the desktop. To save the frozen screen
 with annotations, use zoom; W/K explicitly export a white or black board.
 
+## Settings
+
+The `settings.json` file is optional; without it, the defaults below apply. The
+application only reads the file, on every overlay, and never creates or rewrites
+it. `pixelpointer probe` shows the effective path and whether the file was loaded.
+
+| System | Path |
+| --- | --- |
+| Windows | `%APPDATA%\PixelPointer\settings.json` |
+| macOS | `~/Library/Application Support/PixelPointer/settings.json` |
+| Linux | `$XDG_CONFIG_HOME/pixelpointer/settings.json` or `~/.config/pixelpointer/settings.json` |
+
+```json
+{
+  "version": 1,
+  "pen": { "color": "red", "width": 6 },
+  "zoom": { "initial": 2 }
+}
+```
+
+| Field | Values | Default |
+| --- | --- | --- |
+| `version` | `1` | `1` |
+| `pen.color` | `red`, `green`, `blue`, `yellow`, `orange`, `pink` | `red` |
+| `pen.width` | 1 to 60 | 6 |
+| `zoom.initial` | 1 to 16, magnification when zoom opens | 2 |
+
+Omitted fields use the default; `//` comments and trailing commas are accepted.
+An unknown field, an out-of-range value, malformed JSON, a file larger than
+64 KiB or one that is not UTF-8 invalidates the whole file: the overlay opens with
+the defaults and the reason is shown in the terminal and by `probe`. Keys still
+change color and width during the session without writing to the file.
+
 ## Permissions per system
 
 ### Linux on Wayland (GNOME, KDE, Hyprland)

@@ -31,13 +31,24 @@ public sealed class AnnotationDocument
     private readonly List<Stroke> _strokes = [];
     private Stroke? _current;
 
+    public AnnotationDocument(PenColor color = PenColor.Red, float penWidth = DefaultPenWidth)
+    {
+        if (!float.IsFinite(penWidth) || penWidth < MinPenWidth || penWidth > MaxPenWidth)
+        {
+            throw new ArgumentOutOfRangeException(nameof(penWidth), penWidth, "Espessura fora dos limites.");
+        }
+
+        SelectColor(color);
+        PenWidth = penWidth;
+    }
+
     public IReadOnlyList<Stroke> Strokes => _strokes;
 
-    public PenColor Color { get; private set; } = PenColor.Red;
+    public PenColor Color { get; private set; }
 
     public uint ColorArgb => ToArgb(Color);
 
-    public float PenWidth { get; private set; } = DefaultPenWidth;
+    public float PenWidth { get; private set; }
 
     public Board Board { get; private set; } = Board.None;
 
