@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/lzocateli/PixelPointer/compare/v0.1.1...v0.1.2) (2026-10-31)
+
+
+### Corrigido
+
+* **packaging:** instale o ícone SVG em todas as plataformas ([#8](https://github.com/lzocateli/PixelPointer/issues/8)) ([f3ff01e](https://github.com/lzocateli/PixelPointer/commit/f3ff01e5a20687a1e7eacd070c0ad4e91e2266f5))
+
 ## [0.1.1](https://github.com/lzocateli/PixelPointer/compare/v0.1.0...v0.1.1) (2026-10-30)
 
 
