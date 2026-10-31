@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>PixelPointer.Core</RootNamespace>
+  </PropertyGroup>
+
+</Project>

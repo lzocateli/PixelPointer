@@ -176,8 +176,10 @@ class Scenario:
             self.wait("icone SNI", lambda: Path("/tmp/panel.json").exists())
             panel = json.loads(Path("/tmp/panel.json").read_text())
             assert panel["icon"] and [item[1] for item in panel["entries"]] == ["Zoom", "Desenhar", "Sair"]
-            icon = self.screenshot("01-tray").crop((588, 16, 628, 56))
-            assert len(icon.getcolors(1601) or []) > 4, "Icone nao renderizado"
+            # O painel publica panel.json antes de repintar o icone.
+            self.wait("icone renderizado", lambda: len(
+                self.display.screenshot().crop((588, 16, 628, 56)).getcolors(1601) or []) > 4)
+            self.screenshot("01-tray")
         self.cli("daemon", expected=1)
         self.cli("status")
 

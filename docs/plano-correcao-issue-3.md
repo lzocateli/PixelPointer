@@ -4,7 +4,7 @@
 | --- | --- |
 | Referência | [Issue #3: erro no Registry e integração ao desktop Linux](https://github.com/lzocateli/PixelPointer/issues/3) |
 | Data | 2026-10-30 |
-| Estado | Implementação e E2E linux-x64 concluídos; aceite manual GNOME/X11 de desenho, zoom, PNG, CapsLock/NumLock, uso nos monitores testados e encerramento por Sair concluído; ícone e menu da tray visíveis confirmados; Zoom/Desenhar pela tray, launcher real, portais e validações nativas Windows/macOS pendentes |
+| Estado | **Encerrado em 2026-10-31**: issue #3 fechada. Implementação, E2E linux-x64 e aceites manuais GNOME/X11 registrados abaixo; os itens não assinalados foram transferidos para as [pendências consolidadas](plano-implementacao.md#8-pendências-consolidadas) e não são mais acompanhados aqui |
 | Origem | Análise estática assistida por IA e alinhamento com o solicitante nesta conversa |
 | Escopo inicial | Linux, com reprodução prioritária no Ubuntu/GNOME X11 relatado na issue |
 
@@ -480,3 +480,9 @@ Acionamento de Zoom/Desenhar pela tray e launcher reais, matriz de portais/Wayla
 validações Windows/macOS e vinculação das evidências à issue permanecem pendentes;
 a issue não foi encerrada. A visibilidade do ícone/menu GNOME e o encerramento
 por Sair estão confirmados pelo solicitante.
+
+**Encerramento em 2026-10-31:** a issue #3 foi fechada no GitHub e este plano
+fica encerrado como registro histórico. O parágrafo anterior descreve o estado
+antes do fechamento. Os itens ainda não assinalados não foram concluídos; passam
+a ser acompanhados nas [pendências consolidadas](plano-implementacao.md#8-pendências-consolidadas)
+do plano de implementação.

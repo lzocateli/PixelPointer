@@ -7,7 +7,7 @@
 | Data | 2026-10-30 |
 | Autorização humana | Solicitante, nesta conversa: “Eu autorizo os E2E gráficos isolados nas regras do projeto” |
 | Decisão autorizada | Permitir uma suíte gráfica automatizada separada e isolada |
-| Estado de execução | Primeiro incremento X11 implementado e executado; estabilidade 10/10; revisão humana dos vídeos pendente. Aceite manual adicional Ubuntu 26.04/GNOME Wayland registrado abaixo; não é E2E automatizado |
+| Estado de execução | Primeiro incremento X11 implementado e executado; estabilidade 10/10; revisão humana dos vídeos encerrada por decisão do mantenedor em 2026-10-31, sem revisão registrada. Aceite manual adicional Ubuntu 26.04/GNOME Wayland registrado abaixo; não é E2E automatizado |
 | Versão funcional de referência | v0.1.2, primeira versão funcional aceita como estável pelo mantenedor em 2026-10-30 nos ambientes GNOME X11 e Wayland registrados; não é aprovação da matriz multiplataforma completa |
 | Primeiro alvo | Linux x64, X11 em desktop descartável |
 | Expansão | GNOME X11, Wayland por compositor e demais sistemas após viabilidade comprovada |

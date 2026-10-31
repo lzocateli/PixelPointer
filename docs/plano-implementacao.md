@@ -5,7 +5,7 @@
 | Campo | Valor |
 | --- | --- |
 | Status inicial | aprovado para F0 (decisões de 2026-10-29) |
-| Estado de entrega | F0 validada no Linux/GNOME Wayland, inclusive Native AOT; Windows e macOS pendentes do roteiro manual ([relatório](f0-relatorio.md)). F1 (fundação: repositório, governança, CI/CD e distribuição) entregue em 2026-10-30 |
+| Estado de entrega | F0 validada no Linux/GNOME Wayland, inclusive Native AOT; Windows com evidência manual parcial em 2026-10-31 e macOS pendente do roteiro manual ([relatório](f0-relatorio.md), [pendências](#8-pendências-consolidadas)). F1 (fundação: repositório, governança, CI/CD e distribuição) entregue em 2026-10-30 |
 | Primeira versão funcional | v0.1.2, aceita como estável pelo mantenedor em 2026-10-30 no Ubuntu 24.04.5/GNOME X11 e Ubuntu 26.04/GNOME Wayland; aceite manual limitado aos fluxos e ambientes registrados, sem concluir F2/F3 ou validar Windows/macOS |
 | Origem | IA assistida |
 | Revisor humano | Lincoln Zocateli |
@@ -89,6 +89,12 @@ tests/
   PixelPointer.IntegrationTests/  renderização determinística comparada com imagens de referência
 ```
 
+**F2 em andamento (2026-10-31):** `src/PixelPointer.Core` já contém o modelo de
+anotações (`AnnotationDocument`: traços, cor, espessura, quadro, desfazer e limpar),
+sem SDL nem Skia, coberto por testes unitários. A sobreposição usa esse modelo sem
+mudar atalhos nem aparência. Formas, texto, configurações e os demais módulos
+acima continuam pendentes.
+
 O mesmo binário é app e CLI: `pixelpointer zoom|draw|timer <min>|snip` envia o comando por socket Unix
 (`$XDG_RUNTIME_DIR` ou diretório temporário; AF_UNIX também no Windows 10+) à instância em execução.
 
@@ -135,3 +141,33 @@ O mesmo binário é app e CLI: `pixelpointer zoom|draw|timer <min>|snip` envia o
    janela em tela cheia abre; escolher o monitor do cursor exige o ScreenCast por monitor (F2).
 2. Tamanho do AOT em Windows e macOS (no Linux: 19,2 MB com SDL3 e Skia; inicialização < 10 ms).
 3. Comportamento de Windows e macOS (aguarda o roteiro manual da seção 6 do relatório).
+
+## 8. Pendências consolidadas
+
+Atualizado em 2026-10-31. O [plano da issue #3](plano-correcao-issue-3.md) foi
+encerrado com a issue e permanece como registro histórico. Os itens abertos dele
+e do [plano de E2E](plano-e2e-grafico-uv.md) são acompanhados aqui, além das
+fases F2 a F9 da seção 5.
+
+| Pendência | Origem | Situação |
+| --- | --- | --- |
+| Aceite manual de Zoom e Desenhar acionados pela tray no GNOME X11 | Issue #3, 3.5 | Ícone, menu e Sair aceitos; as duas ações ainda sem confirmação |
+| Abertura pelo menu de aplicativos GNOME sem terminal | Issue #3, 3.6 | Passou no E2E com launcher sintético; falta aceite real |
+| Matriz Wayland por compositor: portais com e sem Registry, recusa de permissões, tray e E2E isolado com libei/EIS | Issue #3, 3.1, 3.3 e 5; E2E, 8 | Aceite manual somente no Ubuntu 26.04/GNOME |
+| Ctrl+S nativo: Known Folder no Windows, inclusive OneDrive, e preferência do macOS, com filesystem real por SO | Issue #3, 3.7 | Encerrado por decisão do mantenedor em 2026-10-31; lógica coberta por testes, sem validação nativa registrada |
+| Roteiro manual completo no Windows | F0; issue #3 | Evidência parcial em 2026-10-31, descrita abaixo |
+| Roteiro manual completo no macOS | F0; issue #3 | Sem evidência nativa |
+| Revisão humana dos vídeos e referências do E2E X11 | E2E, 6 e 8 | Encerrado por decisão do mantenedor em 2026-10-31, sem revisão registrada |
+| Conflito físico de atalhos com outro aplicativo, escala fracionária, outras topologias e GPUs, caneta | Issue #3, 3.2 e 3.3; E2E, 8 | Pendente |
+| Linux arm64 em arquitetura apropriada | E2E, 8 | Pendente |
+
+**Evidência parcial no Windows em 2026-10-31:** o solicitante anexou quatro
+prints nesta conversa. Eles mostram a instalação por `install.ps1` com conferência
+do SHA-256, o daemon registrando Ctrl+1 e Ctrl+2, o menu da tray com Zoom,
+Desenhar e Sair e anotações sobre a tela. Também mostram dois problemas de
+orientação, já documentados no [README](../README.md#instalação): `PATH`
+desatualizado na sessão atual do PowerShell e `profile.ps1` bloqueado pela
+política de execução `Restricted`. Os prints não identificam versão do Windows
+nem arquitetura e não comprovam zoom, Ctrl+S com Known Folder, encerramento por
+Sair ou execução em segundo plano. Os anexos permanecem na conversa, sem cópia
+para o repositório.

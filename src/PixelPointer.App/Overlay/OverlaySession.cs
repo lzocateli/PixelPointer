@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using PixelPointer.Core.Annotations;
 using SDL;
 using SkiaSharp;
 using static SDL.SDL3;
@@ -22,14 +23,9 @@ internal sealed record OverlayMetrics(string VideoDriver, string Renderer, int P
 /// </summary>
 internal sealed unsafe partial class OverlaySession
 {
-    private static readonly SKColor[] PenColors =
-    [
-        SKColors.Red, SKColors.LimeGreen, SKColors.DodgerBlue, SKColors.Yellow, SKColors.Orange, SKColors.HotPink,
-    ];
-
     private readonly SKBitmap? _screenshot;
     private readonly SKImage? _image;
-    private readonly List<Stroke> _strokes = [];
+    private readonly AnnotationDocument _annotations = new();
     private readonly List<double> _frameTimes = [];
     private OverlayMode _mode;
     private float _zoom = 1f;
@@ -41,10 +37,6 @@ internal sealed unsafe partial class OverlaySession
     private int _height;
     private SKRect _view;
     private SKRect _crop;
-    private Stroke? _current;
-    private SKColor _color = SKColors.Red;
-    private float _penWidth = 6f;
-    private SKColor? _board;
     private readonly bool _transparentBackground;
     private bool _penDown;
     private float _pressure = 1f;
@@ -236,13 +228,13 @@ internal sealed unsafe partial class OverlaySession
             case SDL_EventType.SDL_EVENT_MOUSE_MOTION when !IsSynthetic(e.motion.which):
                 _mouseX = e.motion.x * _density;
                 _mouseY = e.motion.y * _density;
-                _current?.Points.Add(new StrokePoint(ToImage(_mouseX, _mouseY), 1f));
+                ContinueStroke(1f);
                 break;
 
             case SDL_EventType.SDL_EVENT_MOUSE_WHEEL:
                 if ((SDL_GetModState() & SDL_Keymod.SDL_KMOD_CTRL) != 0 || _mode == OverlayMode.Draw)
                 {
-                    _penWidth = Math.Clamp(_penWidth + (e.wheel.y > 0 ? 2f : -2f), 1f, 60f);
+                    _annotations.StepPenWidth(e.wheel.y > 0 ? 1 : -1);
                 }
                 else
                 {
@@ -271,7 +263,7 @@ internal sealed unsafe partial class OverlaySession
                 break;
 
             case SDL_EventType.SDL_EVENT_MOUSE_BUTTON_UP when !IsSynthetic(e.button.which) && e.button.button == SDL_BUTTON_LEFT:
-                _current = null;
+                _annotations.EndStroke();
                 break;
 
             case SDL_EventType.SDL_EVENT_PEN_AXIS when e.paxis.axis == SDL_PenAxis.SDL_PEN_AXIS_PRESSURE:
@@ -293,14 +285,14 @@ internal sealed unsafe partial class OverlaySession
                 _mouseY = e.pmotion.y * _density;
                 if (_penDown)
                 {
-                    _current?.Points.Add(new StrokePoint(ToImage(_mouseX, _mouseY), _pressure));
+                    ContinueStroke(_pressure);
                 }
 
                 break;
 
             case SDL_EventType.SDL_EVENT_PEN_UP:
                 _penDown = false;
-                _current = null;
+                _annotations.EndStroke();
                 break;
         }
 
@@ -321,41 +313,37 @@ internal sealed unsafe partial class OverlaySession
                 _targetZoom = Math.Clamp(_targetZoom * 0.8f, 1f, 16f);
                 break;
             case SDL_Keycode.SDLK_Z when ctrl:
-                if (_strokes.Count > 0)
-                {
-                    _strokes.RemoveAt(_strokes.Count - 1);
-                }
-
+                _annotations.Undo();
                 break;
             case SDL_Keycode.SDLK_E:
-                _strokes.Clear();
+                _annotations.Clear();
                 break;
             case SDL_Keycode.SDLK_W:
-                _board = _board == SKColors.White ? null : SKColors.White;
+                _annotations.ToggleBoard(Board.White);
                 break;
             case SDL_Keycode.SDLK_K:
-                _board = _board == SKColors.Black ? null : SKColors.Black;
+                _annotations.ToggleBoard(Board.Black);
                 break;
             case SDL_Keycode.SDLK_S when ctrl:
                 SaveSnapshot();
                 break;
             case SDL_Keycode.SDLK_R:
-                _color = PenColors[0];
+                _annotations.SelectColor(PenColor.Red);
                 break;
             case SDL_Keycode.SDLK_G:
-                _color = PenColors[1];
+                _annotations.SelectColor(PenColor.Green);
                 break;
             case SDL_Keycode.SDLK_B:
-                _color = PenColors[2];
+                _annotations.SelectColor(PenColor.Blue);
                 break;
             case SDL_Keycode.SDLK_Y:
-                _color = PenColors[3];
+                _annotations.SelectColor(PenColor.Yellow);
                 break;
             case SDL_Keycode.SDLK_O:
-                _color = PenColors[4];
+                _annotations.SelectColor(PenColor.Orange);
                 break;
             case SDL_Keycode.SDLK_P:
-                _color = PenColors[5];
+                _annotations.SelectColor(PenColor.Pink);
                 break;
         }
 
@@ -368,8 +356,14 @@ internal sealed unsafe partial class OverlaySession
     private void BeginStroke(float x, float y, float pressure)
     {
         // A espessura fica em coordenadas da imagem para o traço acompanhar o zoom.
-        _current = new Stroke(_color, _penWidth / ViewScale, [new StrokePoint(ToImage(x, y), pressure)]);
-        _strokes.Add(_current);
+        var point = ToImage(x, y);
+        _annotations.BeginStroke(point.X, point.Y, pressure, ViewScale);
+    }
+
+    private void ContinueStroke(float pressure)
+    {
+        var point = ToImage(_mouseX, _mouseY);
+        _annotations.ContinueStroke(point.X, point.Y, pressure);
     }
 
     private float ViewScale => _view.Width > 0 ? _width / _view.Width : 1f;
@@ -404,8 +398,8 @@ internal sealed unsafe partial class OverlaySession
         DrawScene(canvas, _view, width);
         if (_mode == OverlayMode.Draw)
         {
-            using var cursor = new SKPaint { Color = _color, IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 2 };
-            canvas.DrawCircle(_mouseX, _mouseY, _penWidth / 2, cursor);
+            using var cursor = new SKPaint { Color = new SKColor(_annotations.ColorArgb), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 2 };
+            canvas.DrawCircle(_mouseX, _mouseY, _annotations.PenWidth / 2, cursor);
         }
 
         if (_saveMessage is not null)
@@ -450,9 +444,9 @@ internal sealed unsafe partial class OverlaySession
         canvas.Save();
         canvas.Scale(outputWidth / view.Width);
         canvas.Translate(-view.Left, -view.Top);
-        if (_board is { } board)
+        if (_annotations.Board != Board.None)
         {
-            using var fill = new SKPaint { Color = board };
+            using var fill = new SKPaint { Color = _annotations.Board == Board.White ? SKColors.White : SKColors.Black };
             canvas.DrawRect(_crop, fill);
         }
         else if (_image is not null)
@@ -460,7 +454,7 @@ internal sealed unsafe partial class OverlaySession
             canvas.DrawImage(_image, 0, 0, new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None));
         }
 
-        foreach (var stroke in _strokes)
+        foreach (var stroke in _annotations.Strokes)
         {
             DrawStroke(canvas, stroke);
         }
@@ -472,7 +466,7 @@ internal sealed unsafe partial class OverlaySession
     {
         using var paint = new SKPaint
         {
-            Color = stroke.Color,
+            Color = new SKColor(stroke.Color),
             IsAntialias = true,
             Style = SKPaintStyle.Stroke,
             StrokeCap = SKStrokeCap.Round,
@@ -480,19 +474,20 @@ internal sealed unsafe partial class OverlaySession
             StrokeWidth = stroke.Width,
         };
 
-        if (stroke.Points.Count == 1)
+        var points = stroke.Points;
+        if (points.Count == 1)
         {
-            canvas.DrawPoint(stroke.Points[0].Position, paint);
+            canvas.DrawPoint(points[0].X, points[0].Y, paint);
             return;
         }
 
-        if (stroke.Points.TrueForAll(p => p.Pressure >= 0.999f))
+        if (stroke.HasUniformPressure)
         {
             using var builder = new SKPathBuilder();
-            builder.MoveTo(stroke.Points[0].Position);
-            for (var i = 1; i < stroke.Points.Count; i++)
+            builder.MoveTo(points[0].X, points[0].Y);
+            for (var i = 1; i < points.Count; i++)
             {
-                builder.LineTo(stroke.Points[i].Position);
+                builder.LineTo(points[i].X, points[i].Y);
             }
 
             using var path = builder.Detach();
@@ -501,12 +496,12 @@ internal sealed unsafe partial class OverlaySession
         }
 
         // Caneta com pressão: espessura variável por segmento.
-        for (var i = 1; i < stroke.Points.Count; i++)
+        for (var i = 1; i < points.Count; i++)
         {
-            var a = stroke.Points[i - 1];
-            var b = stroke.Points[i];
+            var a = points[i - 1];
+            var b = points[i];
             paint.StrokeWidth = stroke.Width * MathF.Max(0.15f, (a.Pressure + b.Pressure) / 2);
-            canvas.DrawLine(a.Position, b.Position, paint);
+            canvas.DrawLine(a.X, a.Y, b.X, b.Y, paint);
         }
     }
 
@@ -533,10 +528,6 @@ internal sealed unsafe partial class OverlaySession
 
         Console.Error.WriteLine(_saveMessage);
     }
-
-    private readonly record struct StrokePoint(SKPoint Position, float Pressure);
-
-    private sealed record Stroke(SKColor Color, float Width, List<StrokePoint> Points);
 
     private static partial class OverlayNative
     {

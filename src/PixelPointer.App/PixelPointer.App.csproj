@@ -17,6 +17,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../PixelPointer.Core/PixelPointer.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="Assets/pixelpointer.svg" Link="pixelpointer.svg" TargetPath="pixelpointer.svg"
              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
