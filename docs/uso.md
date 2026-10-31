@@ -131,6 +131,19 @@ crie atalhos do próprio desktop que executem o comando:
 Com o `daemon` em execução, `pixelpointer zoom` só envia o comando pelo socket
 local (`$XDG_RUNTIME_DIR/pixelpointer.sock`) e termina em milissegundos.
 
+**Captura por ScreenCast.** Com um único monitor, cada Ctrl+1/Ctrl+2 abre uma
+sessão do portal ScreenCast, lê um quadro pelo PipeWire (`libpipewire-0.3` do
+sistema) e encerra a sessão; o indicador de compartilhamento de tela aparece
+apenas durante essa captura. Na primeira vez o desktop pede para escolher e
+autorizar o monitor. O *restore token* devolvido pelo portal fica em
+`$XDG_STATE_HOME/pixelpointer/screencast-restore-token` (ou
+`~/.local/state/...`), com permissão 0600, e evita repetir o diálogo; apague o
+arquivo para revogar. Cancelar o diálogo cancela a sobreposição. Com mais de um
+monitor, sem PipeWire ou sem o portal ScreenCast, a captura usa o portal
+Screenshot. Em compositores wlroots (Sway, Hyprland), o quadro só chega após
+alguma mudança na tela; sem ela, a captura usa o Screenshot após 2 s. O terminal
+informa o caminho usado e o tempo do portal e do primeiro quadro.
+
 ### Linux com X11
 
 Atalhos e captura funcionam sem permissões adicionais (XGrabKey e XGetImage).

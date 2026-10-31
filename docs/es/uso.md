@@ -137,6 +137,19 @@ Si el escritorio no ofrece el portal GlobalShortcuts (Sway, GNOME anterior a la
 Con el `daemon` en ejecución, `pixelpointer zoom` solo envía el comando por el
 socket local (`$XDG_RUNTIME_DIR/pixelpointer.sock`) y termina en milisegundos.
 
+**Captura por ScreenCast.** Con un solo monitor, cada Ctrl+1/Ctrl+2 abre una
+sesión del portal ScreenCast, lee un cuadro por PipeWire (la `libpipewire-0.3`
+del sistema) y cierra la sesión; el indicador de pantalla compartida aparece
+solo durante esa captura. La primera vez el escritorio pide elegir y autorizar
+el monitor. El *restore token* devuelto por el portal se guarda en
+`$XDG_STATE_HOME/pixelpointer/screencast-restore-token` (o
+`~/.local/state/...`) con permiso 0600 y evita repetir el diálogo; borra el
+archivo para revocarlo. Cancelar el diálogo cancela la superposición. Con más
+de un monitor, sin PipeWire o sin el portal ScreenCast, la captura usa el portal
+Screenshot. En compositores wlroots (Sway, Hyprland), el cuadro solo llega tras
+algún cambio en la pantalla; si no, la captura usa Screenshot tras 2 s. La
+terminal informa el camino usado y el tiempo del portal y del primer cuadro.
+
 ### Linux con X11
 
 Los atajos y la captura funcionan sin permisos adicionales (XGrabKey y XGetImage).

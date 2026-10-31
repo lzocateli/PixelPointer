@@ -74,6 +74,7 @@ atribución cuando se adapte algo.
 | D10 | Señales (F0) | `SDL_HINT_NO_SIGNAL_HANDLERS=1`; SIGINT/SIGTERM gestionados mediante `PosixSignalRegistration` |
 | D11 | Idiomas de documentación (2026-10-30) | pt-BR es la referencia (`README.md`, `docs/*.md`); traducciones en `README.en.md`, `README.es.md`, `docs/en/` y `docs/es/`. La regla vigente de `.github/instructions/documentation.instructions.md` también incluye planes e informes, sustituyendo el alcance anterior limitado a incorporación y uso |
 | D12 | Paquetes y plataformas (2026-10-30) | Paquetes con ejecutable, SDL3, libSkiaSharp, icono SVG, `LICENSE` y `THIRD-PARTY-NOTICES.md`; instaladores crean directorio de aplicación y enlace del comando. Linux mínimo glibc 2.34 (requerido por libSDL3 incluida); sin `linux-musl` (SDL3-CS no publica binario musl) |
+| D13 | ScreenCast en Wayland (2026-10-31, decisión del mantenedor) | Sesión **bajo demanda** por captura, cerrada tras el primer cuadro, para que el indicador de pantalla compartida no sea permanente; mantener la sesión abierta solo se evaluará con mediciones. `libpipewire-0.3` (MIT) del sistema mediante `LibraryImport`, sin redistribuirla. Restore token en `$XDG_STATE_HOME/pixelpointer` (0600, nunca en logs). Solo con un monitor; en otro caso, o ante fallos, portal Screenshot. La cancelación del usuario no se elude |
 
 ## 3. Arquitectura
 
@@ -105,7 +106,9 @@ con retorno automático a CPU. En un contenedor con Xvfb y Mesa llvmpipe (GLX), 
 zoom en OpenGL produjo píxeles idénticos a los de CPU; la interfaz OpenGL nativa
 de Skia puede no estar disponible con EGL (Wayland), en cuyo caso se usa la CPU.
 Falta la aceptación manual en hardware real y la
-medición en 4K antes de hacerla predeterminada. Formas, texto, atajos
+medición en 4K antes de hacerla predeterminada. En Wayland con un monitor, la
+captura usa ScreenCast + PipeWire bajo demanda (D13): 36 ms en Wayland aislado con
+sway, frente a ~550 ms de Screenshot en GNOME en la F0; falta medir en GNOME real. Formas, texto, atajos
 configurables y los demás módulos anteriores siguen pendientes.
 
 El mismo binario es aplicación y CLI: `pixelpointer zoom|draw|timer <min>|snip`
