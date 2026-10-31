@@ -167,6 +167,12 @@ static async Task<int> ProbeAsync()
     return 0;
 }
 
+static int CountDisplays()
+{
+    using var displays = SDL_GetDisplays();
+    return displays?.Count ?? 0;
+}
+
 static unsafe SDL_Rect GetDisplayBounds(SDL_DisplayID id)
 {
     SDL_Rect bounds;
@@ -177,7 +183,15 @@ static unsafe SDL_Rect GetDisplayBounds(SDL_DisplayID id)
 static async Task<int> CaptureAsync(string output)
 {
     using var portal = SessionInfo.IsWayland ? ConnectPortal() : null;
-    var capture = ScreenCaptureFactory.Create(portal);
+    var displays = 1;
+    if (portal is not null)
+    {
+        InitSdl();
+        displays = CountDisplays();
+        SDL_Quit();
+    }
+
+    var capture = ScreenCaptureFactory.Create(portal, displays);
     var watch = Stopwatch.StartNew();
     using var bitmap = await capture.CaptureAsync(CancellationToken.None);
     var elapsed = watch.Elapsed.TotalMilliseconds;
@@ -351,7 +365,7 @@ static void RunOverlay(
         Console.Error.WriteLine("informação: sem compositor X11; o desenho usará uma captura congelada, não transparência ao vivo.");
     }
 
-    var capture = transparentDraw ? null : ScreenCaptureFactory.Create(portal);
+    var capture = transparentDraw ? null : ScreenCaptureFactory.Create(portal, portal is null ? 1 : CountDisplays());
     var captureStart = received.Elapsed.TotalMilliseconds;
     using var bitmap = image is not null
         ? SKBitmap.Decode(image) ?? throw new InvalidOperationException($"Imagem inválida: {image}")
