@@ -161,6 +161,7 @@ $steps.Add('dotnet restore PixelPointer.slnx')
 $steps.Add('dotnet format PixelPointer.slnx --verify-no-changes --no-restore')
 $steps.Add('dotnet build PixelPointer.slnx --configuration Release --no-restore')
 $steps.Add('dotnet test --solution PixelPointer.slnx --configuration Release --no-build')
+$steps.Add('pwsh -NoProfile -File tools/scripts/Test-PreviewRelease.ps1')
 if ($Aot) {
     $steps.Add('DEBIAN_FRONTEND=noninteractive apt-get $apt_opts install -y -qq --no-install-recommends clang zlib1g-dev >/dev/null')
     $steps.Add('dotnet publish src/PixelPointer.App/PixelPointer.App.csproj --configuration Release --runtime linux-x64 --output artifacts/aot/linux-x64')
@@ -189,6 +190,9 @@ $arguments = @(
     '--env', 'DOTNET_CLI_TELEMETRY_OPTOUT=1',
     '--env', 'DOTNET_NOLOGO=1',
     '--env', 'NUGET_PACKAGES=/workspace/artifacts/.nuget/packages',
+    '--env', 'GIT_CONFIG_COUNT=1',
+    '--env', 'GIT_CONFIG_KEY_0=safe.directory',
+    '--env', 'GIT_CONFIG_VALUE_0=/workspace',
     $image, 'bash', '-c', $script
 )
 

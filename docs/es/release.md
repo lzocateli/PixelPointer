@@ -33,12 +33,54 @@ gh workflow run publish.yml --repo lzocateli/PixelPointer --ref main -f preview=
 gh run list --repo lzocateli/PixelPointer --workflow publish.yml
 ```
 
-Usa el `run_id` mostrado para descargar `pixelpointer-preview-<run_id>-1` con
-`gh run download <run_id> --repo lzocateli/PixelPointer --name <artifact>`. Esta
-ejecución valida un snapshot de `main`; para un candidato de la próxima versión,
-usa la preview obligatoria del Release PR, cuyo `VersionPrefix` ya contiene el
-bump propuesto por release-please. La preview no reemplaza la integración humana
-del Release PR, la aprobación del Environment `release` ni la publicación de producción.
+Después del build, smokes de paquetes, pruebas de instaladores y atestaciones
+de SBOM, `Publish GitHub Pre-release` espera tu aprobación en el Environment
+`release`. El GitHub App `Altivy Release` crea `vX.Y.Z-preview.N` en el commit
+validado, prepara una release en borrador, atesta la procedencia y adjunta los
+14 assets más `SHA256SUMS`. Luego publica con `prerelease=true` y
+`make_latest=false`. La versión aparece en
+[Releases](https://github.com/lzocateli/PixelPointer/releases) como **Pre-release**,
+con descargas públicas sin login; no caduca tras siete días como los artifacts
+de Actions. La estable sigue siendo `Latest`.
+
+Esta excepción del canal preview fue autorizada por el mantenedor el 2026-10-31.
+No cambia el flujo estable de Groundwork, no ejecuta `post-release.yml` ni
+actualiza Homebrew/winget. La preview obligatoria de PR sigue siendo solo un
+artifact, sin secrets ni publicación. La preview manual usa el siguiente patch
+de la versión registrada y `preview.<run_number>`; el prefijo se aplica solo
+en los checkouts de build y smoke, sin editar la versión en Git. Esto no implica
+que release-please elija esa versión como próxima release estable.
+
+En la otra máquina, descarga el paquete del RID y `SHA256SUMS`, verifica SHA-256
+y extrae el `.zip`/`.tar.gz` manteniendo las bibliotecas nativas junto al ejecutable,
+o instala el `.deb` Linux. Ejecuta `pixelpointer --version` para verificar el
+sufijo. Las previews no incluyen `install.sh`/`install.ps1`, no se sirven mediante
+`releases/latest` y no son aceptadas por el deploy de Groundwork. Su aprobación
+no reemplaza la integración humana del Release PR ni la aprobación de producción.
+
+### Seguridad y recuperación de la preview
+
+| Riesgo | Control |
+| --- | --- |
+| Publicación desde un PR o una rama no aprobada | Job solo por dispatch de `main`, aprobación del mantenedor en el Environment `release`, checkout del commit de la ejecución y ancestralidad de `origin/main` |
+| Token personal para crear etiquetas protegidas | Solo el App autorizado, con token limitado a `contents: write`; tokens y claves privadas no entran en artifacts ni en la salida de scripts |
+| Paquetes incompletos, alterados o de otra ejecución | Misma versión en build/smoke, atestaciones de SBOM/procedencia, conjunto exacto de assets, SHA-256 local y digest remoto verificados antes de publicar |
+| Reejecución sobrescribe release o promueve preview a estable | Borrador debe coincidir con etiqueta/commit; nunca mover etiquetas ni sobrescribir assets; `prerelease=true`, `make_latest=false`, sin post-release |
+
+Si falla tras crear la etiqueta o el borrador, se conservan y la preview no se
+hace pública. No borres ni muevas etiquetas para eludir un fallo. Reejecutar la
+misma ejecución solo finaliza con todos los digests idénticos; los builds pueden
+no ser reproducibles byte a byte. Ante una divergencia, inicia otro dispatch
+con un nuevo `preview.N`. Una etiqueta existente sin borrador requiere
+investigación del mantenedor; el script rechaza reutilizarla. La reejecución
+rechaza modificar una preview ya pública; publica otra preview para corregirla.
+
+El equivalente local es `tools/scripts/Set-PreviewRelease.ps1`: sin `-Publish`,
+valida archivos y emite el payload sin acceder a GitHub; `-Publish` se reserva
+al job aprobado con el App. `tools/scripts/Test-PreviewRelease.ps1`, incluido
+en `Invoke-Validation.ps1`, prueba filesystem real y API sintética en container.
+Estas pruebas no reemplazan la primera publicación real de los seis RIDs en
+Actions ni la aceptación gráfica en las máquinas de destino.
 
 ## Primera versión funcional
 

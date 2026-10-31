@@ -33,12 +33,54 @@ gh workflow run publish.yml --repo lzocateli/PixelPointer --ref main -f preview=
 gh run list --repo lzocateli/PixelPointer --workflow publish.yml
 ```
 
-Use the displayed `run_id` to download `pixelpointer-preview-<run_id>-1` with
-`gh run download <run_id> --repo lzocateli/PixelPointer --name <artifact>`. This
-validates a snapshot of `main`; for a candidate of the next version, use the
-required Release PR preview, whose `VersionPrefix` already includes the
-release-please proposed bump. Preview does not replace the human merge of the
-Release PR, approval of the `release` Environment or production publication.
+After build, package smoke tests, installer tests and SBOM attestations pass,
+`Publish GitHub Pre-release` waits for your approval in the `release` Environment.
+The `Altivy Release` GitHub App creates `vX.Y.Z-preview.N` at the validated commit,
+prepares a draft release, attests provenance and uploads the 14 assets plus
+`SHA256SUMS`. It then publishes with `prerelease=true` and `make_latest=false`.
+The version appears in [Releases](https://github.com/lzocateli/PixelPointer/releases)
+as **Pre-release**, with public downloads requiring no login; unlike Actions
+artifacts, it does not expire after seven days. Stable remains `Latest`.
+
+This preview-channel exception was authorized by the maintainer on 2026-10-31.
+It does not change Groundwork's stable flow, run `post-release.yml` or update
+Homebrew/winget. The required PR preview remains an artifact-only operation,
+without secrets or publication. Manual previews use the next patch of the
+recorded version and `preview.<run_number>`; the prefix is applied only to build
+and smoke checkouts without editing the version in Git. This does not imply
+that release-please will choose that version for the next stable release.
+
+On the other machine, download the RID package and `SHA256SUMS`, verify SHA-256
+and extract the `.zip`/`.tar.gz` keeping native libraries beside the executable,
+or install the Linux `.deb`. Run `pixelpointer --version` to check the suffix.
+Previews do not include `install.sh`/`install.ps1`, are not served by
+`releases/latest` and are not accepted by Groundwork deploy. Preview approval
+does not replace the human Release PR merge or production approval.
+
+### Preview security and recovery
+
+| Risk | Control |
+| --- | --- |
+| Publication from a PR or unapproved branch | Job only on a `main` dispatch, maintainer approval in the `release` Environment, checkout of the run commit and ancestry of `origin/main` |
+| Personal token used to create protected tags | Only the authorized App, with a token limited to `contents: write`; tokens and private keys never enter artifacts or script output |
+| Incomplete, tampered or mismatched packages | Same build/smoke version, SBOM/provenance attestations, exact asset set, local SHA-256 and remote digest verification before publication |
+| Rerun overwrites a release or promotes preview to stable | Draft must match tag/commit; never move tags or overwrite assets; `prerelease=true`, `make_latest=false`, no post-release |
+
+If the run fails after creating the tag or draft, they are preserved and the
+preview stays unpublished. Do not delete or move tags to bypass a failure.
+A rerun of the same run only completes when all digests are identical; builds
+may not be byte-for-byte reproducible. If they differ, start a new dispatch
+with another `preview.N`. An existing tag without a draft requires maintainer
+investigation; the script refuses to reuse it. A rerun refuses to modify an
+already public preview; publish a new preview to correct it.
+
+The local equivalent is `tools/scripts/Set-PreviewRelease.ps1`: without
+`-Publish`, it validates files and emits the payload without accessing GitHub;
+`-Publish` is reserved for the approved App-backed job.
+`tools/scripts/Test-PreviewRelease.ps1`, included in `Invoke-Validation.ps1`,
+tests a real filesystem and a synthetic API in a container. These tests do not
+replace the first actual six-RID publication in Actions or graphical acceptance
+on the target machines.
 
 ## First Functional Version
 

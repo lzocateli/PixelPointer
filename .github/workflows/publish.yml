@@ -5,8 +5,8 @@
 #   dos instaladores na tag, SBOM atestado e assets anexados a GitHub Release em rascunho no
 #   Environment `release` (gw-github-assets.yml, com atestacao de proveniencia). Homebrew e
 #   winget rodam em post-release.yml, com a release ja publica.
-# - pull_request que altera a cadeia de release e workflow_dispatch: build, smoke e testes
-#   dos instaladores, sem publicar.
+# - pull_request que altera a cadeia de release: build, smoke e testes sem publicar.
+# - workflow_dispatch preview em main: GitHub Pre-release apos aprovacao no Environment release.
 name: Publish
 
 on:
@@ -49,13 +49,15 @@ on:
       - "tools/scripts/Publish-Aot.ps1"
       - "tools/scripts/Test-AotPackage.ps1"
       - "tools/scripts/Test-Installers.ps1"
+      - "tools/scripts/Set-PreviewRelease.ps1"
+      - "tools/scripts/Test-PreviewRelease.ps1"
       - "tools/scripts/ReleaseGovernance.psm1"
       - "tools/scripts/Assert-WingetSubmissionSource.ps1"
       - "tools/scripts/Test-WingetSubmissionPolicy.ps1"
   workflow_dispatch:
     inputs:
       preview:
-        description: Gerar pacotes preview baixáveis, sem publicar uma release
+        description: Publicar GitHub Pre-release da main apos aprovacao no Environment release
         type: boolean
         default: true
 
@@ -76,6 +78,8 @@ jobs:
       publish: ${{ steps.version.outputs.publish }}
       preview: ${{ steps.version.outputs.preview }}
       version_suffix: ${{ steps.version.outputs.version_suffix }}
+      version_prefix: ${{ steps.version.outputs.version_prefix }}
+      version: ${{ steps.version.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -137,6 +141,8 @@ jobs:
           "preview=$($env:PREVIEW.ToLowerInvariant())" >> $env:GITHUB_OUTPUT
           "version_suffix=$suffix" >> $env:GITHUB_OUTPUT
           $displayVersion = if ($suffix) { "$prefix-$suffix" } else { $prefix }
+          "version_prefix=$prefix" >> $env:GITHUB_OUTPUT
+          "version=$displayVersion" >> $env:GITHUB_OUTPUT
           Write-Output "Versao: $displayVersion (preview: $($env:PREVIEW); publicar: $publish)"
 
       - name: Build and tests in container
@@ -180,7 +186,11 @@ jobs:
         env:
           RID: ${{ matrix.rid }}
           VERSION_SUFFIX: ${{ needs.validate.outputs.version_suffix }}
+          VERSION_PREFIX: ${{ needs.validate.outputs.version_prefix }}
         run: |
+          [xml] $props = Get-Content -LiteralPath Directory.Build.props -Raw
+          $props.SelectSingleNode('/Project/PropertyGroup/VersionPrefix').InnerText = $env:VERSION_PREFIX
+          $props.Save((Join-Path $PWD 'Directory.Build.props'))
           $arguments = @{ Rid = $env:RID }
           if (-not [string]::IsNullOrWhiteSpace($env:VERSION_SUFFIX)) { $arguments.VersionSuffix = $env:VERSION_SUFFIX }
           if ($IsLinux) { $arguments.Engine = 'docker' }
@@ -232,7 +242,11 @@ jobs:
         env:
           RIDS: ${{ matrix.rids }}
           VERSION_SUFFIX: ${{ needs.validate.outputs.version_suffix }}
+          VERSION_PREFIX: ${{ needs.validate.outputs.version_prefix }}
         run: |
+          [xml] $props = Get-Content -LiteralPath Directory.Build.props -Raw
+          $props.SelectSingleNode('/Project/PropertyGroup/VersionPrefix').InnerText = $env:VERSION_PREFIX
+          $props.Save((Join-Path $PWD 'Directory.Build.props'))
           ./tools/scripts/Publish-Aot.ps1 -ChecksumsOnly
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           foreach ($rid in $env:RIDS -split ' ') {
@@ -256,7 +270,7 @@ jobs:
     # Antes dos assets e da aprovacao: a release so fica publica com o SBOM de cada pacote atestado.
     name: Attest SBOM ${{ matrix.rid }}
     needs: [validate, build, verify]
-    if: ${{ needs.validate.outputs.publish == 'true' }}
+    if: ${{ needs.validate.outputs.publish == 'true' || (needs.validate.outputs.preview == 'true' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -289,7 +303,7 @@ jobs:
   release-assets:
     name: Prepare release assets
     needs: [validate, build, verify, attest-sbom]
-    if: ${{ !cancelled() && (needs.validate.outputs.publish == 'true' || needs.validate.outputs.preview == 'true') }}
+    if: ${{ !cancelled() && needs.validate.result == 'success' && needs.build.result == 'success' && needs.verify.result == 'success' && (needs.attest-sbom.result == 'success' || needs.attest-sbom.result == 'skipped') && (needs.validate.outputs.publish == 'true' || needs.validate.outputs.preview == 'true') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -347,3 +361,73 @@ jobs:
     with:
       tag: ${{ inputs.tag }}
       artifact-name: release-assets
+
+  publish-preview:
+    name: Publish GitHub Pre-release
+    needs: [validate, release-assets, attest-sbom]
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && needs.validate.outputs.preview == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    env:
+      PREVIEW_VERSION: ${{ needs.validate.outputs.version }}
+      PREVIEW_COMMIT: ${{ github.sha }}
+    steps:
+      - name: Checkout approved source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Download validated preview
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: pixelpointer-preview-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/release-assets
+
+      - name: Validate preview publication inputs
+        shell: pwsh
+        run: |
+          ./tools/scripts/Set-PreviewRelease.ps1 -Version $env:PREVIEW_VERSION -Commit $env:PREVIEW_COMMIT
+          exit $LASTEXITCODE
+
+      - name: Create release GitHub App token
+        id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+
+      - name: Prepare immutable preview draft
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          ./tools/scripts/Set-PreviewRelease.ps1 -Version $env:PREVIEW_VERSION -Commit $env:PREVIEW_COMMIT -Publish
+          exit $LASTEXITCODE
+
+      - name: Attest preview provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: artifacts/release-assets/*
+
+      - name: Upload preview assets without overwriting
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          ./tools/scripts/ci/Publish-ReleaseAssets.ps1 -Tag "v$($env:PREVIEW_VERSION)" -Path artifacts/release-assets -EntriesPath artifacts/release-entries/preview.json
+          exit $LASTEXITCODE
+
+      - name: Publish verified preview without changing Latest
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          ./tools/scripts/Set-PreviewRelease.ps1 -Stage publish -Version $env:PREVIEW_VERSION -Commit $env:PREVIEW_COMMIT -Publish
+          exit $LASTEXITCODE

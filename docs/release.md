@@ -33,12 +33,54 @@ gh workflow run publish.yml --repo lzocateli/PixelPointer --ref main -f preview=
 gh run list --repo lzocateli/PixelPointer --workflow publish.yml
 ```
 
-Use o `run_id` exibido para baixar `pixelpointer-preview-<run_id>-1` com
-`gh run download <run_id> --repo lzocateli/PixelPointer --name <artifact>`. Essa
-execução valida um snapshot da `main`; para um candidato da próxima versão, use a
-preview obrigatória do Release PR, cujo `VersionPrefix` já contém o bump proposto
-pelo release-please. Preview não substitui o merge humano do Release PR, a
-aprovação do Environment `release` nem a publicação de produção.
+Após build, smoke, testes de instaladores e atestações de SBOM passarem, o job
+`Publish GitHub Pre-release` aguarda sua aprovação no Environment `release`.
+O GitHub App `Altivy Release` cria a tag `vX.Y.Z-preview.N` no commit validado,
+prepara uma release em rascunho, atesta a proveniência e anexa os 14 assets mais
+`SHA256SUMS`. Só então publica com `prerelease=true` e `make_latest=false`.
+A versão aparece em [Releases](https://github.com/lzocateli/PixelPointer/releases)
+com a marca **Pre-release** e downloads públicos sem login; não expira após
+sete dias como o artifact do Actions. A estável continua sendo `Latest`.
+
+Essa é uma exceção autorizada pelo mantenedor em 2026-10-31 para o canal preview:
+não altera o fluxo estável do Groundwork, não executa `post-release.yml` e não
+atualiza Homebrew/winget. A preview obrigatória de PR continua sendo apenas um
+artifact, sem secrets ou publicação. A preview manual usa o próximo patch da
+versão registrada e o sufixo `preview.<run_number>`; o prefixo é aplicado somente
+nos checkouts de build e smoke, sem editar a versão no Git. Isso não significa
+que essa será a próxima versão estável calculada pelo release-please.
+
+Na outra máquina, baixe o pacote do RID e `SHA256SUMS`, confira o SHA-256 e
+extraia o `.zip`/`.tar.gz` mantendo as bibliotecas nativas junto ao executável,
+ou instale o `.deb` Linux. Execute `pixelpointer --version` para conferir o
+sufixo. Previews não incluem `install.sh`/`install.ps1`, não são servidas por
+`releases/latest` e não são aceitas pelo deploy do Groundwork. A aprovação da
+preview não substitui o merge humano do Release PR nem a aprovação da produção.
+
+### Segurança e recuperação da preview
+
+| Risco | Controle |
+| --- | --- |
+| Publicação a partir de PR ou branch não aprovada | Job somente em dispatch da `main`, aprovação do mantenedor no Environment `release`, checkout do commit da execução e ancestralidade de `origin/main` |
+| Uso de token pessoal para criar tags protegidas | Somente o App autorizado, com token limitado a `contents: write`; token e chave não entram nos artifacts nem na saída dos scripts |
+| Pacotes incompletos, adulterados ou de outra execução | Build e smoke com a mesma versão, atestações de SBOM/proveniência, conjunto exato de assets, SHA-256 local e digest remoto conferidos antes de publicar |
+| Reexecução sobrescrever release ou promover preview a estável | Rascunho deve corresponder à mesma tag/commit; nunca mover tags ou sobrescrever assets; `prerelease=true`, `make_latest=false` e nenhum post-release |
+
+Se a execução falhar após criar a tag ou o rascunho, eles são preservados e a
+preview não fica pública. Não exclua/mova tags para contornar a falha. Uma
+reexecução da mesma execução só finaliza se todos os digests forem idênticos;
+builds podem não ser reprodutíveis byte a byte. Se houver divergência, inicie
+um novo dispatch, com outro `preview.N`. Uma tag existente sem rascunho exige
+investigação do mantenedor; o script recusa reutilizá-la. Após uma preview já
+pública, uma reexecução recusa alterá-la; para corrigir, publique outra preview.
+
+O comando local equivalente é
+`tools/scripts/Set-PreviewRelease.ps1`: sem `-Publish`, valida arquivos e emite
+o payload sem acessar o GitHub; `-Publish` é reservado ao job aprovado com o
+App. `tools/scripts/Test-PreviewRelease.ps1`, incluído no
+`Invoke-Validation.ps1`, testa filesystem real e API sintética em container.
+Esses testes não substituem a primeira publicação real dos seis RIDs no Actions
+nem o aceite gráfico nas máquinas de destino.
 
 ## Primeira versão funcional
 
