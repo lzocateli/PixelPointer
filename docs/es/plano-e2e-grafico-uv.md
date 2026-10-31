@@ -109,6 +109,7 @@ basadas únicamente en `sleep`.
 | Transparencia | Dibujar sobre escena animada con compositor | Fondo sigue cambiando; trazos persisten; PNG contiene alfa |
 | Sin compositor | Dibujar sin compositor | Aviso explícito y captura congelada; sin afirmar transparencia |
 | Guardado | Ctrl+S repetido, destino XDG con espacios y acentos | PNG decodificable, carpeta correcta, nombres únicos, archivos conservados |
+| Configuración | `settings.json` con color, grosor y zoom inicial; después un archivo inválido | `probe` carga el archivo; zoom 4x, trazo azul grueso; el archivo inválido genera un aviso, usa los valores predeterminados y queda intacto |
 | Fallo de guardado | Configuración inválida o destino inaccesible | Error visible, sin destino alternativo, proceso utilizable |
 | Salir de superposición | Esc y botón derecho donde corresponda | Transiciones del contrato, reapertura posible, daemon conservado |
 | Bandeja gráfica | Pulsar icono y Zoom/Desenhar/Sair | Icono visible, menú/acción correctos, cierre limpio |

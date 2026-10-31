@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using PixelPointer.Core.Annotations;
+using PixelPointer.Core.Settings;
 using SDL;
 using SkiaSharp;
 using static SDL.SDL3;
@@ -25,7 +26,7 @@ internal sealed unsafe partial class OverlaySession
 {
     private readonly SKBitmap? _screenshot;
     private readonly SKImage? _image;
-    private readonly AnnotationDocument _annotations = new();
+    private readonly AnnotationDocument _annotations;
     private readonly List<double> _frameTimes = [];
     private OverlayMode _mode;
     private float _zoom = 1f;
@@ -45,18 +46,21 @@ internal sealed unsafe partial class OverlaySession
     private string? _saveMessage;
     private bool _saveFailed;
 
-    internal OverlaySession(SKBitmap? screenshot, OverlayMode mode, bool transparentBackground = false)
+    internal OverlaySession(SKBitmap? screenshot, OverlayMode mode, bool transparentBackground = false,
+        AppSettings? settings = null)
     {
         if (screenshot is null && (!transparentBackground || mode != OverlayMode.Draw))
         {
             throw new ArgumentException("Uma captura é obrigatória, exceto no desenho transparente.", nameof(screenshot));
         }
 
+        settings ??= AppSettings.Default;
         _screenshot = screenshot;
         _image = screenshot is null ? null : SKImage.FromBitmap(screenshot);
         _mode = mode;
         _transparentBackground = transparentBackground;
-        _targetZoom = mode == OverlayMode.Zoom ? 2f : 1f;
+        _annotations = new AnnotationDocument(settings.PenColor, settings.PenWidth);
+        _targetZoom = mode == OverlayMode.Zoom ? settings.InitialZoom : 1f;
     }
 
     internal OverlayMetrics Run(CancellationToken cancellationToken = default)

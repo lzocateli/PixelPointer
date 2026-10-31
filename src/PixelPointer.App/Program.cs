@@ -103,6 +103,9 @@ static int Help(TextWriter writer)
         Destino do Ctrl+S: Imagens/Screenshots no Windows, preferência de capturas ou
         Área de Trabalho no macOS, PICTURES/Screenshots conforme XDG no Linux.
         O caminho final é informado na janela; arquivos existentes são preservados.
+        Configurações opcionais em settings.json (o probe mostra o caminho), lidas a cada
+        sobreposição: {"version": 1, "pen": {"color": "red", "width": 6}, "zoom": {"initial": 2}}.
+        Arquivo inválido é ignorado com aviso e nunca é regravado.
         """);
     return 0;
 }
@@ -119,6 +122,13 @@ static async Task<int> ProbeAsync()
     }
 
     Console.WriteLine($"Skia ............ SkiaSharp {typeof(SKBitmap).Assembly.GetName().Version}");
+    var settings = SettingsStore.Load();
+    Console.WriteLine($"Configurações .. {settings.Status switch
+    {
+        SettingsStatus.Loaded => "carregadas",
+        SettingsStatus.Missing => "ausentes; usando os padrões",
+        _ => $"ignoradas ({settings.Error}); usando os padrões",
+    }}{(settings.Path is null ? string.Empty : $" em {settings.Path}")}");
 
     // SDL antes de qualquer await, para rodar na thread principal.
     InitSdl();
@@ -353,7 +363,7 @@ static void RunOverlay(
         Environment.SetEnvironmentVariable("XDG_ACTIVATION_TOKEN", token);
     }
 
-    var metrics = new OverlaySession(bitmap, mode, transparentDraw).Run(cancellationToken);
+    var metrics = new OverlaySession(bitmap, mode, transparentDraw, LoadSettings()).Run(cancellationToken);
     Console.WriteLine($"""
         --- sessão {command.Id} ---
         captura ......... {(transparentDraw ? "X11 transparente" : image is null ? capture!.Name : "arquivo")}: {bitmap?.Width ?? metrics.PixelWidth}x{bitmap?.Height ?? metrics.PixelHeight} em {captureMs:0} ms
@@ -362,6 +372,17 @@ static void RunOverlay(
         quadros ......... {metrics.Frames}, média {metrics.AverageFrameMs:0.0} ms, p95 {metrics.P95FrameMs:0.0} ms (Skia CPU + upload)
         caneta .......... {metrics.PenEvents} eventos, pressão máx. {metrics.MaxPressure:0.00}
         """);
+}
+
+static PixelPointer.Core.Settings.AppSettings LoadSettings()
+{
+    var result = SettingsStore.Load();
+    if (result.Status == SettingsStatus.Invalid)
+    {
+        Console.Error.WriteLine($"aviso: configurações ignoradas ({(result.Path is null ? string.Empty : $"{result.Path}: ")}{result.Error}); usando os padrões.");
+    }
+
+    return result.Settings;
 }
 
 static unsafe void PumpSdlEvents()

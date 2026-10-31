@@ -59,6 +59,39 @@ salvamento. No desenho transparente X11, o fundo do PNG também é transparente:
 ele exporta as anotações, sem recapturar o desktop. Para salvar a tela congelada
 com anotações, use o zoom; W/K exportam o quadro branco/preto explicitamente.
 
+## Configurações
+
+O arquivo `settings.json` é opcional; sem ele, valem os padrões abaixo. O
+aplicativo só lê o arquivo, a cada sobreposição, e nunca o cria nem o regrava.
+`pixelpointer probe` mostra o caminho efetivo e se o arquivo foi carregado.
+
+| Sistema | Caminho |
+| --- | --- |
+| Windows | `%APPDATA%\PixelPointer\settings.json` |
+| macOS | `~/Library/Application Support/PixelPointer/settings.json` |
+| Linux | `$XDG_CONFIG_HOME/pixelpointer/settings.json` ou `~/.config/pixelpointer/settings.json` |
+
+```json
+{
+  "version": 1,
+  "pen": { "color": "red", "width": 6 },
+  "zoom": { "initial": 2 }
+}
+```
+
+| Campo | Valores | Padrão |
+| --- | --- | --- |
+| `version` | `1` | `1` |
+| `pen.color` | `red`, `green`, `blue`, `yellow`, `orange`, `pink` | `red` |
+| `pen.width` | 1 a 60 | 6 |
+| `zoom.initial` | 1 a 16, ampliação ao abrir o zoom | 2 |
+
+Campos omitidos usam o padrão; comentários `//` e vírgulas finais são aceitos.
+Campo desconhecido, valor fora da faixa, JSON malformado, arquivo acima de
+64 KiB ou fora de UTF-8 invalidam o arquivo inteiro: a sobreposição abre com os
+padrões e o motivo aparece no terminal e no `probe`. As teclas continuam alterando
+cor e espessura durante a sessão sem gravar no arquivo.
+
 ## Permissões por sistema
 
 ### Linux com Wayland (GNOME, KDE, Hyprland)

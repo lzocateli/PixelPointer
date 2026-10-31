@@ -193,7 +193,7 @@ class Scenario:
 
         def diagnostics():
             for line in daemon.stdout:
-                for token in ["congelada", "indispon", "registrada", "salvar", "salva", "Atalhos"]:
+                for token in ["congelada", "indispon", "registrada", "salvar", "salva", "Atalhos", "ignoradas"]:
                     if token in line:
                         self.signals.append(token)
                 if line.startswith("Atalhos "):
@@ -339,6 +339,41 @@ class Scenario:
         self.screenshot("09-zoom-bottom-right")
         self.close_overlay()
 
+    def settings(self):
+        path = Path(os.environ["XDG_CONFIG_HOME"]) / "pixelpointer" / "settings.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        blue = (30, 144, 255)
+
+        def colored(color, region):
+            return sum(all(abs(actual - expected) <= 8 for actual, expected in zip(pixel, color))
+                       for pixel in self.display.screenshot().crop(region).getdata())
+
+        try:
+            path.write_text('{"version": 1, "pen": {"color": "blue", "width": 20}, "zoom": {"initial": 4}}\n')
+            assert "Configurações .. carregadas" in self.cli("probe"), "probe nao carregou settings.json"
+            self.overlay("zoom")
+            self.display.move(0, 0)
+            # A 4x, a linha 480 da tela corresponde a y=120 da cena, dentro do retangulo ciano.
+            self.wait("zoom inicial configurado 4x", lambda: abs(colored((0, 170, 204), (0, 480, 800, 481)) - 560) <= 4)
+            self.close_overlay()
+            self.overlay("draw")
+            self.chord("w")
+            self.display.drag(200, 300)
+            self.wait("cor e espessura configuradas", lambda: colored(blue, (190, 285, 380, 315)) > 2500)
+            self.screenshot("12-settings")
+            self.close_overlay()
+            invalid = '{"pen": {"width": 999}}\n'
+            path.write_text(invalid)
+            self.overlay("draw")
+            self.chord("w")
+            self.display.drag(200, 300)
+            self.wait("padroes com arquivo invalido", lambda: "ignoradas" in self.signals
+                      and self.red_count(self.display.screenshot()) > 300)
+            assert path.read_text() == invalid, "settings.json foi modificado"
+            self.close_overlay()
+        finally:
+            path.unlink(missing_ok=True)
+
     def save_failure(self):
         self.overlay("draw")
         invalid = Path(os.environ["HOME"]) / "destino-bloqueado"
@@ -427,6 +462,7 @@ class Scenario:
         self.close_overlay()
         self.annotations()
         self.zoom_controls()
+        self.settings()
         self.save_failure()
         for caps, num in [(False, False), (True, False), (True, True), (False, True)]:
             if caps:
