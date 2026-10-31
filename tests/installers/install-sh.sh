@@ -67,6 +67,14 @@ expect_code 0 "instalacao em prefixo explicito" sh "$installer" --base-url "$bas
 grep -q 'nao esta no PATH' "$work/out" || fail "aviso de PATH ausente"
 "$prefix/bin/pixelpointer" --version > /dev/null || fail "comando instalado nao executa"
 "$prefix/bin/pixelpointer" selftest > /dev/null || fail "bibliotecas nativas nao carregam pelo link"
+if [ "$(uname -s)" = "Linux" ]; then
+    desktop_data="$work/desktop-data"
+    expect_code 0 "integracao desktop apos instalar" env "XDG_DATA_HOME=$desktop_data" "$prefix/bin/pixelpointer" install-desktop-file
+    [ -s "$desktop_data/applications/io.github.lzocateli.PixelPointer.desktop" ] || fail "entrada desktop ausente"
+    cmp "$prefix/lib/pixelpointer/pixelpointer.svg" "$desktop_data/icons/hicolor/scalable/apps/io.github.lzocateli.PixelPointer.svg" || fail "icone desktop difere do instalado"
+    expect_code 0 "remocao da integracao desktop" env "XDG_DATA_HOME=$desktop_data" "$prefix/bin/pixelpointer" uninstall-desktop-file
+    [ ! -e "$desktop_data/icons/hicolor/scalable/apps/io.github.lzocateli.PixelPointer.svg" ] || fail "icone desktop permaneceu apos remover"
+fi
 pass "instalacao em prefixo explicito"
 
 printf 'versao anterior\n' > "$prefix/lib/pixelpointer/pixelpointer"
@@ -76,6 +84,7 @@ if grep -q 'nao esta no PATH' "$work/out"; then
     fail "aviso de PATH com o diretorio ja no PATH"
 fi
 "$prefix/bin/pixelpointer" --version > /dev/null || fail "reinstalacao nao substituiu o executavel"
+[ -s "$prefix/lib/pixelpointer/pixelpointer.svg" ] || fail "reinstalacao perdeu o icone SVG"
 [ ! -e "$prefix/lib/pixelpointer/arquivo-antigo" ] || fail "reinstalacao manteve arquivos da versao anterior"
 [ "$(ls -A "$prefix/lib")" = "pixelpointer" ] || fail "diretorios temporarios restantes em $prefix/lib"
 [ "$(ls -A "$prefix/bin")" = "pixelpointer" ] || fail "arquivos restantes em $prefix/bin"
