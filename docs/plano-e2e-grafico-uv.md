@@ -332,6 +332,24 @@ outros compositores e Windows/macOS não foram detalhados nesse reteste.
 Continuam pendentes o E2E Wayland isolado por compositor e a revisão humana dos
 vídeos automatizados X11. O aceite não conclui as fases F2/F3 inteiras.
 
+### Validação ScreenCast + PipeWire em Wayland isolado
+
+`tools/scripts/Test-WaylandScreenCast.ps1` executa o pacote em container com
+sway headless, PipeWire, WirePlumber, xdg-desktop-portal e
+xdg-desktop-portal-wlr (snapshot Debian fixado), sem rede e sem sessão, D-Bus ou
+diretórios do host. O seletor do xdg-desktop-portal-wlr está configurado para a
+única saída virtual; não há diálogo GNOME nesse ambiente.
+
+| Modo | Verificação | Resultado em 2026-10-31 |
+| --- | --- | --- |
+| Padrão, sem GPU | O xdg-desktop-portal-wlr 0.7 exige DMA-BUF e recusa o renderer pixman ([#289](https://github.com/emersion/xdg-desktop-portal-wlr/issues/289)); `capture` deve falhar com código 1, aviso de retorno ao Screenshot e erro claro, sem exceção não tratada nem arquivo | Aprovado |
+| `-RenderNode /dev/dri/renderD128` (Podman rootless, `keep-id`) | Duas capturas 800x600 por ScreenCast, cor exata do fundo, restore token 0600 reutilizado e quadro novo após mudar o fundo | Aprovado: portal 7–8 ms, primeiro quadro 19–26 ms, 36 ms no total |
+
+O modo com GPU expõe somente o nó de renderização, opcionalmente. Os tempos são
+do ambiente virtual sem diálogo; não substituem a medição no GNOME real, onde a
+meta continua < 150 ms. Em wlroots o quadro só chega após dano na tela; sem dano
+a captura volta ao Screenshot após 2 s.
+
 ## 9. Referências técnicas
 
 - [Scripts e lockfiles no uv](https://docs.astral.sh/uv/guides/scripts/).
