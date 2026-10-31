@@ -89,6 +89,12 @@ tests/
   PixelPointer.IntegrationTests/  renderização determinística comparada com imagens de referência
 ```
 
+**F2 em andamento (2026-10-31):** `src/PixelPointer.Core` já contém o modelo de
+anotações (`AnnotationDocument`: traços, cor, espessura, quadro, desfazer e limpar),
+sem SDL nem Skia, coberto por testes unitários. A sobreposição usa esse modelo sem
+mudar atalhos nem aparência. Formas, texto, configurações e os demais módulos
+acima continuam pendentes.
+
 O mesmo binário é app e CLI: `pixelpointer zoom|draw|timer <min>|snip` envia o comando por socket Unix
 (`$XDG_RUNTIME_DIR` ou diretório temporário; AF_UNIX também no Windows 10+) à instância em execução.
 
