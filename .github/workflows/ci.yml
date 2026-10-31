@@ -125,12 +125,11 @@ jobs:
   release-preview:
     name: Release preview packages
     if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'release-please--branches--main' }}
-    uses: ./.github/workflows/publish.yml
+    uses: ./.github/workflows/release-preview.yml
     permissions:
       contents: read
     with:
-      preview: true
-      preview_suffix: 'preview.${{ github.run_number }}'
+      version_suffix: 'preview.${{ github.run_number }}'
 
   result:
     name: Result
