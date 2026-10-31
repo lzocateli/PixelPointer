@@ -96,8 +96,12 @@ anotaciones (`AnnotationDocument`: trazos, color, grosor, pizarra, deshacer y
 borrar), sin SDL ni Skia, cubierto por pruebas unitarias. La superposición usa este
 modelo sin cambiar atajos ni apariencia. La configuración de solo lectura en
 `settings.json` (color y grosor iniciales, zoom inicial; JSON con source
-generator) se describe en la [guía de uso](uso.md#configuración). Formas,
-texto, atajos configurables y los demás módulos anteriores siguen pendientes.
+generator) se describe en la [guía de uso](uso.md#configuración).
+`src/PixelPointer.Rendering` (`SceneRenderer`) dibuja fondo, pizarra y trazos
+de forma independiente de la ventana, con pruebas de imagen en CPU; la
+superposición conserva solo el cursor y los mensajes. La renderización en GPU,
+formas, texto, atajos configurables y los demás módulos anteriores siguen
+pendientes.
 
 El mismo binario es aplicación y CLI: `pixelpointer zoom|draw|timer <min>|snip`
 envía el comando mediante socket Unix (`$XDG_RUNTIME_DIR` o directorio temporal;
