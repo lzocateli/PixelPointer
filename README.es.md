@@ -47,6 +47,30 @@ curl -fsSL https://github.com/lzocateli/PixelPointer/releases/latest/download/in
 & ([scriptblock]::Create((Invoke-RestMethod https://github.com/lzocateli/PixelPointer/releases/latest/download/install.ps1)))
 ```
 
+En Windows, si el directorio no está en el `PATH`, `install.ps1` sugiere dos
+opciones; usa **solo una**. La recomendada graba el `PATH` del usuario en el
+registro, pero solo la ven los procesos nuevos: en la misma sesión de PowerShell,
+`pixelpointer` sigue "no reconocido" hasta abrir otra terminal o actualizar la
+sesión:
+
+```powershell
+$env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
+```
+
+La alternativa por perfil graba `$PROFILE.CurrentUserAllHosts` (`profile.ps1`),
+que Windows PowerShell solo carga cuando la directiva de ejecución permite
+scripts. Con la directiva predeterminada `Restricted`, cada terminal nueva
+muestra "profile.ps1 no se puede cargar porque la ejecución de scripts está
+deshabilitada". Si ya grabaste el `PATH` en el registro, elimina del perfil la
+línea `$env:PATH = ...pixelpointer...`; el perfil es innecesario. Para conservar
+el perfil, permite scripts locales solo para tu usuario, sabiendo que esto relaja
+la directiva (una directiva impuesta por GPO prevalece; verifícala con
+`Get-ExecutionPolicy -List`):
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+```
+
 ```bash
 # Homebrew (macOS y Linux)
 brew install lzocateli/tap/pixelpointer
@@ -107,6 +131,18 @@ ventana. Para usarlo sin terminal en Linux, ejecuta
 aplicaciones. Sal con **Sair** en la bandeja o mediante `pixelpointer quit`. Esto
 no activa el
 inicio automático de sesión.
+
+En Windows (PowerShell), inicia el daemon en un proceso separado y sin ventana:
+
+```powershell
+Start-Process pixelpointer -ArgumentList daemon -WindowStyle Hidden
+pixelpointer status
+```
+
+El indicador se libera de inmediato y el daemon sigue activo incluso después de
+cerrar PowerShell. Sal con **Sair** en la bandeja o mediante `pixelpointer quit`.
+En este modo los mensajes del daemon no se muestran; para diagnosticar conflictos
+de atajos, ejecuta `pixelpointer daemon` en primer plano.
 
 | Atajo o tecla | Acción |
 | --- | --- |

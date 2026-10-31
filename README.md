@@ -47,6 +47,29 @@ curl -fsSL https://github.com/lzocateli/PixelPointer/releases/latest/download/in
 & ([scriptblock]::Create((Invoke-RestMethod https://github.com/lzocateli/PixelPointer/releases/latest/download/install.ps1)))
 ```
 
+No Windows, se o diretório não estiver no `PATH`, o `install.ps1` sugere duas
+opções; use **apenas uma**. A recomendada grava o `PATH` do usuário no registro,
+mas só vale para processos novos: no mesmo PowerShell, `pixelpointer` continua
+"não reconhecido" até abrir outro terminal ou atualizar a sessão:
+
+```powershell
+$env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
+```
+
+A alternativa pelo perfil grava `$PROFILE.CurrentUserAllHosts` (`profile.ps1`),
+que o Windows PowerShell só carrega quando a política de execução permite
+scripts. Com a política padrão `Restricted`, todo terminal novo mostra
+"profile.ps1 não pode ser carregado porque a execução de scripts foi
+desabilitada". Se já gravou o `PATH` no registro, remova do perfil a linha
+`$env:PATH = ...pixelpointer...`; o perfil é desnecessário. Para manter o perfil,
+permita scripts locais somente para o seu usuário, ciente de que isso relaxa a
+política (uma política imposta por GPO prevalece; confira com
+`Get-ExecutionPolicy -List`):
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+```
+
 ```bash
 # Homebrew (macOS e Linux)
 brew install lzocateli/tap/pixelpointer
@@ -106,6 +129,18 @@ e encerrar quando a janela do terminal for fechada. Para usar sem terminal no
 Linux, execute `pixelpointer install-desktop-file` e abra **PixelPointer** pelo
 menu de aplicativos. Encerre por **Sair** na tray ou por `pixelpointer quit`.
 Essa integração não configura início automático com a sessão.
+
+No Windows (PowerShell), inicie o daemon em um processo separado, sem janela:
+
+```powershell
+Start-Process pixelpointer -ArgumentList daemon -WindowStyle Hidden
+pixelpointer status
+```
+
+O prompt é liberado na hora e o daemon continua ativo mesmo após fechar o
+PowerShell. Encerre por **Sair** na tray ou por `pixelpointer quit`. Nessa forma
+as mensagens do daemon não aparecem; para diagnosticar conflitos de atalho,
+execute `pixelpointer daemon` em primeiro plano.
 
 | Atalho ou tecla | Ação |
 | --- | --- |
