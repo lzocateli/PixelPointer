@@ -133,6 +133,20 @@ desktop shortcuts that run the command:
 With the `daemon` running, `pixelpointer zoom` only sends the command through
 the local socket (`$XDG_RUNTIME_DIR/pixelpointer.sock`) and exits in milliseconds.
 
+**ScreenCast capture.** With a single monitor, each Ctrl+1/Ctrl+2 opens a
+ScreenCast portal session, reads one frame through PipeWire (the system
+`libpipewire-0.3`) and closes the session; the screen-sharing indicator appears
+only during that capture. The first time, the desktop asks you to choose and
+authorize the monitor. The *restore token* returned by the portal is stored in
+`$XDG_STATE_HOME/pixelpointer/screencast-restore-token` (or
+`~/.local/state/...`) with mode 0600 and avoids repeating the dialog; delete the
+file to revoke it. Cancelling the dialog cancels the overlay. With more than one
+monitor, without PipeWire or without the ScreenCast portal, capture uses the
+Screenshot portal. On wlroots compositors (Sway, Hyprland), a frame only arrives
+after something changes on screen; otherwise capture uses Screenshot after 2 s.
+The terminal reports the path used and the time spent in the portal and on the
+first frame.
+
 ### Linux on X11
 
 Hotkeys and capture work without extra permissions (XGrabKey and XGetImage).

@@ -74,6 +74,7 @@ atribución cuando se adapte algo.
 | D10 | Señales (F0) | `SDL_HINT_NO_SIGNAL_HANDLERS=1`; SIGINT/SIGTERM gestionados mediante `PosixSignalRegistration` |
 | D11 | Idiomas de documentación (2026-10-30) | pt-BR es la referencia (`README.md`, `docs/*.md`); traducciones en `README.en.md`, `README.es.md`, `docs/en/` y `docs/es/`. La regla vigente de `.github/instructions/documentation.instructions.md` también incluye planes e informes, sustituyendo el alcance anterior limitado a incorporación y uso |
 | D12 | Paquetes y plataformas (2026-10-30) | Paquetes con ejecutable, SDL3, libSkiaSharp, icono SVG, `LICENSE` y `THIRD-PARTY-NOTICES.md`; instaladores crean directorio de aplicación y enlace del comando. Linux mínimo glibc 2.34 (requerido por libSDL3 incluida); sin `linux-musl` (SDL3-CS no publica binario musl) |
+| D13 | ScreenCast en Wayland (2026-10-31, decisión del mantenedor) | Sesión **bajo demanda** por captura, cerrada tras el primer cuadro, para que el indicador de pantalla compartida no sea permanente; mantener la sesión abierta solo se evaluará con mediciones. `libpipewire-0.3` (MIT) del sistema mediante `LibraryImport`, sin redistribuirla. Restore token en `$XDG_STATE_HOME/pixelpointer` (0600, nunca en logs). Solo con un monitor; en otro caso, o ante fallos, portal Screenshot. La cancelación del usuario no se elude |
 
 ## 3. Arquitectura
 
@@ -105,7 +106,9 @@ con retorno automático a CPU. En un contenedor con Xvfb y Mesa llvmpipe (GLX), 
 zoom en OpenGL produjo píxeles idénticos a los de CPU; la interfaz OpenGL nativa
 de Skia puede no estar disponible con EGL (Wayland), en cuyo caso se usa la CPU.
 Falta la aceptación manual en hardware real y la
-medición en 4K antes de hacerla predeterminada. Formas, texto, atajos
+medición en 4K antes de hacerla predeterminada. En Wayland con un monitor, la
+captura usa ScreenCast + PipeWire bajo demanda (D13): 36 ms en Wayland aislado con
+sway, frente a ~550 ms de Screenshot en GNOME en la F0; falta medir en GNOME real. Formas, texto, atajos
 configurables y los demás módulos anteriores siguen pendientes.
 
 El mismo binario es aplicación y CLI: `pixelpointer zoom|draw|timer <min>|snip`
@@ -168,7 +171,7 @@ de las fases F2 a F9 de la sección 5.
 | --- | --- | --- |
 | Aceptación manual de Zoom y Desenhar accionados desde la bandeja en GNOME X11 | Issue #3, 3.5 | Icono, menú y Sair aceptados; ambas acciones aún sin confirmar |
 | Apertura desde el menú de aplicaciones de GNOME sin terminal | Issue #3, 3.6 | Aprobó en el E2E con lanzador sintético; falta aceptación real |
-| Matriz Wayland por compositor: portales con y sin Registry, permisos denegados, bandeja y E2E aislado con libei/EIS | Issue #3, 3.1, 3.3 y 5; E2E, 8 | Aceptación manual solo en Ubuntu 26.04/GNOME |
+| Matriz Wayland por compositor: portales con y sin Registry, permisos denegados, bandeja y E2E aislado con libei/EIS | Issue #3, 3.1, 3.3 y 5; E2E, 8 | ScreenCast/PipeWire pasó en Sway aislado con render node; el modo sin GPU se trata. Falta aceptación de ScreenCast en GNOME real (consentimiento, token, indicador y latencia), varios monitores y otros compositores; la aceptación de v0.1.2 es anterior a esta implementación |
 | Ctrl+S nativo: Known Folder en Windows, incluido OneDrive, y preferencia de macOS, con filesystem real por SO | Issue #3, 3.7 | Cerrado por decisión del mantenedor el 2026-10-31; lógica cubierta por pruebas, sin validación nativa registrada |
 | Recorrido manual completo en Windows | F0; issue #3 | Evidencia parcial el 2026-10-31, descrita abajo |
 | Recorrido manual completo en macOS | F0; issue #3 | Sin evidencia nativa |

@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using Microsoft.Win32.SafeHandles;
 using Tmds.DBus.Protocol;
 
 namespace PixelPointer.App.Linux;
@@ -12,12 +13,13 @@ internal enum AppIdRegistrationStatus
 
 internal sealed record AppIdRegistrationResult(AppIdRegistrationStatus Status, string? Detail = null);
 
-/// <summary>Cliente mínimo dos portais XDG (Registry, Screenshot e GlobalShortcuts) sobre o barramento de sessão.</summary>
+/// <summary>Cliente mínimo dos portais XDG (Registry, Screenshot, ScreenCast e GlobalShortcuts) sobre o barramento de sessão.</summary>
 internal sealed class PortalClient : IDisposable
 {
     internal const string AppId = "io.github.lzocateli.PixelPointer";
     private const string Destination = "org.freedesktop.portal.Desktop";
     private const string DesktopPath = "/org/freedesktop/portal/desktop";
+    private const string ScreenCastInterface = "org.freedesktop.portal.ScreenCast";
 
     private readonly DBusConnection _connection;
     private int _tokenCounter;
@@ -101,6 +103,131 @@ internal sealed class PortalClient : IDisposable
             writer.WriteDictionaryEnd(dict);
         }, cancellationToken).ConfigureAwait(false);
         return results["uri"].GetString();
+    }
+
+    /// <summary>Lê uma propriedade uint32 de uma interface do portal, ou 0 quando ausente.</summary>
+    internal async Task<uint> GetUInt32PropertyAsync(string portalInterface, string property)
+    {
+        try
+        {
+            var message = CreateMessage((ref MessageWriter writer) =>
+            {
+                writer.WriteMethodCallHeader(Destination, DesktopPath, "org.freedesktop.DBus.Properties", "Get", "ss");
+                writer.WriteString(portalInterface);
+                writer.WriteString(property);
+            });
+            return await _connection.CallMethodAsync(message,
+                static (message, _) => message.GetBodyReader().ReadVariantValue().GetUInt32()).ConfigureAwait(false);
+        }
+        catch (DBusErrorReplyException)
+        {
+            return 0;
+        }
+    }
+
+    /// <summary>Cria uma sessão ScreenCast e devolve o handle da sessão.</summary>
+    internal async Task<string> CreateScreenCastSessionAsync(CancellationToken cancellationToken)
+    {
+        var token = NextToken();
+        var sessionToken = NextToken();
+        var results = await RequestAsync(token, (ref MessageWriter writer) =>
+        {
+            writer.WriteMethodCallHeader(Destination, DesktopPath, ScreenCastInterface, "CreateSession", "a{sv}");
+            var dict = writer.WriteDictionaryStart();
+            WriteStringEntry(ref writer, "handle_token", token);
+            WriteStringEntry(ref writer, "session_handle_token", sessionToken);
+            writer.WriteDictionaryEnd(dict);
+        }, cancellationToken).ConfigureAwait(false);
+        var handle = results["session_handle"];
+        return handle.Type == VariantValueType.ObjectPath ? handle.GetObjectPathAsString() : handle.GetString();
+    }
+
+    /// <summary>Seleciona um único monitor; com <paramref name="persist"/>, pede um restore token reutilizável.</summary>
+    internal async Task SelectScreenCastSourcesAsync(string session, uint cursorMode, bool persist, string? restoreToken,
+        CancellationToken cancellationToken)
+    {
+        var token = NextToken();
+        await RequestAsync(token, (ref MessageWriter writer) =>
+        {
+            writer.WriteMethodCallHeader(Destination, DesktopPath, ScreenCastInterface, "SelectSources", "oa{sv}");
+            writer.WriteObjectPath(session);
+            var dict = writer.WriteDictionaryStart();
+            WriteStringEntry(ref writer, "handle_token", token);
+            WriteUInt32Entry(ref writer, "types", 1);
+            writer.WriteDictionaryEntryStart();
+            writer.WriteString("multiple");
+            writer.WriteVariantBool(false);
+            if (cursorMode != 0)
+            {
+                WriteUInt32Entry(ref writer, "cursor_mode", cursorMode);
+            }
+
+            if (persist)
+            {
+                WriteUInt32Entry(ref writer, "persist_mode", 2);
+                if (restoreToken is not null)
+                {
+                    WriteStringEntry(ref writer, "restore_token", restoreToken);
+                }
+            }
+
+            writer.WriteDictionaryEnd(dict);
+        }, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Inicia a sessão; o desktop pode pedir confirmação. Devolve o nó PipeWire e o novo restore token.</summary>
+    internal async Task<(uint NodeId, string? RestoreToken)> StartScreenCastAsync(string session,
+        CancellationToken cancellationToken)
+    {
+        var token = NextToken();
+        var results = await RequestAsync(token, (ref MessageWriter writer) =>
+        {
+            writer.WriteMethodCallHeader(Destination, DesktopPath, ScreenCastInterface, "Start", "osa{sv}");
+            writer.WriteObjectPath(session);
+            writer.WriteString(string.Empty);
+            var dict = writer.WriteDictionaryStart();
+            WriteStringEntry(ref writer, "handle_token", token);
+            writer.WriteDictionaryEnd(dict);
+        }, cancellationToken).ConfigureAwait(false);
+
+        if (!results.TryGetValue("streams", out var streams) || streams.Count != 1)
+        {
+            throw new InvalidOperationException("O portal ScreenCast não devolveu exatamente um monitor.");
+        }
+
+        var nodeId = streams.GetItem(0).GetItem(0).GetUInt32();
+        var restore = results.TryGetValue("restore_token", out var value) ? value.GetString() : null;
+        return (nodeId, restore);
+    }
+
+    /// <summary>Abre o socket PipeWire restrito aos streams da sessão.</summary>
+    internal async Task<SafeFileHandle> OpenPipeWireRemoteAsync(string session)
+    {
+        var message = CreateMessage((ref MessageWriter writer) =>
+        {
+            writer.WriteMethodCallHeader(Destination, DesktopPath, ScreenCastInterface, "OpenPipeWireRemote", "oa{sv}");
+            writer.WriteObjectPath(session);
+            var dict = writer.WriteDictionaryStart();
+            writer.WriteDictionaryEnd(dict);
+        });
+        return await _connection.CallMethodAsync(message,
+            static (message, _) => message.GetBodyReader().ReadHandle<SafeFileHandle>()
+                ?? throw new InvalidOperationException("O portal não devolveu o socket do PipeWire."))
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>Encerra uma sessão de portal; falhas são ignoradas porque a sessão também termina com a conexão.</summary>
+    internal async Task CloseSessionAsync(string session)
+    {
+        try
+        {
+            var message = CreateMessage((ref MessageWriter writer) =>
+                writer.WriteMethodCallHeader(Destination, session, "org.freedesktop.portal.Session", "Close"));
+            await _connection.CallMethodAsync(message).ConfigureAwait(false);
+        }
+        catch (DBusErrorReplyException)
+        {
+        }
     }
 
     /// <summary>Cria uma sessão GlobalShortcuts e devolve o handle da sessão.</summary>
@@ -259,5 +386,12 @@ internal sealed class PortalClient : IDisposable
         writer.WriteDictionaryEntryStart();
         writer.WriteString(key);
         writer.WriteVariantString(value);
+    }
+
+    private static void WriteUInt32Entry(ref MessageWriter writer, string key, uint value)
+    {
+        writer.WriteDictionaryEntryStart();
+        writer.WriteString(key);
+        writer.WriteVariantUInt32(value);
     }
 }

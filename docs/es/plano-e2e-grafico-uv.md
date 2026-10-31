@@ -7,7 +7,7 @@
 | Fecha | 2026-10-30 |
 | Autorización humana | Solicitante, en esta conversación: autorización de E2E gráficos aislados según las reglas del proyecto |
 | Decisión autorizada | Permitir una suite gráfica automatizada separada y aislada |
-| Estado de ejecución | Primer incremento X11 implementado y ejecutado; estabilidad 10/10; revisión humana de vídeos cerrada por decisión del mantenedor el 2026-10-31, sin revisión registrada. Aceptación manual adicional Ubuntu 26.04/GNOME Wayland registrada abajo; no es E2E automatizado |
+| Estado de ejecución | X11 ejecutado con estabilidad 10/10; revisión humana de vídeos cerrada por decisión del mantenedor el 2026-10-31, sin revisión registrada. ScreenCast/PipeWire validado en Sway aislado con render node (incluye restore token y cuadro tras daño); el modo sin GPU trata la indisponibilidad. La aceptación manual Wayland de abajo corresponde a v0.1.2, anterior a ScreenCast; GNOME real y otros compositores siguen pendientes |
 | Versión funcional de referencia | v0.1.2, primera versión funcional aceptada como estable por el mantenedor el 2026-10-30 en entornos GNOME X11/Wayland registrados; no es aprobación de la matriz multiplataforma completa |
 | Primer objetivo | Linux x64, X11 en escritorio desechable |
 | Expansión | GNOME X11, Wayland por compositor y otros sistemas tras demostrar viabilidad |
@@ -180,7 +180,7 @@ solo tras prueba local en contenedores.
 | --- | --- |
 | Linux x64, X11 virtual mínimo | Ejecutado: 10/10 consecutivos con compositor/bandeja; variantes sin compositor y sin bandeja pasaron |
 | GNOME X11 | Aceptación manual de dibujo transparente, visual automático, zoom, PNG, CapsLock/NumLock, ambos monitores y cierre por Sair; capturas confirman monitor 1, icono/menú y status sin daemon; Zoom/Desenhar por bandeja, lanzador y matriz completa sin demostración individual |
-| Wayland | Aceptación manual Ubuntu 26.04/GNOME tras instalar v0.1.2: flujos ejercitados funcionales según relato, capturas de dibujo, pizarras, lanzador y bandeja. E2E aislado por compositor, libei/EIS y portales reales pendientes; sin mocks de consentimiento ni XTEST vía XWayland como prueba nativa |
+| Wayland | ScreenCast/PipeWire pasó en Sway headless aislado con render node: dos capturas, formato/color, restore token reutilizado y cuadro nuevo tras daño; sin render node, la indisponibilidad se trata sin excepción no controlada. La aceptación manual Ubuntu 26.04/GNOME de v0.1.2 es anterior a esta implementación. GNOME real (consentimiento, restore token, indicador y latencia), varios monitores y otros compositores pendientes; sin mocks de consentimiento ni XTEST vía XWayland como prueba nativa |
 | Linux arm64 | Ejecutar en arquitectura adecuada antes de declarar cobertura |
 | Windows/macOS | Backends nativos y sesiones gráficas desechables; estrategia depende de compatibilidad con contenedores y autorización específica para excepciones |
 | Lápiz/GPU/monitores físicos | Uso en ambos monitores 1920×1080 escala 1 confirmado manualmente; lápiz, otras GPU, escalas/topologías pendientes |
@@ -301,6 +301,24 @@ sin terminal, conflictos, CapsLock/NumLock en este Wayland, fallos/rechazo de pe
 otros monitores, HiDPI, lápiz, otros compositores y Windows/macOS no detallados en
 este retest. Pendientes E2E Wayland aislado por compositor y revisión humana de
 vídeos X11. Aceptación no completa toda F2/F3.
+
+### Validación ScreenCast + PipeWire en Wayland aislado
+
+`tools/scripts/Test-WaylandScreenCast.ps1` ejecuta el paquete en un contenedor con
+sway headless, PipeWire, WirePlumber, xdg-desktop-portal y
+xdg-desktop-portal-wlr (snapshot Debian fijado), sin red y sin la sesión, D-Bus ni
+directorios del host. El selector de xdg-desktop-portal-wlr está configurado para
+la única salida virtual; no hay diálogo de GNOME en este entorno.
+
+| Modo | Verificación | Resultado el 2026-10-31 |
+| --- | --- | --- |
+| Predeterminado, sin GPU | xdg-desktop-portal-wlr 0.7 exige DMA-BUF y rechaza el renderer pixman ([#289](https://github.com/emersion/xdg-desktop-portal-wlr/issues/289)); `capture` debe fallar con código 1, aviso de retorno a Screenshot y error claro, sin excepción no controlada ni archivo | Aprobado |
+| `-RenderNode /dev/dri/renderD128` (Podman rootless, `keep-id`) | Dos capturas 800x600 por ScreenCast, color exacto del fondo, restore token 0600 reutilizado y cuadro nuevo tras cambiar el fondo | Aprobado: portal 7–8 ms, primer cuadro 19–26 ms, 36 ms en total |
+
+El modo con GPU expone solo el nodo de renderizado, de forma opcional. Los tiempos
+son del entorno virtual sin diálogo; no sustituyen la medición en GNOME real,
+donde la meta sigue siendo < 150 ms. En wlroots el cuadro solo llega tras daño en
+la pantalla; sin daño, la captura vuelve a Screenshot tras 2 s.
 
 ## 9. Referencias técnicas
 

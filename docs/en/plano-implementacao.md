@@ -73,6 +73,7 @@ code is MIT and may serve as a behavioral reference, with attribution for adapta
 | D10 | Signals (F0) | `SDL_HINT_NO_SIGNAL_HANDLERS=1`; SIGINT/SIGTERM handled through `PosixSignalRegistration` |
 | D11 | Documentation languages (2026-10-30) | pt-BR is authoritative (`README.md`, `docs/*.md`); translations in `README.en.md`, `README.es.md`, `docs/en/` and `docs/es/`. The current rule in `.github/instructions/documentation.instructions.md` also includes plans and reports, replacing the previous scope limited to onboarding and usage |
 | D12 | Packages and platforms (2026-10-30) | Packages include executable, SDL3, libSkiaSharp, SVG icon, `LICENSE` and `THIRD-PARTY-NOTICES.md`; installers create the app directory and command link. Linux minimum glibc 2.34 (required by bundled libSDL3); no `linux-musl` (SDL3-CS provides no musl binary) |
+| D13 | ScreenCast on Wayland (2026-10-31, maintainer decision) | **On-demand** session per capture, closed after the first frame, so the sharing indicator is not permanent; keeping the session open will only be evaluated with measurements. System `libpipewire-0.3` (MIT) through `LibraryImport`, not redistributed. Restore token in `$XDG_STATE_HOME/pixelpointer` (0600, never logged). Single monitor only; otherwise, or on failure, the Screenshot portal. User cancellation is not bypassed |
 
 ## 3. Architecture
 
@@ -103,7 +104,9 @@ CPU fallback. In a container with Xvfb and Mesa llvmpipe (GLX), OpenGL zoom
 produced pixels identical to the CPU path; Skia's native OpenGL interface may be
 unavailable with EGL (Wayland), in which case the CPU is used. Manual acceptance
 on real hardware and 4K measurement are required
-before making it the default. Shapes, text, configurable hotkeys and the other
+before making it the default. On Wayland with one monitor, capture uses on-demand
+ScreenCast + PipeWire (D13): 36 ms on isolated Wayland with sway, against ~550 ms
+for Screenshot on GNOME in F0; measurement on real GNOME is pending. Shapes, text, configurable hotkeys and the other
 modules above remain pending.
 
 The same binary is both app and CLI: `pixelpointer zoom|draw|timer <min>|snip`
@@ -166,7 +169,7 @@ addition to phases F2 to F9 in section 5.
 | --- | --- | --- |
 | Manual acceptance of Zoom and Draw triggered from the tray on GNOME X11 | Issue #3, 3.5 | Icon, menu and Sair accepted; both actions still unconfirmed |
 | Launch from the GNOME applications menu without a terminal | Issue #3, 3.6 | Passed in E2E with a synthetic launcher; real acceptance missing |
-| Wayland matrix per compositor: portals with and without Registry, denied permissions, tray and isolated E2E with libei/EIS | Issue #3, 3.1, 3.3 and 5; E2E, 8 | Manual acceptance only on Ubuntu 26.04/GNOME |
+| Wayland matrix per compositor: portals with and without Registry, denied permissions, tray and isolated E2E with libei/EIS | Issue #3, 3.1, 3.3 and 5; E2E, 8 | ScreenCast/PipeWire passed on isolated Sway with a render node; no-GPU mode is handled. ScreenCast acceptance on real GNOME (consent, token, indicator and latency), multi-monitor and other compositors remain pending; v0.1.2 acceptance predates this implementation |
 | Native Ctrl+S: Windows Known Folder, including OneDrive, and macOS preference, with a real filesystem per OS | Issue #3, 3.7 | Closed by maintainer decision on 2026-10-31; logic covered by tests, no recorded native validation |
 | Full manual checklist on Windows | F0; issue #3 | Partial evidence on 2026-10-31, described below |
 | Full manual checklist on macOS | F0; issue #3 | No native evidence |
