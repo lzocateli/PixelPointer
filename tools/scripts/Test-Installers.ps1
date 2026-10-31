@@ -195,7 +195,7 @@ if command -v apt-get >/dev/null 2>&1; then
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -qq >/dev/null && apt-get install -y -qq --no-install-recommends libfontconfig1 libstdc++6 curl ca-certificates >/dev/null
 else
-  dnf install -y -q fontconfig libstdc++ >/dev/null
+    dnf install -y -q diffutils fontconfig libstdc++ >/dev/null
 fi
 if [ "$TEST_USER" = "0:0" ]; then
   exec sh /installer/test.sh

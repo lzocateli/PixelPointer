@@ -1,0 +1,185 @@
+# Preview do candidato do Release PR. Nao cria tags, releases ou publica assets.
+name: Release preview
+
+on:
+  workflow_call:
+    inputs:
+      version_suffix:
+        description: Sufixo SemVer preview.<run-number> do Release PR
+        type: string
+        required: true
+
+permissions: {}
+
+jobs:
+  validate:
+    name: Validate preview candidate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      version_suffix: ${{ steps.version.outputs.version_suffix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate preview version
+        id: version
+        shell: pwsh
+        env:
+          VERSION_SUFFIX: ${{ inputs.version_suffix }}
+        run: |
+          if (-not (Test-Path -LiteralPath .github/ci-cd.json)) { throw 'Configuração CI/CD ausente.' }
+          $config = Get-Content -LiteralPath .github/ci-cd.json -Raw | ConvertFrom-Json
+          if (-not $config.publishSnapshots) { throw 'Snapshots estão desabilitados em .github/ci-cd.json.' }
+          if ($env:VERSION_SUFFIX -notmatch '^preview\.\d{1,9}$') {
+            throw "Sufixo preview inválido: '$env:VERSION_SUFFIX'."
+          }
+          [xml] $props = Get-Content -LiteralPath Directory.Build.props -Raw
+          $prefix = @($props.Project.PropertyGroup | ForEach-Object { $_.VersionPrefix } | Where-Object { $_ })[0]
+          if ([string]::IsNullOrWhiteSpace($prefix)) { throw 'VersionPrefix ausente.' }
+          "version_suffix=$env:VERSION_SUFFIX" >> $env:GITHUB_OUTPUT
+          Write-Output "Candidato: $prefix-$env:VERSION_SUFFIX"
+
+  build:
+    name: Build preview ${{ matrix.rid }}
+    needs: validate
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { rid: linux-x64, runner: ubuntu-24.04 }
+          - { rid: linux-arm64, runner: ubuntu-24.04 }
+          - { rid: win-x64, runner: windows-2025 }
+          - { rid: win-arm64, runner: windows-11-arm }
+          - { rid: osx-arm64, runner: macos-15 }
+          - { rid: osx-x64, runner: macos-15-intel }
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET (native toolchain)
+        if: ${{ !startsWith(matrix.rid, 'linux-') }}
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Publish preview package
+        shell: pwsh
+        env:
+          RID: ${{ matrix.rid }}
+          VERSION_SUFFIX: ${{ needs.validate.outputs.version_suffix }}
+        run: |
+          $arguments = @{ Rid = $env:RID; VersionSuffix = $env:VERSION_SUFFIX }
+          if ($IsLinux) { $arguments.Engine = 'docker' }
+          ./tools/scripts/Publish-Aot.ps1 @arguments
+          exit $LASTEXITCODE
+
+      - name: Upload RID package
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: preview-package-${{ matrix.rid }}-${{ github.run_attempt }}
+          path: artifacts/release/pixelpointer-${{ matrix.rid }}.*
+          if-no-files-found: error
+          retention-days: 7
+
+  verify:
+    name: Verify preview ${{ matrix.rid }}
+    needs: [validate, build]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { rid: linux-x64, runner: ubuntu-24.04 }
+          - { rid: linux-arm64, runner: ubuntu-24.04-arm }
+          - { rid: win-x64, runner: windows-2025 }
+          - { rid: win-arm64, runner: windows-11-arm }
+          - { rid: osx-arm64, runner: macos-15 }
+          - { rid: osx-x64, runner: macos-15-intel }
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download preview packages
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: preview-package-*-${{ github.run_attempt }}
+          merge-multiple: true
+          path: artifacts/release
+
+      - name: Generate checksums
+        shell: pwsh
+        run: |
+          ./tools/scripts/Publish-Aot.ps1 -ChecksumsOnly -OutputDirectory artifacts/release
+          exit $LASTEXITCODE
+
+      - name: Smoke test package
+        shell: pwsh
+        env:
+          RID: ${{ matrix.rid }}
+          VERSION_SUFFIX: ${{ needs.validate.outputs.version_suffix }}
+        run: |
+          $arguments = @{ Rid = $env:RID; VersionSuffix = $env:VERSION_SUFFIX; ReleaseDirectory = 'artifacts/release' }
+          if ($IsLinux) { $arguments.Engine = 'docker' }
+          ./tools/scripts/Test-AotPackage.ps1 @arguments
+          exit $LASTEXITCODE
+
+      - name: Test installers
+        shell: pwsh
+        run: |
+          $arguments = @{ ReleaseDirectory = 'artifacts/release' }
+          if ($IsLinux) { $arguments.Engine = 'docker' }
+          ./tools/scripts/Test-Installers.ps1 @arguments
+          exit $LASTEXITCODE
+
+  assemble:
+    name: Assemble downloadable preview
+    needs: [validate, build, verify]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download verified preview packages
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: preview-package-*-${{ github.run_attempt }}
+          merge-multiple: true
+          path: dist
+
+      - name: Generate checksums and verify package count
+        shell: pwsh
+        run: |
+          ./tools/scripts/Publish-Aot.ps1 -ChecksumsOnly -OutputDirectory dist
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $expected = 14
+          $actual = @(Get-ChildItem -LiteralPath dist -File | Where-Object Name -ne 'SHA256SUMS').Count
+          if ($actual -ne $expected) { throw "Esperados $expected arquivos preview; encontrados $actual." }
+
+      - name: Upload verified preview
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pixelpointer-preview-${{ github.run_id }}-${{ github.run_attempt }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7

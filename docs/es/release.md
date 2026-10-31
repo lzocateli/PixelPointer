@@ -11,6 +11,35 @@ publica paquetes Native AOT para todos los RIDs compatibles y
 [`post-release.yml`](../../.github/workflows/post-release.yml) distribuye por
 Homebrew y winget. Cada etapa tiene un equivalente local en `tools/scripts/`.
 
+## Preview obligatorio
+
+Cada Release PR `release-please--branches--main` ejecuta `release-preview` dentro
+del check obligatorio `Result`. El job crea paquetes `preview.<run_number>` para
+los seis RIDs, SBOM, archivos `.deb` Linux y `SHA256SUMS`, ejecuta los smokes de
+paquetes y las pruebas de instaladores, y sube artifacts
+`pixelpointer-preview-<run_id>-<run_attempt>` durante siete días. El artifact no
+incluye `install.sh`/`install.ps1`, no crea etiqueta ni GitHub Release y no ejecuta
+`post-release.yml`. Los rulesets impiden integrar el Release PR si la preview
+obligatoria falla o sigue pendiente.
+
+Cuando pase el check, abre en Actions la ejecución `CI` del Release PR y descarga
+el artifact `pixelpointer-preview-<run_id>-<run_attempt>`; contiene
+`pixelpointer-linux-x64.tar.gz`, `.deb`, SBOM y checksums. La retención es de siete días.
+
+También se puede iniciar manualmente una preview de `main`, sin Release PR:
+
+```bash
+gh workflow run publish.yml --repo lzocateli/PixelPointer --ref main -f preview=true
+gh run list --repo lzocateli/PixelPointer --workflow publish.yml
+```
+
+Usa el `run_id` mostrado para descargar `pixelpointer-preview-<run_id>-1` con
+`gh run download <run_id> --repo lzocateli/PixelPointer --name <artifact>`. Esta
+ejecución valida un snapshot de `main`; para un candidato de la próxima versión,
+usa la preview obligatoria del Release PR, cuyo `VersionPrefix` ya contiene el
+bump propuesto por release-please. La preview no reemplaza la integración humana
+del Release PR, la aprobación del Environment `release` ni la publicación de producción.
+
 ## Primera versión funcional
 
 `v0.1.2` es la primera versión funcional aceptada como estable por el mantenedor

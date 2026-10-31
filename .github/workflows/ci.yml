@@ -122,10 +122,19 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  release-preview:
+    name: Release preview packages
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'release-please--branches--main' }}
+    uses: ./.github/workflows/release-preview.yml
+    permissions:
+      contents: read
+    with:
+      version_suffix: 'preview.${{ github.run_number }}'
+
   result:
     name: Result
     if: ${{ always() }}
-    needs: [hygiene, gitleaks, validate, validate-windows, validate-macos]
+    needs: [hygiene, gitleaks, validate, validate-windows, validate-macos, release-preview]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions: {}
@@ -134,11 +143,16 @@ jobs:
         shell: bash
         env:
           NEEDS: ${{ toJSON(needs) }}
+          RELEASE_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'release-please--branches--main' }}
         run: |
           set -euo pipefail
-          failed=$(jq -r 'to_entries[] | select(.value.result != "success") | "\(.key)=\(.value.result)"' <<<"$NEEDS")
+          failed=$(jq -r 'to_entries[] | select(.value.result != "success" and ((.key == "release-preview" and .value.result == "skipped") | not)) | "\(.key)=\(.value.result)"' <<<"$NEEDS")
           if [[ -n "$failed" ]]; then
             echo "::error::Jobs obrigatórios sem sucesso: ${failed//$'\n'/, }"
+            exit 1
+          fi
+          if [[ "$RELEASE_PR" == "true" ]] && [[ "$(jq -r '.["release-preview"].result' <<<"$NEEDS")" != "success" ]]; then
+            echo "::error::O Release PR exige os artifacts de preview aprovados antes do merge."
             exit 1
           fi
           echo "Todos os jobs obrigatórios terminaram com sucesso."
