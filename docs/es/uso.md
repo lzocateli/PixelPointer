@@ -91,6 +91,7 @@ ruta efectiva y si el archivo se cargó.
 | `pen.color` | `red`, `green`, `blue`, `yellow`, `orange`, `pink` | `red` |
 | `pen.width` | 1 a 60 | 6 |
 | `zoom.initial` | 1 a 16, ampliación al abrir el zoom | 2 |
+| `rendering.gpu` | `true` o `false`; dibuja con OpenGL | `false` |
 
 Los campos omitidos usan el valor predeterminado; se aceptan comentarios `//` y
 comas finales. Un campo desconocido, un valor fuera de rango, JSON mal formado,
@@ -98,6 +99,12 @@ un archivo de más de 64 KiB o que no sea UTF-8 invalidan todo el archivo: la
 superposición se abre con los valores predeterminados y el motivo aparece en la
 terminal y en `probe`. Las teclas siguen cambiando color y grosor durante la
 sesión sin escribir en el archivo.
+
+`rendering.gpu` es experimental y está desactivado por defecto. Al activarlo, la
+superposición intenta OpenGL y vuelve a la renderización en CPU, con un aviso en
+la terminal, si no se pueden crear la ventana o el contexto OpenGL. El dibujo
+transparente X11 y `SDL_RENDER_DRIVER=software` siguen en CPU. La línea
+`quadros` de la terminal informa el camino usado.
 
 ## Permisos por sistema
 

@@ -99,9 +99,14 @@ modelo sin cambiar atajos ni apariencia. La configuración de solo lectura en
 generator) se describe en la [guía de uso](uso.md#configuración).
 `src/PixelPointer.Rendering` (`SceneRenderer`) dibuja fondo, pizarra y trazos
 de forma independiente de la ventana, con pruebas de imagen en CPU; la
-superposición conserva solo el cursor y los mensajes. La renderización en GPU,
-formas, texto, atajos configurables y los demás módulos anteriores siguen
-pendientes.
+superposición conserva solo el cursor y los mensajes. La renderización en GPU
+(Skia sobre el OpenGL de SDL) existe como opción experimental (`rendering.gpu`)
+con retorno automático a CPU. En un contenedor con Xvfb y Mesa llvmpipe (GLX), el
+zoom en OpenGL produjo píxeles idénticos a los de CPU; la interfaz OpenGL nativa
+de Skia puede no estar disponible con EGL (Wayland), en cuyo caso se usa la CPU.
+Falta la aceptación manual en hardware real y la
+medición en 4K antes de hacerla predeterminada. Formas, texto, atajos
+configurables y los demás módulos anteriores siguen pendientes.
 
 El mismo binario es aplicación y CLI: `pixelpointer zoom|draw|timer <min>|snip`
 envía el comando mediante socket Unix (`$XDG_RUNTIME_DIR` o directorio temporal;

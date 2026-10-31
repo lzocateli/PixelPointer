@@ -87,12 +87,19 @@ it. `pixelpointer probe` shows the effective path and whether the file was loade
 | `pen.color` | `red`, `green`, `blue`, `yellow`, `orange`, `pink` | `red` |
 | `pen.width` | 1 to 60 | 6 |
 | `zoom.initial` | 1 to 16, magnification when zoom opens | 2 |
+| `rendering.gpu` | `true` or `false`; draws with OpenGL | `false` |
 
 Omitted fields use the default; `//` comments and trailing commas are accepted.
 An unknown field, an out-of-range value, malformed JSON, a file larger than
 64 KiB or one that is not UTF-8 invalidates the whole file: the overlay opens with
 the defaults and the reason is shown in the terminal and by `probe`. Keys still
 change color and width during the session without writing to the file.
+
+`rendering.gpu` is experimental and off by default. When on, the overlay tries
+OpenGL and falls back to CPU rendering, with a terminal notice, if the OpenGL
+window or context cannot be created. Transparent X11 drawing and
+`SDL_RENDER_DRIVER=software` stay on the CPU. The `quadros` line in the terminal
+reports the path used.
 
 ## Permissions per system
 

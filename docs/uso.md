@@ -85,12 +85,19 @@ aplicativo só lê o arquivo, a cada sobreposição, e nunca o cria nem o regrav
 | `pen.color` | `red`, `green`, `blue`, `yellow`, `orange`, `pink` | `red` |
 | `pen.width` | 1 a 60 | 6 |
 | `zoom.initial` | 1 a 16, ampliação ao abrir o zoom | 2 |
+| `rendering.gpu` | `true` ou `false`; desenha com OpenGL | `false` |
 
 Campos omitidos usam o padrão; comentários `//` e vírgulas finais são aceitos.
 Campo desconhecido, valor fora da faixa, JSON malformado, arquivo acima de
 64 KiB ou fora de UTF-8 invalidam o arquivo inteiro: a sobreposição abre com os
 padrões e o motivo aparece no terminal e no `probe`. As teclas continuam alterando
 cor e espessura durante a sessão sem gravar no arquivo.
+
+`rendering.gpu` é experimental e está desligado por padrão. Quando ligado, a
+sobreposição tenta OpenGL e volta à renderização em CPU, com aviso no terminal,
+se a janela ou o contexto OpenGL não puderem ser criados. O desenho transparente
+X11 e `SDL_RENDER_DRIVER=software` continuam em CPU. A linha `quadros` do
+terminal informa o caminho usado.
 
 ## Permissões por sistema
 

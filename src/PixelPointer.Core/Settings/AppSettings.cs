@@ -5,7 +5,7 @@ using PixelPointer.Core.Annotations;
 namespace PixelPointer.Core.Settings;
 
 /// <summary>Preferências do usuário aplicadas a cada sobreposição.</summary>
-public sealed record AppSettings(PenColor PenColor, float PenWidth, float InitialZoom)
+public sealed record AppSettings(PenColor PenColor, float PenWidth, float InitialZoom, bool Gpu = false)
 {
     public const int CurrentVersion = 1;
     public const float MinZoom = 1f;
@@ -41,7 +41,8 @@ public sealed record AppSettings(PenColor PenColor, float PenWidth, float Initia
             file.Pen?.Width is { } width
                 ? RequireRange(width, AnnotationDocument.MinPenWidth, AnnotationDocument.MaxPenWidth, "pen.width")
                 : Default.PenWidth,
-            file.Zoom?.Initial is { } zoom ? RequireRange(zoom, MinZoom, MaxZoom, "zoom.initial") : Default.InitialZoom);
+            file.Zoom?.Initial is { } zoom ? RequireRange(zoom, MinZoom, MaxZoom, "zoom.initial") : Default.InitialZoom,
+            file.Rendering?.Gpu ?? Default.Gpu);
     }
 
     private static PenColor ParseColor(string value) => value switch
@@ -69,6 +70,8 @@ internal sealed class SettingsFile
     public PenSection? Pen { get; set; }
 
     public ZoomSection? Zoom { get; set; }
+
+    public RenderingSection? Rendering { get; set; }
 }
 
 internal sealed class PenSection
@@ -81,6 +84,11 @@ internal sealed class PenSection
 internal sealed class ZoomSection
 {
     public float? Initial { get; set; }
+}
+
+internal sealed class RenderingSection
+{
+    public bool? Gpu { get; set; }
 }
 
 [JsonSourceGenerationOptions(
