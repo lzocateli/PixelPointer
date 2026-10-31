@@ -5,7 +5,7 @@
 | Campo | Valor |
 | --- | --- |
 | Estado inicial | Aprobado para F0 (decisiones del 2026-10-29) |
-| Estado de entrega | F0 validada en Linux/GNOME Wayland, incluido Native AOT; Windows y macOS pendientes del recorrido manual ([informe, pt-BR](../f0-relatorio.md)). F1 (repositorio, gobernanza, CI/CD y distribución) entregada el 2026-10-30 |
+| Estado de entrega | F0 validada en Linux/GNOME Wayland, incluido Native AOT; Windows con evidencia manual parcial el 2026-10-31 y macOS pendiente del recorrido manual ([informe, pt-BR](../f0-relatorio.md), [pendientes](#8-pendientes-consolidados)). F1 (repositorio, gobernanza, CI/CD y distribución) entregada el 2026-10-30 |
 | Primera versión funcional | v0.1.2, aceptada como estable por el mantenedor el 2026-10-30 en Ubuntu 24.04.5/GNOME X11 y Ubuntu 26.04/GNOME Wayland; aceptación manual limitada a flujos/entornos registrados, sin completar F2/F3 ni validar Windows/macOS |
 | Origen | Asistido por IA |
 | Revisor humano | Lincoln Zocateli |
@@ -139,3 +139,34 @@ AF_UNIX también en Windows 10+) a la instancia en ejecución.
    requiere ScreenCast por monitor (F2).
 2. Tamaño AOT en Windows/macOS (Linux: 19,2 MB con SDL3 y Skia; inicio < 10 ms).
 3. Comportamiento Windows/macOS (pendiente del recorrido manual, sección 6 del informe).
+
+## 8. Pendientes consolidados
+
+Actualizado el 2026-10-31. El [plan de la issue #3, pt-BR](../plano-correcao-issue-3.md)
+se cerró junto con la issue y se conserva como registro histórico. Sus ítems
+abiertos y los del [plan de E2E](plano-e2e-grafico-uv.md) se siguen aquí, además
+de las fases F2 a F9 de la sección 5.
+
+| Pendiente | Origen | Situación |
+| --- | --- | --- |
+| Aceptación manual de Zoom y Desenhar accionados desde la bandeja en GNOME X11 | Issue #3, 3.5 | Icono, menú y Sair aceptados; ambas acciones aún sin confirmar |
+| Apertura desde el menú de aplicaciones de GNOME sin terminal | Issue #3, 3.6 | Aprobó en el E2E con lanzador sintético; falta aceptación real |
+| Matriz Wayland por compositor: portales con y sin Registry, permisos denegados, bandeja y E2E aislado con libei/EIS | Issue #3, 3.1, 3.3 y 5; E2E, 8 | Aceptación manual solo en Ubuntu 26.04/GNOME |
+| Ctrl+S nativo: Known Folder en Windows, incluido OneDrive, y preferencia de macOS, con filesystem real por SO | Issue #3, 3.7 | Cerrado por decisión del mantenedor el 2026-10-31; lógica cubierta por pruebas, sin validación nativa registrada |
+| Recorrido manual completo en Windows | F0; issue #3 | Evidencia parcial el 2026-10-31, descrita abajo |
+| Recorrido manual completo en macOS | F0; issue #3 | Sin evidencia nativa |
+| Revisión humana de los vídeos y referencias del E2E X11 | E2E, 6 y 8 | Cerrado por decisión del mantenedor el 2026-10-31, sin revisión registrada |
+| Conflicto físico de atajos con otra aplicación, escala fraccionaria, otras topologías y GPU, lápiz | Issue #3, 3.2 y 3.3; E2E, 8 | Pendiente |
+| Linux arm64 en arquitectura adecuada | E2E, 8 | Pendiente |
+
+**Evidencia parcial en Windows el 2026-10-31:** el solicitante adjuntó cuatro
+capturas en esta conversación. Muestran la instalación con `install.ps1` y la
+verificación del SHA-256, el daemon registrando Ctrl+1 y Ctrl+2, el menú de la
+bandeja con Zoom, Desenhar y Sair, y anotaciones sobre la pantalla. También
+muestran dos problemas de orientación, ya documentados en el
+[README](../../README.es.md#instalación): `PATH` desactualizado en la sesión
+actual de PowerShell y `profile.ps1` bloqueado por la directiva de ejecución
+`Restricted`. Las capturas no identifican la versión de Windows ni la
+arquitectura y no prueban zoom, Ctrl+S con Known Folder, salida mediante Sair ni
+ejecución en segundo plano. Los adjuntos permanecen en la conversación, sin
+copia al repositorio.

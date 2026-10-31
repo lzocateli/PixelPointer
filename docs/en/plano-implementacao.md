@@ -5,7 +5,7 @@
 | Field | Value |
 | --- | --- |
 | Initial status | Approved for F0 (decisions of 2026-10-29) |
-| Delivery status | F0 validated on Linux/GNOME Wayland, including Native AOT; Windows and macOS await the manual checklist ([report, pt-BR](../f0-relatorio.md)). F1 (repository, governance, CI/CD and distribution foundation) delivered on 2026-10-30 |
+| Delivery status | F0 validated on Linux/GNOME Wayland, including Native AOT; Windows has partial manual evidence from 2026-10-31 and macOS awaits the manual checklist ([report, pt-BR](../f0-relatorio.md), [pending items](#8-consolidated-pending-items)). F1 (repository, governance, CI/CD and distribution foundation) delivered on 2026-10-30 |
 | First functional version | v0.1.2, accepted as stable by the maintainer on 2026-10-30 on Ubuntu 24.04.5/GNOME X11 and Ubuntu 26.04/GNOME Wayland; manual acceptance limited to recorded flows/environments, without completing F2/F3 or validating Windows/macOS |
 | Origin | AI-assisted |
 | Human reviewer | Lincoln Zocateli |
@@ -138,3 +138,33 @@ AF_UNIX also on Windows 10+) to the running instance.
    per-monitor ScreenCast (F2).
 2. AOT size on Windows and macOS (Linux: 19.2 MB including SDL3 and Skia; startup < 10 ms).
 3. Windows and macOS behavior (awaiting section 6 of the manual report).
+
+## 8. Consolidated Pending Items
+
+Updated on 2026-10-31. The [issue #3 plan, pt-BR](../plano-correcao-issue-3.md)
+was closed together with the issue and remains as a historical record. Its open
+items and those of the [E2E plan](plano-e2e-grafico-uv.md) are tracked here, in
+addition to phases F2 to F9 in section 5.
+
+| Pending item | Source | Status |
+| --- | --- | --- |
+| Manual acceptance of Zoom and Draw triggered from the tray on GNOME X11 | Issue #3, 3.5 | Icon, menu and Sair accepted; both actions still unconfirmed |
+| Launch from the GNOME applications menu without a terminal | Issue #3, 3.6 | Passed in E2E with a synthetic launcher; real acceptance missing |
+| Wayland matrix per compositor: portals with and without Registry, denied permissions, tray and isolated E2E with libei/EIS | Issue #3, 3.1, 3.3 and 5; E2E, 8 | Manual acceptance only on Ubuntu 26.04/GNOME |
+| Native Ctrl+S: Windows Known Folder, including OneDrive, and macOS preference, with a real filesystem per OS | Issue #3, 3.7 | Closed by maintainer decision on 2026-10-31; logic covered by tests, no recorded native validation |
+| Full manual checklist on Windows | F0; issue #3 | Partial evidence on 2026-10-31, described below |
+| Full manual checklist on macOS | F0; issue #3 | No native evidence |
+| Human review of X11 E2E videos and references | E2E, 6 and 8 | Closed by maintainer decision on 2026-10-31, with no recorded review |
+| Physical hotkey conflict with another application, fractional scaling, other topologies and GPUs, pen | Issue #3, 3.2 and 3.3; E2E, 8 | Pending |
+| Linux arm64 on suitable hardware | E2E, 8 | Pending |
+
+**Partial Windows evidence on 2026-10-31:** the requester attached four
+screenshots in this conversation. They show installation through `install.ps1`
+with SHA-256 verification, the daemon registering Ctrl+1 and Ctrl+2, the tray
+menu with Zoom, Desenhar and Sair, and annotations on the screen. They also show
+two guidance problems, already documented in the [README](../../README.en.md#installation):
+a stale `PATH` in the current PowerShell session and `profile.ps1` blocked by the
+`Restricted` execution policy. The screenshots identify neither the Windows
+version nor the architecture, and do not prove zoom, Ctrl+S with the Known
+Folder, exit through Sair or background execution. The attachments remain in the
+conversation and were not copied into the repository.
