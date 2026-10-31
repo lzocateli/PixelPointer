@@ -97,8 +97,13 @@ mudar atalhos nem aparência. Configurações somente leitura em `settings.json`
 descritas no [guia de uso](uso.md#configurações). `src/PixelPointer.Rendering`
 (`SceneRenderer`) desenha fundo, quadro e traços independentemente da janela,
 com testes de imagem em CPU; a sobreposição mantém somente cursor e mensagens.
-Renderização em GPU, formas, texto, atalhos configuráveis e os demais módulos
-acima continuam pendentes.
+Renderização em GPU (Skia sobre OpenGL do SDL) existe como opt-in experimental
+(`rendering.gpu`), com retorno automático à CPU. Em container com Xvfb e Mesa
+llvmpipe (GLX), o zoom em OpenGL produziu pixels idênticos aos da CPU; a interface
+OpenGL nativa do Skia pode não estar disponível com EGL (Wayland), caso em que a
+CPU é usada. Falta aceite manual em hardware real e medição em 4K antes de
+torná-la padrão. Formas, texto, atalhos
+configuráveis e os demais módulos acima continuam pendentes.
 
 O mesmo binário é app e CLI: `pixelpointer zoom|draw|timer <min>|snip` envia o comando por socket Unix
 (`$XDG_RUNTIME_DIR` ou diretório temporário; AF_UNIX também no Windows 10+) à instância em execução.

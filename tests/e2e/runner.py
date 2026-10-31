@@ -349,7 +349,7 @@ class Scenario:
                        for pixel in self.display.screenshot().crop(region).getdata())
 
         try:
-            path.write_text('{"version": 1, "pen": {"color": "blue", "width": 20}, "zoom": {"initial": 4}}\n')
+            path.write_text('{"version": 1, "pen": {"color": "blue", "width": 20}, "zoom": {"initial": 4}, "rendering": {"gpu": true}}\n')
             assert "Configurações .. carregadas" in self.cli("probe"), "probe nao carregou settings.json"
             self.overlay("zoom")
             self.display.move(0, 0)

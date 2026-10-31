@@ -97,8 +97,14 @@ hotkeys or appearance. Read-only settings in `settings.json` (initial color and
 width, initial zoom; JSON with a source generator) are described in the
 [usage guide](usage.md#settings). `src/PixelPointer.Rendering` (`SceneRenderer`)
 draws background, board and strokes independently of the window, with CPU image
-tests; the overlay keeps only the cursor and messages. GPU rendering, shapes,
-text, configurable hotkeys and the other modules above remain pending.
+tests; the overlay keeps only the cursor and messages. GPU rendering (Skia on
+SDL's OpenGL) exists as an experimental opt-in (`rendering.gpu`) with automatic
+CPU fallback. In a container with Xvfb and Mesa llvmpipe (GLX), OpenGL zoom
+produced pixels identical to the CPU path; Skia's native OpenGL interface may be
+unavailable with EGL (Wayland), in which case the CPU is used. Manual acceptance
+on real hardware and 4K measurement are required
+before making it the default. Shapes, text, configurable hotkeys and the other
+modules above remain pending.
 
 The same binary is both app and CLI: `pixelpointer zoom|draw|timer <min>|snip`
 sends a command through a Unix socket (`$XDG_RUNTIME_DIR` or temporary directory;

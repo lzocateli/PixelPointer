@@ -16,12 +16,12 @@ internal enum OverlayMode
 }
 
 /// <summary>Métricas de uma sessão de sobreposição, impressas ao final para o relatório da F0.</summary>
-internal sealed record OverlayMetrics(string VideoDriver, string Renderer, int PixelWidth, int PixelHeight, float PixelDensity,
+internal sealed record OverlayMetrics(string VideoDriver, string Renderer, bool Gpu, int PixelWidth, int PixelHeight, float PixelDensity,
     double WindowToFirstFrameMs, int Frames, double AverageFrameMs, double P95FrameMs, int PenEvents, float MaxPressure);
 
 /// <summary>
-/// Janela de sobreposição em tela cheia: SDL3 cria a janela e entrega a entrada; o Skia desenha em CPU
-/// num buffer que é enviado como textura. Implementa o essencial do Zoom (Ctrl+1) e do Desenho (Ctrl+2).
+/// Janela de sobreposição em tela cheia: SDL3 cria a janela e entrega a entrada; o Skia desenha em CPU, num
+/// buffer enviado como textura, ou em OpenGL quando habilitado. Implementa o essencial do Zoom (Ctrl+1) e do Desenho (Ctrl+2).
 /// </summary>
 internal sealed unsafe partial class OverlaySession
 {
@@ -40,6 +40,7 @@ internal sealed unsafe partial class OverlaySession
     private SKRect _view;
     private SKRect _crop;
     private readonly bool _transparentBackground;
+    private readonly bool _gpuRequested;
     private bool _penDown;
     private float _pressure = 1f;
     private int _penEvents;
@@ -62,6 +63,9 @@ internal sealed unsafe partial class OverlaySession
         _transparentBackground = transparentBackground;
         _annotations = new AnnotationDocument(settings.PenColor, settings.PenWidth);
         _targetZoom = mode == OverlayMode.Zoom ? settings.InitialZoom : 1f;
+        // A janela transparente X11 depende do visual de 32 bits do caminho em CPU.
+        _gpuRequested = settings.Gpu && !transparentBackground
+            && !string.Equals(SDL_GetHint(SDL_HINT_RENDER_DRIVER), "software", StringComparison.OrdinalIgnoreCase);
     }
 
     internal OverlayMetrics Run(CancellationToken cancellationToken = default)
@@ -74,20 +78,46 @@ internal sealed unsafe partial class OverlaySession
             flags |= (SDL_WindowFlags)0x0000000040000000UL;
         }
 
-        var window = SDL_CreateWindow("PixelPointer", 0, 0, flags);
+        SDL_Window* window = null;
+        if (_gpuRequested)
+        {
+            GlOverlayTarget.PrepareWindowAttributes();
+            window = SDL_CreateWindow("PixelPointer", 0, 0, flags | SDL_WindowFlags.SDL_WINDOW_OPENGL);
+            if (window is null)
+            {
+                Console.Error.WriteLine($"informação: janela OpenGL indisponível ({SDL_GetError()}); usando renderização em CPU.");
+            }
+        }
+
+        window = window is not null ? window : SDL_CreateWindow("PixelPointer", 0, 0, flags);
         if (window is null)
         {
             throw new InvalidOperationException($"SDL_CreateWindow: {SDL_GetError()}");
         }
 
-        var renderer = SDL_CreateRenderer(window, (Utf8String)null);
-        if (renderer is null)
+        GlOverlayTarget? gl = null;
+        if (_gpuRequested && (SDL_GetWindowFlags(window) & SDL_WindowFlags.SDL_WINDOW_OPENGL) != 0)
         {
-            SDL_DestroyWindow(window);
-            throw new InvalidOperationException($"SDL_CreateRenderer: {SDL_GetError()}");
+            gl = GlOverlayTarget.TryCreate(window, out var reason);
+            if (gl is null)
+            {
+                Console.Error.WriteLine($"informação: renderização em GPU indisponível ({reason}); usando CPU.");
+            }
         }
 
-        SDL_SetRenderVSync(renderer, 1);
+        SDL_Renderer* renderer = null;
+        if (gl is null)
+        {
+            renderer = SDL_CreateRenderer(window, (Utf8String)null);
+            if (renderer is null)
+            {
+                SDL_DestroyWindow(window);
+                throw new InvalidOperationException($"SDL_CreateRenderer: {SDL_GetError()}");
+            }
+
+            SDL_SetRenderVSync(renderer, 1);
+        }
+
         SDL_RaiseWindow(window);
 
         SDL_Texture* texture = null;
@@ -109,19 +139,22 @@ internal sealed unsafe partial class OverlaySession
                     width = _width = pw;
                     height = _height = ph;
                     _density = SDL_GetWindowPixelDensity(window);
-                    if (texture is not null)
-                    {
-                        SDL_DestroyTexture(texture);
-                    }
-
-                    surface?.Dispose();
-                    texture = SDL_CreateTexture(renderer, SDL_PixelFormat.SDL_PIXELFORMAT_ARGB8888,
-                        SDL_TextureAccess.SDL_TEXTUREACCESS_STREAMING, width, height);
-                    surface = SKSurface.Create(new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul));
                     _crop = ComputeCrop(window, width, height);
-                    if (_transparentBackground && OverlayNative.SetTextureBlendMode(texture, 0x10) == 0)
+                    if (gl is null)
                     {
-                        throw new InvalidOperationException($"SDL_SetTextureBlendMode: {SDL_GetError()}");
+                        if (texture is not null)
+                        {
+                            SDL_DestroyTexture(texture);
+                        }
+
+                        surface?.Dispose();
+                        texture = SDL_CreateTexture(renderer, SDL_PixelFormat.SDL_PIXELFORMAT_ARGB8888,
+                            SDL_TextureAccess.SDL_TEXTUREACCESS_STREAMING, width, height);
+                        surface = SKSurface.Create(new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul));
+                        if (_transparentBackground && OverlayNative.SetTextureBlendMode(texture, 0x10) == 0)
+                        {
+                            throw new InvalidOperationException($"SDL_SetTextureBlendMode: {SDL_GetError()}");
+                        }
                     }
 
                     dirty = true;
@@ -147,28 +180,38 @@ internal sealed unsafe partial class OverlaySession
                     dirty = true;
                 }
 
-                if (!dirty || surface is null || texture is null)
+                if (!dirty || width == 0 || height == 0 || (gl is null && (surface is null || texture is null)))
                 {
                     continue;
                 }
 
                 var frame = Stopwatch.StartNew();
-                Render(surface.Canvas, width, height);
-                using (var pixmap = surface.PeekPixels())
+                if (gl is not null)
                 {
-                    SDL_UpdateTexture(texture, null, pixmap.GetPixels(), pixmap.RowBytes);
+                    Render(gl.GetCanvas(width, height), width, height);
+                    _frameTimes.Add(frame.Elapsed.TotalMilliseconds);
+                    gl.Present();
+                }
+                else
+                {
+                    Render(surface!.Canvas, width, height);
+                    using (var pixmap = surface.PeekPixels())
+                    {
+                        SDL_UpdateTexture(texture, null, pixmap.GetPixels(), pixmap.RowBytes);
+                    }
+
+                    if (_transparentBackground
+                        && (OverlayNative.SetRenderDrawColor(renderer, 0, 0, 0, 0) == 0
+                            || OverlayNative.RenderClear(renderer) == 0))
+                    {
+                        throw new InvalidOperationException($"SDL_RenderClear: {SDL_GetError()}");
+                    }
+
+                    SDL_RenderTexture(renderer, texture, null, null);
+                    _frameTimes.Add(frame.Elapsed.TotalMilliseconds);
+                    SDL_RenderPresent(renderer);
                 }
 
-                if (_transparentBackground
-                    && (OverlayNative.SetRenderDrawColor(renderer, 0, 0, 0, 0) == 0
-                        || OverlayNative.RenderClear(renderer) == 0))
-                {
-                    throw new InvalidOperationException($"SDL_RenderClear: {SDL_GetError()}");
-                }
-
-                SDL_RenderTexture(renderer, texture, null, null);
-                _frameTimes.Add(frame.Elapsed.TotalMilliseconds);
-                SDL_RenderPresent(renderer);
                 if (firstFrameMs == 0)
                 {
                     firstFrameMs = opened.Elapsed.TotalMilliseconds;
@@ -178,7 +221,8 @@ internal sealed unsafe partial class OverlaySession
             }
 
             var sorted = _frameTimes.Order().ToArray();
-            return new OverlayMetrics(SDL_GetCurrentVideoDriver() ?? "?", SDL_GetRendererName(renderer) ?? "?", width, height,
+            return new OverlayMetrics(SDL_GetCurrentVideoDriver() ?? "?",
+                gl is not null ? GlOverlayTarget.Name : SDL_GetRendererName(renderer) ?? "?", gl is not null, width, height,
                 _density, firstFrameMs, sorted.Length, sorted.Length == 0 ? 0 : sorted.Average(),
                 sorted.Length == 0 ? 0 : sorted[(int)(sorted.Length * 0.95)], _penEvents, _maxPressure);
         }
@@ -191,7 +235,12 @@ internal sealed unsafe partial class OverlaySession
                 SDL_DestroyTexture(texture);
             }
 
-            SDL_DestroyRenderer(renderer);
+            gl?.Dispose();
+            if (renderer is not null)
+            {
+                SDL_DestroyRenderer(renderer);
+            }
+
             SDL_DestroyWindow(window);
         }
     }

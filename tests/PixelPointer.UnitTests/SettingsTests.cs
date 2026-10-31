@@ -18,10 +18,11 @@ public sealed class SettingsTests
               "version": 1,
               "pen": { "color": "blue", "width": 12.5, },
               "zoom": { "initial": 3 },
+              "rendering": { "gpu": true },
             }
             """);
 
-        Assert.Equal(new AppSettings(PenColor.Blue, 12.5f, 3f), settings);
+        Assert.Equal(new AppSettings(PenColor.Blue, 12.5f, 3f, Gpu: true), settings);
     }
 
     [Fact]
@@ -40,6 +41,8 @@ public sealed class SettingsTests
     [InlineData("""{"zoom": {"initial": "2"}}""", "JSON inválido")]
     [InlineData("""{"zoom": {"inital": 2}}""", "JSON inválido")]
     [InlineData("""{"theme": "dark"}""", "JSON inválido")]
+    [InlineData("""{"rendering": {"gpu": "yes"}}""", "JSON inválido")]
+    [InlineData("""{"rendering": {"backend": "gl"}}""", "JSON inválido")]
     [InlineData("""{"pen": """, "JSON inválido")]
     [InlineData("[]", "JSON inválido")]
     [InlineData("null", "objeto JSON")]

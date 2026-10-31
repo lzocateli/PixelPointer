@@ -104,7 +104,8 @@ static int Help(TextWriter writer)
         Área de Trabalho no macOS, PICTURES/Screenshots conforme XDG no Linux.
         O caminho final é informado na janela; arquivos existentes são preservados.
         Configurações opcionais em settings.json (o probe mostra o caminho), lidas a cada
-        sobreposição: {"version": 1, "pen": {"color": "red", "width": 6}, "zoom": {"initial": 2}}.
+        sobreposição: {"version": 1, "pen": {"color": "red", "width": 6}, "zoom": {"initial": 2},
+        "rendering": {"gpu": false}}. Com gpu true, usa OpenGL e volta à CPU se indisponível.
         Arquivo inválido é ignorado com aviso e nunca é regravado.
         """);
     return 0;
@@ -369,7 +370,7 @@ static void RunOverlay(
         captura ......... {(transparentDraw ? "X11 transparente" : image is null ? capture!.Name : "arquivo")}: {bitmap?.Width ?? metrics.PixelWidth}x{bitmap?.Height ?? metrics.PixelHeight} em {captureMs:0} ms
         janela .......... {metrics.VideoDriver} / renderer {metrics.Renderer}, {metrics.PixelWidth}x{metrics.PixelHeight} px, densidade {metrics.PixelDensity:0.##}
         1º quadro ....... {metrics.WindowToFirstFrameMs:0} ms após criar a janela; {captureMs + metrics.WindowToFirstFrameMs:0} ms após o comando
-        quadros ......... {metrics.Frames}, média {metrics.AverageFrameMs:0.0} ms, p95 {metrics.P95FrameMs:0.0} ms (Skia CPU + upload)
+        quadros ......... {metrics.Frames}, média {metrics.AverageFrameMs:0.0} ms, p95 {metrics.P95FrameMs:0.0} ms (Skia {(metrics.Gpu ? "OpenGL" : "CPU + upload")})
         caneta .......... {metrics.PenEvents} eventos, pressão máx. {metrics.MaxPressure:0.00}
         """);
 }
