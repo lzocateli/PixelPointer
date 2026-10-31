@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using PixelPointer.Core.Annotations;
 using PixelPointer.Core.Settings;
+using PixelPointer.Rendering;
 using SDL;
 using SkiaSharp;
 using static SDL.SDL3;
@@ -442,72 +443,8 @@ internal sealed unsafe partial class OverlaySession
         }
     }
 
-    private void DrawScene(SKCanvas canvas, SKRect view, int outputWidth)
-    {
-        canvas.Clear(_transparentBackground ? SKColors.Transparent : SKColors.Black);
-        canvas.Save();
-        canvas.Scale(outputWidth / view.Width);
-        canvas.Translate(-view.Left, -view.Top);
-        if (_annotations.Board != Board.None)
-        {
-            using var fill = new SKPaint { Color = _annotations.Board == Board.White ? SKColors.White : SKColors.Black };
-            canvas.DrawRect(_crop, fill);
-        }
-        else if (_image is not null)
-        {
-            canvas.DrawImage(_image, 0, 0, new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None));
-        }
-
-        foreach (var stroke in _annotations.Strokes)
-        {
-            DrawStroke(canvas, stroke);
-        }
-
-        canvas.Restore();
-    }
-
-    private static void DrawStroke(SKCanvas canvas, Stroke stroke)
-    {
-        using var paint = new SKPaint
-        {
-            Color = new SKColor(stroke.Color),
-            IsAntialias = true,
-            Style = SKPaintStyle.Stroke,
-            StrokeCap = SKStrokeCap.Round,
-            StrokeJoin = SKStrokeJoin.Round,
-            StrokeWidth = stroke.Width,
-        };
-
-        var points = stroke.Points;
-        if (points.Count == 1)
-        {
-            canvas.DrawPoint(points[0].X, points[0].Y, paint);
-            return;
-        }
-
-        if (stroke.HasUniformPressure)
-        {
-            using var builder = new SKPathBuilder();
-            builder.MoveTo(points[0].X, points[0].Y);
-            for (var i = 1; i < points.Count; i++)
-            {
-                builder.LineTo(points[i].X, points[i].Y);
-            }
-
-            using var path = builder.Detach();
-            canvas.DrawPath(path, paint);
-            return;
-        }
-
-        // Caneta com pressão: espessura variável por segmento.
-        for (var i = 1; i < points.Count; i++)
-        {
-            var a = points[i - 1];
-            var b = points[i];
-            paint.StrokeWidth = stroke.Width * MathF.Max(0.15f, (a.Pressure + b.Pressure) / 2);
-            canvas.DrawLine(a.X, a.Y, b.X, b.Y, paint);
-        }
-    }
+    private void DrawScene(SKCanvas canvas, SKRect view, int outputWidth) =>
+        SceneRenderer.Draw(canvas, _annotations, _image, _crop, view, outputWidth, _transparentBackground);
 
     private void SaveSnapshot()
     {

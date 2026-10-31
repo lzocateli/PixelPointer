@@ -95,8 +95,10 @@ model (`AnnotationDocument`: strokes, color, width, board, undo and clear), with
 SDL or Skia, covered by unit tests. The overlay uses this model without changing
 hotkeys or appearance. Read-only settings in `settings.json` (initial color and
 width, initial zoom; JSON with a source generator) are described in the
-[usage guide](usage.md#settings). Shapes, text, configurable hotkeys and the
-other modules above remain pending.
+[usage guide](usage.md#settings). `src/PixelPointer.Rendering` (`SceneRenderer`)
+draws background, board and strokes independently of the window, with CPU image
+tests; the overlay keeps only the cursor and messages. GPU rendering, shapes,
+text, configurable hotkeys and the other modules above remain pending.
 
 The same binary is both app and CLI: `pixelpointer zoom|draw|timer <min>|snip`
 sends a command through a Unix socket (`$XDG_RUNTIME_DIR` or temporary directory;

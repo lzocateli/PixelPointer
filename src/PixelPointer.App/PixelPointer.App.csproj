@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../PixelPointer.Core/PixelPointer.Core.csproj" />
+    <ProjectReference Include="../PixelPointer.Rendering/PixelPointer.Rendering.csproj" />
   </ItemGroup>
 
   <ItemGroup>
