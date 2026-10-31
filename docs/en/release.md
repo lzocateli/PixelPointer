@@ -12,6 +12,34 @@ builds Native AOT packages for all supported RIDs, and
 through Homebrew and winget. Every step has a local equivalent under
 `tools/scripts/`.
 
+## Required Preview
+
+Every `release-please--branches--main` Release PR runs `release-preview` as part
+of the required `Result` check. The job builds `preview.<run_number>` packages for
+all six RIDs, SBOMs, Linux `.deb` files and `SHA256SUMS`, runs package smoke tests
+and installer tests, then uploads `pixelpointer-preview-<run_id>-<run_attempt>`
+artifacts for seven days. The artifact has no `install.sh`/`install.ps1`, creates
+no tag or GitHub Release and does not run `post-release.yml`. Rulesets block
+merging the Release PR while its required preview is failing or pending.
+
+After the check passes, open the Release PR's `CI` run in Actions and download
+the `pixelpointer-preview-<run_id>-<run_attempt>` artifact; it contains
+`pixelpointer-linux-x64.tar.gz`, `.deb`, SBOM and checksums. Retention is seven days.
+
+A manual preview of `main`, without a Release PR, can also be started:
+
+```bash
+gh workflow run publish.yml --repo lzocateli/PixelPointer --ref main -f preview=true
+gh run list --repo lzocateli/PixelPointer --workflow publish.yml
+```
+
+Use the displayed `run_id` to download `pixelpointer-preview-<run_id>-1` with
+`gh run download <run_id> --repo lzocateli/PixelPointer --name <artifact>`. This
+validates a snapshot of `main`; for a candidate of the next version, use the
+required Release PR preview, whose `VersionPrefix` already includes the
+release-please proposed bump. Preview does not replace the human merge of the
+Release PR, approval of the `release` Environment or production publication.
+
 ## First Functional Version
 
 `v0.1.2` is the first functional version accepted as stable by the maintainer on
