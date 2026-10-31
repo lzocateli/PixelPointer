@@ -169,7 +169,7 @@ addition to phases F2 to F9 in section 5.
 | --- | --- | --- |
 | Manual acceptance of Zoom and Draw triggered from the tray on GNOME X11 | Issue #3, 3.5 | Icon, menu and Sair accepted; both actions still unconfirmed |
 | Launch from the GNOME applications menu without a terminal | Issue #3, 3.6 | Passed in E2E with a synthetic launcher; real acceptance missing |
-| Wayland matrix per compositor: portals with and without Registry, denied permissions, tray and isolated E2E with libei/EIS | Issue #3, 3.1, 3.3 and 5; E2E, 8 | Manual acceptance only on Ubuntu 26.04/GNOME |
+| Wayland matrix per compositor: portals with and without Registry, denied permissions, tray and isolated E2E with libei/EIS | Issue #3, 3.1, 3.3 and 5; E2E, 8 | ScreenCast/PipeWire passed on isolated Sway with a render node; no-GPU mode is handled. ScreenCast acceptance on real GNOME (consent, token, indicator and latency), multi-monitor and other compositors remain pending; v0.1.2 acceptance predates this implementation |
 | Native Ctrl+S: Windows Known Folder, including OneDrive, and macOS preference, with a real filesystem per OS | Issue #3, 3.7 | Closed by maintainer decision on 2026-10-31; logic covered by tests, no recorded native validation |
 | Full manual checklist on Windows | F0; issue #3 | Partial evidence on 2026-10-31, described below |
 | Full manual checklist on macOS | F0; issue #3 | No native evidence |

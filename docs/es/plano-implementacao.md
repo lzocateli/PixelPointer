@@ -171,7 +171,7 @@ de las fases F2 a F9 de la sección 5.
 | --- | --- | --- |
 | Aceptación manual de Zoom y Desenhar accionados desde la bandeja en GNOME X11 | Issue #3, 3.5 | Icono, menú y Sair aceptados; ambas acciones aún sin confirmar |
 | Apertura desde el menú de aplicaciones de GNOME sin terminal | Issue #3, 3.6 | Aprobó en el E2E con lanzador sintético; falta aceptación real |
-| Matriz Wayland por compositor: portales con y sin Registry, permisos denegados, bandeja y E2E aislado con libei/EIS | Issue #3, 3.1, 3.3 y 5; E2E, 8 | Aceptación manual solo en Ubuntu 26.04/GNOME |
+| Matriz Wayland por compositor: portales con y sin Registry, permisos denegados, bandeja y E2E aislado con libei/EIS | Issue #3, 3.1, 3.3 y 5; E2E, 8 | ScreenCast/PipeWire pasó en Sway aislado con render node; el modo sin GPU se trata. Falta aceptación de ScreenCast en GNOME real (consentimiento, token, indicador y latencia), varios monitores y otros compositores; la aceptación de v0.1.2 es anterior a esta implementación |
 | Ctrl+S nativo: Known Folder en Windows, incluido OneDrive, y preferencia de macOS, con filesystem real por SO | Issue #3, 3.7 | Cerrado por decisión del mantenedor el 2026-10-31; lógica cubierta por pruebas, sin validación nativa registrada |
 | Recorrido manual completo en Windows | F0; issue #3 | Evidencia parcial el 2026-10-31, descrita abajo |
 | Recorrido manual completo en macOS | F0; issue #3 | Sin evidencia nativa |

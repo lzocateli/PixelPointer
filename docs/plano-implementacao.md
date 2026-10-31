@@ -166,7 +166,7 @@ fases F2 a F9 da seção 5.
 | --- | --- | --- |
 | Aceite manual de Zoom e Desenhar acionados pela tray no GNOME X11 | Issue #3, 3.5 | Ícone, menu e Sair aceitos; as duas ações ainda sem confirmação |
 | Abertura pelo menu de aplicativos GNOME sem terminal | Issue #3, 3.6 | Passou no E2E com launcher sintético; falta aceite real |
-| Matriz Wayland por compositor: portais com e sem Registry, recusa de permissões, tray e E2E isolado com libei/EIS | Issue #3, 3.1, 3.3 e 5; E2E, 8 | Aceite manual somente no Ubuntu 26.04/GNOME |
+| Matriz Wayland por compositor: portais com e sem Registry, recusa de permissões, tray e E2E isolado com libei/EIS | Issue #3, 3.1, 3.3 e 5; E2E, 8 | ScreenCast/PipeWire passou em Sway isolado com render node; modo sem GPU tratado. Falta aceite do ScreenCast no GNOME real (consentimento, token, indicador e latência), multi-monitor e outros compositores; o aceite v0.1.2 precede esta implementação |
 | Ctrl+S nativo: Known Folder no Windows, inclusive OneDrive, e preferência do macOS, com filesystem real por SO | Issue #3, 3.7 | Encerrado por decisão do mantenedor em 2026-10-31; lógica coberta por testes, sem validação nativa registrada |
 | Roteiro manual completo no Windows | F0; issue #3 | Evidência parcial em 2026-10-31, descrita abaixo |
 | Roteiro manual completo no macOS | F0; issue #3 | Sem evidência nativa |

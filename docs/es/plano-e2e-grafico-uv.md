@@ -7,7 +7,7 @@
 | Fecha | 2026-10-30 |
 | Autorización humana | Solicitante, en esta conversación: autorización de E2E gráficos aislados según las reglas del proyecto |
 | Decisión autorizada | Permitir una suite gráfica automatizada separada y aislada |
-| Estado de ejecución | Primer incremento X11 implementado y ejecutado; estabilidad 10/10; revisión humana de vídeos cerrada por decisión del mantenedor el 2026-10-31, sin revisión registrada. Aceptación manual adicional Ubuntu 26.04/GNOME Wayland registrada abajo; no es E2E automatizado |
+| Estado de ejecución | X11 ejecutado con estabilidad 10/10; revisión humana de vídeos cerrada por decisión del mantenedor el 2026-10-31, sin revisión registrada. ScreenCast/PipeWire validado en Sway aislado con render node (incluye restore token y cuadro tras daño); el modo sin GPU trata la indisponibilidad. La aceptación manual Wayland de abajo corresponde a v0.1.2, anterior a ScreenCast; GNOME real y otros compositores siguen pendientes |
 | Versión funcional de referencia | v0.1.2, primera versión funcional aceptada como estable por el mantenedor el 2026-10-30 en entornos GNOME X11/Wayland registrados; no es aprobación de la matriz multiplataforma completa |
 | Primer objetivo | Linux x64, X11 en escritorio desechable |
 | Expansión | GNOME X11, Wayland por compositor y otros sistemas tras demostrar viabilidad |
@@ -180,7 +180,7 @@ solo tras prueba local en contenedores.
 | --- | --- |
 | Linux x64, X11 virtual mínimo | Ejecutado: 10/10 consecutivos con compositor/bandeja; variantes sin compositor y sin bandeja pasaron |
 | GNOME X11 | Aceptación manual de dibujo transparente, visual automático, zoom, PNG, CapsLock/NumLock, ambos monitores y cierre por Sair; capturas confirman monitor 1, icono/menú y status sin daemon; Zoom/Desenhar por bandeja, lanzador y matriz completa sin demostración individual |
-| Wayland | Aceptación manual Ubuntu 26.04/GNOME tras instalar v0.1.2: flujos ejercitados funcionales según relato, capturas de dibujo, pizarras, lanzador y bandeja. E2E aislado por compositor, libei/EIS y portales reales pendientes; sin mocks de consentimiento ni XTEST vía XWayland como prueba nativa |
+| Wayland | ScreenCast/PipeWire pasó en Sway headless aislado con render node: dos capturas, formato/color, restore token reutilizado y cuadro nuevo tras daño; sin render node, la indisponibilidad se trata sin excepción no controlada. La aceptación manual Ubuntu 26.04/GNOME de v0.1.2 es anterior a esta implementación. GNOME real (consentimiento, restore token, indicador y latencia), varios monitores y otros compositores pendientes; sin mocks de consentimiento ni XTEST vía XWayland como prueba nativa |
 | Linux arm64 | Ejecutar en arquitectura adecuada antes de declarar cobertura |
 | Windows/macOS | Backends nativos y sesiones gráficas desechables; estrategia depende de compatibilidad con contenedores y autorización específica para excepciones |
 | Lápiz/GPU/monitores físicos | Uso en ambos monitores 1920×1080 escala 1 confirmado manualmente; lápiz, otras GPU, escalas/topologías pendientes |
