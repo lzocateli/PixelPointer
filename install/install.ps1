@@ -60,7 +60,7 @@ $ErrorActionPreference = 'Stop'
 $script:RunAsFile = -not [string]::IsNullOrEmpty($PSCommandPath)
 $repositoryUrl = 'https://github.com/lzocateli/PixelPointer/releases'
 
-$packageFiles = @('pixelpointer.exe', 'SDL3.dll', 'libSkiaSharp.dll', 'LICENSE', 'THIRD-PARTY-NOTICES.md')
+$packageFiles = @('pixelpointer.exe', 'SDL3.dll', 'libSkiaSharp.dll', 'pixelpointer.svg', 'LICENSE', 'THIRD-PARTY-NOTICES.md')
 
 # Antivirus pode manter o arquivo recem-gravado aberto por alguns instantes.
 function Move-DirectoryWithRetry {

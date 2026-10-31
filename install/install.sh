@@ -288,7 +288,7 @@ printf 'SHA-256 conferido: %s\n' "$actual"
 
 mkdir "$work_dir/extract"
 tar -xzf "$work_dir/$asset" -C "$work_dir/extract" || die "falha ao extrair $asset"
-for name in pixelpointer $libraries LICENSE THIRD-PARTY-NOTICES.md; do
+for name in pixelpointer $libraries pixelpointer.svg LICENSE THIRD-PARTY-NOTICES.md; do
     if [ ! -f "$work_dir/extract/$name" ] || [ -h "$work_dir/extract/$name" ]; then
         die "$asset nao contem $name"
     fi
@@ -315,7 +315,7 @@ check_root_directory "$lib_root"
 check_root_directory "$bin_dir"
 
 staged_dir="$(mktemp -d "$lib_root/.pixelpointer.install.XXXXXX")" || die "falha ao criar diretorio temporario em $lib_root"
-for name in pixelpointer $libraries LICENSE THIRD-PARTY-NOTICES.md; do
+for name in pixelpointer $libraries pixelpointer.svg LICENSE THIRD-PARTY-NOTICES.md; do
     cp "$work_dir/extract/$name" "$staged_dir/$name" || die "falha ao copiar para $lib_root"
     chmod 0644 "$staged_dir/$name"
 done

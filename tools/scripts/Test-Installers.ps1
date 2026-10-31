@@ -300,13 +300,14 @@ exec setpriv --reuid "${TEST_USER%%:*}" --regid "${TEST_USER##*:}" --clear-group
             $installed = Join-Path $binDir 'pixelpointer.exe'
             $runs = Test-Runs -Path $installed
             Assert-Case -Name 'instalacao em diretorio explicito' -Condition ($result.Code -eq 0 -and $runs -and $result.Output -match 'nao esta no PATH') -Result $result
+            Assert-Case -Name 'icone SVG instalado' -Condition ($result.Code -eq 0 -and (Test-Path -LiteralPath (Join-Path $binDir 'pixelpointer.svg') -PathType Leaf)) -Result $result
 
             Set-Content -LiteralPath $installed -Value 'versao anterior'
             Set-Content -LiteralPath (Join-Path $binDir 'arquivo-antigo') -Value 'residuo'
             $result = Invoke-Installer @('-BaseUrl', $baseUrl, '-InstallDir', $binDir)
             $runs = Test-Runs -Path $installed
             $entries = @(Get-ChildItem -LiteralPath $binDir -Force | ForEach-Object Name | Sort-Object)
-            $expectedEntries = @('LICENSE', 'libSkiaSharp.dll', 'pixelpointer.exe', 'SDL3.dll', 'THIRD-PARTY-NOTICES.md') | Sort-Object
+            $expectedEntries = @('LICENSE', 'libSkiaSharp.dll', 'pixelpointer.exe', 'pixelpointer.svg', 'SDL3.dll', 'THIRD-PARTY-NOTICES.md') | Sort-Object
             $siblings = @(Get-ChildItem -LiteralPath $scratch -Force -Filter '.pixelpointer.*')
             Assert-Case -Name 'reinstalacao sem residuos' -Condition ($result.Code -eq 0 -and $runs -and (-not (Compare-Object $expectedEntries $entries)) -and $siblings.Count -eq 0) -Result $result
 
