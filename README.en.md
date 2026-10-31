@@ -47,6 +47,29 @@ curl -fsSL https://github.com/lzocateli/PixelPointer/releases/latest/download/in
 & ([scriptblock]::Create((Invoke-RestMethod https://github.com/lzocateli/PixelPointer/releases/latest/download/install.ps1)))
 ```
 
+On Windows, if the directory is not on `PATH`, `install.ps1` suggests two
+options; use **only one**. The recommended one writes the user `PATH` to the
+registry, but only new processes see it: in the same PowerShell session,
+`pixelpointer` stays "not recognized" until you open another terminal or refresh
+the session:
+
+```powershell
+$env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
+```
+
+The profile alternative writes `$PROFILE.CurrentUserAllHosts` (`profile.ps1`),
+which Windows PowerShell only loads when the execution policy allows scripts.
+With the default `Restricted` policy, every new terminal shows "profile.ps1
+cannot be loaded because running scripts is disabled on this system". If you
+already wrote `PATH` to the registry, remove the `$env:PATH = ...pixelpointer...`
+line from the profile; the profile is unnecessary. To keep the profile, allow
+local scripts for your user only, knowing that this relaxes the policy (a policy
+enforced by Group Policy takes precedence; check with `Get-ExecutionPolicy -List`):
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+```
+
 ```bash
 # Homebrew (macOS and Linux)
 brew install lzocateli/tap/pixelpointer
@@ -105,6 +128,18 @@ The process may still write to that terminal and may stop when its window closes
 To run without a terminal on Linux, use `pixelpointer install-desktop-file` and
 open **PixelPointer** from the applications menu. Exit from the tray's **Sair**
 item or with `pixelpointer quit`. This does not enable autostart at login.
+
+On Windows (PowerShell), start the daemon in a separate, windowless process:
+
+```powershell
+Start-Process pixelpointer -ArgumentList daemon -WindowStyle Hidden
+pixelpointer status
+```
+
+The prompt returns immediately and the daemon keeps running after PowerShell is
+closed. Exit from the tray's **Sair** item or with `pixelpointer quit`. In this
+mode the daemon's messages are not shown; to diagnose hotkey conflicts, run
+`pixelpointer daemon` in the foreground.
 
 | Hotkey or key | Action |
 | --- | --- |
