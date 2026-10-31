@@ -58,6 +58,28 @@ Cada paquete incluye el SBOM SPDX y atestaciones de procedencia:
 `gh attestation verify <archivo> --repo lzocateli/PixelPointer`
 ([verificación](docs/es/uso.md#verificar-las-descargas)).
 
+## Desinstalar
+
+Si el daemon está en ejecución, detenlo primero con `pixelpointer quit`. Después,
+desinstala PixelPointer con el mismo método que usaste para instalarlo:
+
+| Instalación | Comando o acción |
+| --- | --- |
+| `install.sh` (Linux/macOS, prefijo predeterminado) | En Linux, ejecuta `pixelpointer uninstall-desktop-file` si registraste la entrada del menú; luego ejecuta `rm -f -- "$HOME/.local/bin/pixelpointer"` y `rm -r -- "$HOME/.local/lib/pixelpointer"` |
+| `install.sh --prefix <dir>` | Elimina `<dir>/bin/pixelpointer` y `<dir>/lib/pixelpointer`, sustituyendo `<dir>` por el prefijo usado durante la instalación |
+| `install.sh --global` | Ejecuta `sudo rm -f -- /usr/local/bin/pixelpointer` y `sudo rm -r -- /usr/local/lib/pixelpointer`; en Linux, elimina primero la entrada del escritorio con el binario instalado |
+| `install.ps1` | En PowerShell, ejecuta `Remove-Item -LiteralPath "$env:LOCALAPPDATA\Programs\pixelpointer" -Recurse` |
+| `.deb` | `sudo apt remove pixelpointer` |
+| Homebrew | `brew uninstall lzocateli/tap/pixelpointer` |
+| winget | `winget uninstall lzocateli.PixelPointer` |
+
+Si agregaste manualmente la línea de inicio de PowerShell al perfil, elimínala
+de `$PROFILE.CurrentUserAllHosts`. En Linux, elimina la integración del escritorio
+antes del ejecutable con `pixelpointer uninstall-desktop-file`, usando el mismo
+`XDG_DATA_HOME`; el comando conserva los archivos modificados. La desinstalación
+no borra las capturas PNG. Consulta la [guía de uso](docs/es/uso.md#desinstalar)
+para ver detalles y límites de cada método.
+
 ## Primeros pasos
 
 ```bash
@@ -66,10 +88,27 @@ pixelpointer grant                  # GNOME/Wayland: permiso de captura (una vez
 pixelpointer daemon                 # Ctrl+1 zoom, Ctrl+2 dibujo
 ```
 
+El comando `daemon` se ejecuta en **primer plano**: mantiene activos los atajos y
+el IPC, pero no libera la terminal automáticamente. Es lo esperado, no un bloqueo;
+Ctrl+C lo detiene. En Linux, agrega `&` para liberar el indicador:
+
+```bash
+pixelpointer daemon &
+```
+
+El proceso aún puede escribir en esa terminal y puede detenerse al cerrar su
+ventana. Para usarlo sin terminal en Linux, ejecuta
+`pixelpointer install-desktop-file` y abre **PixelPointer** desde el menú de
+aplicaciones. Sal con **Sair** en la bandeja o mediante `pixelpointer quit`. Esto
+no activa el
+inicio automático de sesión.
+
 | Atajo o tecla | Acción |
 | --- | --- |
 | **Ctrl+1** | Zoom: congela la pantalla ampliada; el mouse recorre la imagen |
 | **Ctrl+2** | Dibujo sin zoom |
+| `pixelpointer status` | Consulta si el daemon está en ejecución |
+| `pixelpointer quit` | Detiene el daemon y la sobreposición activa |
 | Rueda del mouse / flechas | Más o menos zoom |
 | Clic y arrastrar | Dibujar (se admite la presión del lápiz) |
 | R G B Y O P | Rojo, verde, azul, amarillo, naranja, rosa |
@@ -112,6 +151,25 @@ solución de problemas: [guía de uso](docs/es/uso.md).
   [convención de commits](.github/COMMIT_CONVENTIONS.md) y
   [política de seguridad](.github/SECURITY.md). Issues y pull requests en
   español son bienvenidos.
+
+## Comunidad y contribuciones
+
+Las contribuciones mediante forks y pull requests son bienvenidas. Empieza por
+[informes de errores, solicitudes de funciones o preguntas](https://github.com/lzocateli/PixelPointer/issues/new/choose)
+y espera a que se acuerde el alcance antes de implementar.
+
+- [Guía de contribución](.github/CONTRIBUTING.md) y [gobernanza](.github/GOVERNANCE.md).
+- [Soporte](.github/SUPPORT.md) y [código de conducta](.github/CODE_OF_CONDUCT.md).
+- [Informes privados de vulnerabilidades](.github/SECURITY.md).
+- [Historial de versiones](https://github.com/lzocateli/PixelPointer/releases).
+
+La infraestructura administrada (workflows `gw-*`, `.githooks/`,
+`tools/scripts/ci/`, plantillas y políticas de `.github/`) fue generada por
+Altivy.Groundwork; `.groundwork/manifest.json` enumera estos archivos y
+`groundwork status` verifica su integridad. Los workflows y scripts de
+compilación, publicación y distribución (`ci.yml`, `publish.yml`,
+`post-release.yml`, `winget.yml`, `tools/scripts/*.ps1`, `install/`) y los
+documentos de gobernanza se adaptaron de DotnetScope y pertenecen al proyecto.
 
 ## Licencia
 

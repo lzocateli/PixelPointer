@@ -133,22 +133,28 @@ gh attestation verify pixelpointer-linux-x64.tar.gz --repo lzocateli/PixelPointe
 
 ## Desinstalar
 
+Se o daemon estiver em execução, encerre-o primeiro com `pixelpointer quit`.
+Depois, remova o PixelPointer pelo mesmo método usado para instalá-lo:
+
 | Instalação | Remoção |
 | --- | --- |
-| `install.sh` | `rm -rf ~/.local/lib/pixelpointer ~/.local/bin/pixelpointer` (ou o `--prefix` usado) |
-| `install.ps1` | apague `%LOCALAPPDATA%\Programs\pixelpointer` |
+| `install.sh` (Linux/macOS, prefixo padrão) | No Linux, execute `pixelpointer uninstall-desktop-file` se registrou a entrada do menu; depois `rm -f -- "$HOME/.local/bin/pixelpointer"` e `rm -r -- "$HOME/.local/lib/pixelpointer"` |
+| `install.sh --prefix <dir>` | Remova `<dir>/bin/pixelpointer` e `<dir>/lib/pixelpointer`, substituindo `<dir>` pelo prefixo usado na instalação |
+| `install.sh --global` | Remova `/usr/local/bin/pixelpointer` e `/usr/local/lib/pixelpointer` com `sudo`; antes, remova a entrada desktop no Linux pelo binário instalado |
+| `install.ps1` | PowerShell: `Remove-Item -LiteralPath "$env:LOCALAPPDATA\Programs\pixelpointer" -Recurse` |
 | `.deb` | `sudo apt remove pixelpointer` |
 | Homebrew | `brew uninstall pixelpointer` |
 | winget | `winget uninstall lzocateli.PixelPointer` |
 
-No Linux, se tiver usado `install-desktop-file`, execute
-`pixelpointer uninstall-desktop-file` **antes de remover o executável**, com a
-mesma instalação e o mesmo `XDG_DATA_HOME`. O comando remove somente entrada e
-ícone idênticos aos recursos esperados pela instalação atual. Se houver arquivo
-modificado, link simbólico ou entrada criada por outra versão/localização,
-recusa a operação e preserva os recursos para revisão manual. As pastas não são
-removidas, e capturas PNG nunca são apagadas pela desinstalação.
-O pacote `.deb` gerencia separadamente os recursos instalados em `/usr/share`.
+Se adicionou manualmente a linha de inicialização ao perfil do PowerShell, remova
+essa linha de `$PROFILE.CurrentUserAllHosts`. No Linux, se tiver usado
+`install-desktop-file`, execute `pixelpointer uninstall-desktop-file` **antes de
+remover o executável**, com o mesmo binário e `XDG_DATA_HOME`. O comando remove
+somente a entrada e o ícone idênticos aos recursos esperados pela instalação
+atual. Se encontrar arquivo modificado, link simbólico ou recurso de outra
+versão/localização, recusa a operação e preserva os arquivos para revisão manual.
+Não remove diretórios nem capturas PNG. O pacote `.deb` gerencia separadamente os
+recursos instalados em `/usr/share`.
 No GNOME, os atalhos vinculados podem ser
 removidos nas Configurações; a permissão de captura, com:
 

@@ -4,9 +4,33 @@ description: "Use ao criar ou alterar README, documentação técnica, runbook, 
 applyTo: "**/*.md, docs/**, contracts/**/*.yaml, contracts/**/*.json, contracts/**/*.proto"
 ---
 
-# Documentação
+# Documentação multilíngue
 
-- Escreva em português brasileiro, com termos técnicos consistentes.
+- Escreva primeiro em português brasileiro (pt-BR), a fonte normativa do projeto.
+- Sempre que criar ou alterar documentação autoral voltada a usuários,
+	colaboradores ou operadores, crie/atualize as versões em inglês (en) e espanhol
+	(es) na mesma mudança. A regra cobre todo o projeto: README, guias, planos,
+	relatórios, runbooks, documentação de testes, contribuição e operação. Também
+	vale quando uma mudança de código altera comportamento ou comandos documentados.
+- Esta regra substitui o escopo de tradução mais restrito registrado em decisões
+	anteriores: planos e relatórios também precisam de versões en/es; pt-BR continua
+	sendo a referência para resolver divergências.
+- Mapa de arquivos: `README.md` corresponde a `README.en.md` e `README.es.md`;
+	`docs/<caminho>.md` corresponde a `docs/en/<caminho>.md` e
+	`docs/es/<caminho>.md`. Preserve os pares legados `docs/uso.md`,
+	`docs/en/usage.md` e `docs/es/uso.md`. Para documentação autoral fora da raiz e
+	de `docs/`, use arquivos irmãos `<nome>.en.md` e `<nome>.es.md`.
+- Se uma versão traduzida ainda não existir, crie-a na alteração que introduz ou
+	modifica o documento. Mantenha links de navegação entre os idiomas e valide
+	links relativos em cada versão.
+- Traduza significado, contexto e limitações; não faça substituição mecânica de
+	palavras. Não acrescente capacidades, suporte ou garantias ausentes da versão
+	normativa. Atualize as três versões juntas quando comandos, exemplos, opções,
+	pré-requisitos ou resultados esperados mudarem.
+- Exceções: textos de licença e avisos de terceiros devem permanecer fiéis ao
+	original; changelogs gerados devem seguir sua ferramenta; arquivos de dados,
+	metadados e instruções de agente/MCP não são documentação de produto a traduzir.
+	Preserve nesses arquivos o idioma e a sintaxe exigidos pelo consumidor.
 - Preserve comandos, identificadores e labels literais exigidos pelas ferramentas.
 - O README raiz é autoridade para visão, escopo e princípios; `.github/` define procedimentos.
 - Não duplique conteúdo extenso; use links entre documentos proprietários.
