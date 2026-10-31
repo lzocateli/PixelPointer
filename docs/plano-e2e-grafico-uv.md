@@ -1,11 +1,14 @@
 # Plano de E2E gráficos isolados com uv e evidência em vídeo
 
+**Português (Brasil)** · [English](en/plano-e2e-grafico-uv.md) · [Español](es/plano-e2e-grafico-uv.md)
+
 | Campo | Estado |
 | --- | --- |
 | Data | 2026-10-30 |
 | Autorização humana | Solicitante, nesta conversa: “Eu autorizo os E2E gráficos isolados nas regras do projeto” |
 | Decisão autorizada | Permitir uma suíte gráfica automatizada separada e isolada |
-| Estado de execução | Primeiro incremento X11 implementado e executado; estabilidade 10/10; revisão humana pendente |
+| Estado de execução | Primeiro incremento X11 implementado e executado; estabilidade 10/10; revisão humana dos vídeos pendente. Aceite manual adicional Ubuntu 26.04/GNOME Wayland registrado abaixo; não é E2E automatizado |
+| Versão funcional de referência | v0.1.2, primeira versão funcional aceita como estável pelo mantenedor em 2026-10-30 nos ambientes GNOME X11 e Wayland registrados; não é aprovação da matriz multiplataforma completa |
 | Primeiro alvo | Linux x64, X11 em desktop descartável |
 | Expansão | GNOME X11, Wayland por compositor e demais sistemas após viabilidade comprovada |
 
@@ -185,7 +188,7 @@ somente superfícies do projeto autorizadas, após a prova local em containers.
 | --- | --- |
 | Linux x64, X11 mínimo virtual | Executado: 10/10 consecutivos com compositor/tray; variantes sem compositor e sem tray passaram |
 | GNOME X11 | Aceite manual concluído: desenho transparente, visual automático, zoom, PNG, CapsLock/NumLock, uso nos dois monitores e encerramento por Sair; prints confirmam monitor 1, ícone/menu da tray e status sem daemon após saída; Zoom/Desenhar pela tray, launcher e matriz completa ainda sem comprovação manual |
-| Wayland | Avaliar compositor, libei/EIS e portais reais; não substituir consentimento por mock nem usar XTEST via XWayland como prova do caminho nativo |
+| Wayland | Aceite manual Ubuntu 26.04/GNOME após instalação da v0.1.2: relato de funcionamento dos fluxos exercitados e prints de desenho, quadros, launcher e tray. E2E isolado por compositor, libei/EIS e portais reais continuam pendentes; não substituir consentimento por mock nem usar XTEST via XWayland como prova do caminho nativo |
 | Linux arm64 | Executar em arquitetura apropriada antes de declarar cobertura |
 | Windows/macOS | Backends nativos e sessão gráfica descartável próprios; estratégia depende de compatibilidade com a regra de containers e autorização específica se exigir exceção |
 | Caneta/GPU/monitores físicos | Uso nos dois monitores 1920×1080 em escala 1 confirmado manualmente; caneta, outras GPUs, escalas e topologias continuam pendentes |
@@ -284,6 +287,49 @@ Não comprova o acionamento das opções Zoom/Desenhar pela tray, launcher,
 conflitos físicos com outros apps, escala fracionária, outras topologias/GPUs,
 Wayland ou a matriz GNOME completa.
 Também não substitui a revisão humana pendente dos vídeos da suíte automatizada.
+
+### Aceite manual no Ubuntu 26.04/GNOME Wayland
+
+Em 2026-10-30, após a instalação da release `v0.1.2` orientada nesta conversa,
+o solicitante informou: “Testes realizado com wayland ubuntu 26.04 tudo
+funcionando veja os prints”. Esse é o aceite humano dos fluxos exercitados,
+não uma execução automatizada nem uma confirmação individual de toda a matriz.
+
+| Recorte | Evidência e resultado |
+| --- | --- |
+| Ambiente | Ubuntu 26.04, GNOME/Wayland, conforme relato e contexto da conversa; pacote de referência linux-x64 v0.1.2. Os prints não mostram `--version`, `probe`, escala nem topologia de monitores |
+| Desenho e cores | Traços vermelhos e azuis sobre a imagem da área de trabalho; um print posterior mostra um novo traço azul |
+| Quadros e retorno | Fundos branco e preto conservam os traços; outro print mostra retorno à imagem da área de trabalho com as anotações |
+| Identidade desktop | Ícone próprio PixelPointer e nome visíveis no launcher; ícone no painel e menu com Zoom, Desenhar e Sair visíveis |
+| Encerramento visual da anotação | Prints sem traços mostram a área de trabalho novamente; não comprovam encerramento do daemon nem qual comando foi usado |
+| Resultado humano | Solicitante confirmou funcionamento geral na sessão testada; zoom, atalhos, permissões e ações do menu não têm demonstração individual nos anexos |
+
+Os seis anexos permanecem como evidência desta conversa, sem cópia, hash,
+publicação ou inspeção de arquivos pessoais. A automação não acessou a sessão
+gráfica do usuário. O instalador publicado da `v0.1.2` foi conferido separadamente
+nesta conversa: exige e copia `pixelpointer.svg`; os prints corroboram a identidade
+visual no desktop, mas não substituem os testes de pacote/instalador.
+
+**Aceite complementar do desenho transparente em 2026-10-30:** o solicitante
+forneceu dois novos prints nesta conversa, identificando-os como “duas evidencias
+para desenho comtransparencia”. O primeiro mostra um traço vermelho sobre a
+imagem de um vídeo no navegador; o segundo mostra uma anotação circular vermelha
+sobre outro conteúdo do vídeo. O conteúdo do navegador permanece visível sob a
+área de desenho. O desenho transparente fica concluído por aceite humano nessa
+sessão Ubuntu 26.04/GNOME Wayland, corroborado visualmente pela sobreposição.
+São oito anexos ao todo nesse registro; todos permanecem somente na conversa.
+Não houve análise de arquivo PNG original nem gravação/automação da sessão.
+Como as anotações e os conteúdos diferem entre os dois prints, eles não comprovam
+movimento contínuo do fundo sob um mesmo traço persistente; essa verificação
+objetiva permanece pendente, assim como a análise de alfa do PNG exportado.
+
+Limites: imagem estática não comprova transparência ao vivo, alfa de PNG,
+latência, caminho Wayland nativo versus XWayland, ScreenCast/PipeWire ou qual
+portal foi utilizado. Abertura sem terminal, conflitos de atalhos, CapsLock/NumLock
+nesse Wayland, falhas/recusa de permissões, outros monitores, HiDPI, caneta,
+outros compositores e Windows/macOS não foram detalhados nesse reteste.
+Continuam pendentes o E2E Wayland isolado por compositor e a revisão humana dos
+vídeos automatizados X11. O aceite não conclui as fases F2/F3 inteiras.
 
 ## 9. Referências técnicas
 

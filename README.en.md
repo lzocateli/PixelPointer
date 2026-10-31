@@ -18,11 +18,16 @@ system, including Wayland desktops such as GNOME and KDE. PixelPointer is an
 independent project; it is not a Microsoft product and does not use ZoomIt's
 code, name or icons.
 
-> **Status:** pre-1.0. Zoom (Ctrl+1) and draw (Ctrl+2) work and were validated
-> on GNOME 50/Wayland; Windows and macOS pass CI and await the manual test
-> script. Break timer, Live Zoom, snip, recording and DemoType are in the
-> [implementation plan](docs/plano-implementacao.md) (Portuguese). Results and
-> limitations: [F0 report](docs/f0-relatorio.md) (Portuguese).
+> **Status:** `v0.1.2` is the first functional version, accepted as stable by the
+> maintainer on Linux/GNOME: Ubuntu 24.04.5/X11 and Ubuntu 26.04/Wayland, on
+> 2026-10-30. Zoom and drawing have manual acceptance in the tested environments,
+> including transparent drawing according to the user's report and screenshots.
+> The product remains pre-1.0; Windows and macOS pass CI but await manual
+> acceptance. Other compositors/configurations are not covered by this acceptance.
+> Evidence and limits: [E2E plan](docs/en/plano-e2e-grafico-uv.md).
+> Break timer, Live Zoom, snipping, recording and DemoType remain in the
+> [implementation plan](docs/en/plano-implementacao.md); the
+> [F0 report](docs/f0-relatorio.md) (Portuguese) preserves historical spike results.
 
 ## Installation
 

@@ -1,5 +1,7 @@
 # Processo de release
 
+**Português (Brasil)** · [English](en/release.md) · [Español](es/release.md)
+
 O processo comum de release (Release PR, versão, tag, `release-manifest.json`,
 republicação e correção de release defeituosa) é o do Altivy.Groundwork, descrito
 no runbook [release](runbooks/release.md) e em [CI-CD](../.github/CI-CD.md). Este
@@ -9,6 +11,35 @@ Native AOT para todos os RIDs suportados e o
 [`post-release.yml`](../.github/workflows/post-release.yml) distribui pelo
 Homebrew e pelo winget. Cada etapa tem um comando local equivalente em
 `tools/scripts/`.
+
+## Primeira versão funcional
+
+`v0.1.2` é a primeira versão funcional aceita como estável pelo mantenedor em
+2026-10-30 no Ubuntu 24.04.5/GNOME X11 e Ubuntu 26.04/GNOME Wayland. O
+[plano E2E](plano-e2e-grafico-uv.md) registra o aceite manual e seus limites;
+não representa validação nativa Windows/macOS nem conclusão das fases F2/F3.
+
+A release `v0.1.1` inclui o SVG no pacote, mas seu instalador não o copia.
+A `v0.1.2` inclui a correção do PR #8: `install.sh` e `install.ps1` exigem e
+copiam `pixelpointer.svg`. Não sobrescreva assets nem mova tags das versões
+anteriores. Para reproduzir a versão aceita, a partir de qualquer diretório no
+Linux/macOS, com `curl`, `sh` e as dependências nativas do README disponíveis:
+
+```bash
+curl -fsSL https://github.com/lzocateli/PixelPointer/releases/download/v0.1.2/install.sh | sh -s -- --version 0.1.2
+```
+
+O instalador verifica SHA-256 e instala/substitui o pacote no prefixo padrão,
+sem alterar perfis ou PATH. Confirme `pixelpointer --version` e, no Linux,
+execute `pixelpointer install-desktop-file`. Um registro desktop antigo
+modificado é preservado e exige migração explícita, não sobrescrita silenciosa.
+
+A publicação GitHub e a submissão winget são etapas distintas. Um job winget
+aguardando aprovação pode manter a fila `release-main` ocupada mesmo após a
+release pública; se o mantenedor decidir adiar o envio, rejeite somente a
+aprovação `winget` da execução antiga para liberar o próximo Release PR.
+Não aprove winget para desbloquear uma release. A correção estrutural dessa
+concorrência pertence ao catálogo Groundwork, não a edições locais em `gw-*`.
 
 ## Artefatos
 

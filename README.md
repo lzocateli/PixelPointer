@@ -18,11 +18,16 @@ em qualquer sistema operacional, inclusive em desktops Wayland como GNOME e KDE.
 O PixelPointer é um projeto independente, não é um produto da Microsoft e não
 usa o código, a marca ou os ícones do ZoomIt.
 
-> **Estado:** pré-1.0. Zoom (Ctrl+1) e desenho (Ctrl+2) funcionam e foram
-> validados no GNOME 50/Wayland; Windows e macOS passam no CI e aguardam o
-> roteiro de teste manual. Timer, Live Zoom, recorte, gravação e DemoType estão
-> no [plano de implementação](docs/plano-implementacao.md). Resultados e
-> limitações: [relatório da F0](docs/f0-relatorio.md).
+> **Estado:** `v0.1.2` é a primeira versão funcional, aceita como estável pelo
+> mantenedor no Linux/GNOME: Ubuntu 24.04.5/X11 e Ubuntu 26.04/Wayland, em
+> 2026-10-30. Zoom e desenho possuem aceite manual nos ambientes testados,
+> incluindo desenho transparente conforme relato e prints do usuário.
+> O produto continua pré-1.0; Windows e macOS passam no CI, mas aguardam aceite
+> manual. Outros compositores e configurações não estão abrangidos por esse aceite.
+> Evidências e limites: [plano de E2E](docs/plano-e2e-grafico-uv.md).
+> Timer, Live Zoom, recorte, gravação e DemoType permanecem no
+> [plano de implementação](docs/plano-implementacao.md); o
+> [relatório da F0](docs/f0-relatorio.md) preserva os resultados históricos do spike.
 
 ## Instalação
 

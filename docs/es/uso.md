@@ -5,6 +5,13 @@
 > Traducción de la referencia en portugués [docs/uso.md](../uso.md). Si
 > difieren, prevalecen la versión en portugués y el comportamiento implementado.
 
+**Versión funcional de referencia:** `v0.1.2`, primera versión funcional aceptada
+como estable por el mantenedor el 2026-10-30 en Ubuntu 24.04.5/GNOME X11 y Ubuntu
+26.04/GNOME Wayland. Aceptación manual limitada a flujos ejercitados;
+Windows/macOS, otros compositores y la matriz completa siguen pendientes.
+Consulte el [registro de evidencias](plano-e2e-grafico-uv.md). El informe F0 es
+histórico; esta aceptación no cambia los límites de los backends descritos abajo.
+
 ## Comandos
 
 | Comando | Función |
