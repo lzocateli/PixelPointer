@@ -79,18 +79,27 @@ public sealed class AnnotationDocument
     public void ToggleBoard(Board board) => Board = Board == board ? Board.None : board;
 
     /// <summary>Inicia um traço; <paramref name="viewScale"/> converte a espessura da tela para a imagem.</summary>
-    public void BeginStroke(float x, float y, float pressure, float viewScale)
+    public void BeginStroke(float x, float y, float pressure, float viewScale,
+        StrokeShape shape = StrokeShape.Freehand)
     {
         if (!(viewScale > 0) || !float.IsFinite(viewScale))
         {
             throw new ArgumentOutOfRangeException(nameof(viewScale), viewScale, "A escala da vista deve ser positiva e finita.");
         }
 
-        _current = new Stroke(ColorArgb, PenWidth / viewScale, new StrokePoint(x, y, pressure));
+        if (!Enum.IsDefined(shape))
+        {
+            throw new ArgumentOutOfRangeException(nameof(shape), shape, null);
+        }
+
+        // Formas geométricas usam espessura uniforme, como no mouse.
+        var first = new StrokePoint(x, y, shape == StrokeShape.Freehand ? pressure : 1f);
+        _current = new Stroke(ColorArgb, PenWidth / viewScale, first, shape);
         _strokes.Add(_current);
     }
 
-    public void ContinueStroke(float x, float y, float pressure) => _current?.Add(new StrokePoint(x, y, pressure));
+    public void ContinueStroke(float x, float y, float pressure) =>
+        _current?.Add(new StrokePoint(x, y, _current.Shape == StrokeShape.Freehand ? pressure : 1f));
 
     public void EndStroke() => _current = null;
 

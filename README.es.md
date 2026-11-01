@@ -158,6 +158,10 @@ de atajos, ejecuta `pixelpointer daemon` en primer plano.
 | `pixelpointer quit` | Detiene el daemon y la sobreposición activa |
 | Rueda del mouse / flechas | Más o menos zoom |
 | Clic y arrastrar | Dibujar (se admite la presión del lápiz) |
+| Shift + arrastrar | Línea recta |
+| Ctrl + arrastrar | Rectángulo |
+| Ctrl+Shift + arrastrar | Flecha |
+| Tab + arrastrar | Elipse |
 | R G B Y O P | Rojo, verde, azul, amarillo, naranja, rosa |
 | Ctrl+rueda | Grosor del lápiz |
 | Ctrl+Z / E | Deshacer / borrar todo |

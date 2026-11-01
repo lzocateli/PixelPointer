@@ -52,9 +52,13 @@ executar a partir de um terminal; os detalhes e erros ficam nessa saída.
 | `pixelpointer --version` / `--help` | Versão e ajuda |
 
 Teclas na sobreposição: roda do mouse ou setas para o zoom, clique e arraste
-para desenhar, R/G/B/Y/O/P para cores, Ctrl+roda para a espessura, Ctrl+Z para
-desfazer, E para apagar, W/K para quadro branco/preto, Ctrl+S para salvar PNG
-na pasta de capturas do usuário, Esc ou botão direito para sair.
+para desenhar, Shift/Ctrl/Ctrl+Shift/Tab ao começar a arrastar para linha
+reta/retângulo/seta/elipse, R/G/B/Y/O/P para cores, Ctrl+roda para a espessura,
+Ctrl+Z para desfazer, E para apagar, W/K para quadro branco/preto, Ctrl+S para
+salvar PNG na pasta de capturas do usuário, Esc ou botão direito para sair.
+
+As formas seguem o ZoomIt: segure a tecla ao começar a arrastar; a forma
+acompanha o mouse até soltar o botão e usa a cor e a espessura atuais.
 
 ## Onde o Ctrl+S salva
 

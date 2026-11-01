@@ -206,7 +206,7 @@ Windows para eludir alertas.
 #### Pruebas y retorno a la estable
 
 - Confirma versión elegida, `selftest` y sesión/portales en `probe`.
-- Prueba Ctrl+1, rueda del ratón, Ctrl+2, colores y Ctrl+Z.
+- Prueba Ctrl+1, rueda del ratón, Ctrl+2, colores, formas (Shift, Ctrl, Ctrl+Shift y Tab al arrastrar) y Ctrl+Z.
 - Prueba Ctrl+S: PNG en Imágenes/`Screenshots` de XDG en Linux o en la carpeta
    especial Imágenes/`Screenshots` de Windows, respetando OneDrive.
 - Esc cierra la sobreposición; `status` debe confirmar que el daemon sigue
