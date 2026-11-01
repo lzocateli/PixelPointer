@@ -7,6 +7,60 @@ namespace PixelPointer.UnitTests;
 
 public sealed class ScreenCastTests
 {
+    [Fact]
+    public async Task Recovery_NameTracksCompletedCaptureAndReturnsToPreferredSource()
+    {
+        var preferred = new CaptureStub("ScreenCast");
+        var fallback = new CaptureStub("Screenshot");
+        var capture = new ScreenCastCapture(preferred, fallback);
+        using var first = await capture.CaptureAsync(CancellationToken.None);
+        Assert.Equal("ScreenCast", capture.Name);
+        preferred.Error = new NotSupportedException();
+        using var second = await capture.CaptureAsync(CancellationToken.None);
+        Assert.Equal("Screenshot", capture.Name);
+        preferred.Error = null;
+        using var third = await capture.CaptureAsync(CancellationToken.None);
+        Assert.Equal("ScreenCast", capture.Name);
+        Assert.Equal(3, preferred.Calls);
+        Assert.Equal(1, fallback.Calls);
+    }
+
+    [Fact]
+    public async Task Recovery_FailedFallbackDoesNotReportAnUncompletedSource()
+    {
+        var preferred = new CaptureStub("ScreenCast") { Error = new NotSupportedException() };
+        var fallback = new CaptureStub("Screenshot") { Error = new InvalidOperationException() };
+        var capture = new ScreenCastCapture(preferred, fallback);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => capture.CaptureAsync(CancellationToken.None));
+        Assert.Equal("ScreenCast", capture.Name);
+    }
+
+    [Fact]
+    public async Task Recovery_CancellationNeverUsesFallback()
+    {
+        var preferred = new CaptureStub("ScreenCast") { Error = new OperationCanceledException() };
+        var fallback = new CaptureStub("Screenshot");
+        var capture = new ScreenCastCapture(preferred, fallback);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => capture.CaptureAsync(CancellationToken.None));
+        Assert.Equal(0, fallback.Calls);
+    }
+
+    private sealed class CaptureStub(string name) : IScreenCapture
+    {
+        public string Name => name;
+        public Exception? Error { get; set; }
+        public int Calls { get; private set; }
+
+        public Task<SKBitmap> CaptureAsync(CancellationToken cancellationToken)
+        {
+            Calls++;
+            cancellationToken.ThrowIfCancellationRequested();
+            return Error is null ? Task.FromResult(new SKBitmap(1, 1)) : Task.FromException<SKBitmap>(Error);
+        }
+    }
+
     [Theory]
     [InlineData(-1, false)]
     [InlineData(0, false)]

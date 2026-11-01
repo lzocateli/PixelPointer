@@ -401,6 +401,28 @@ nginx had no public ports; containers were removed. No host graphical session,
 D-Bus or personal capture was used. Real multi-monitor capture with Screenshot,
 monitor selection, HiDPI, GNOME/KDE and other architectures/platforms remain pending.
 
+### Source identity after fallback and recovery
+
+On 2026-11-01, `fix/capture-backend-recovery` separated native capture from
+fallback selection through existing `IScreenCapture`. The name changes only
+after a successful capture: returns to ScreenCast after recovery and does not
+change to Screenshot when fallback fails. Cancellation still has no fallback;
+native session, consent, timeout and closure remain unchanged.
+
+Three focused tests use controlled sources for success → fallback → recovery,
+failed fallback and cancellation. The real gate passed format, build without
+warnings/errors, 164 tests, 23 governance cases, AOT and `selftest`.
+
+| Native scenario | Local evidence | Result |
+| --- | --- | --- |
+| No render node | `artifacts/wayland/screencast-20261101T174558524-1a07a163` | Controlled error, no file |
+| Capture and lifecycle | `artifacts/wayland/screencast-20261101T174601492-fccadfc0` | IPC draw/zoom, status, quit and restart passed |
+| `GetAll` denial | `artifacts/wayland/screencast-20261101T174606129-0bb81304` | Get reads and real captures preserved |
+
+nginx stayed isolated without public ports; no host session or D-Bus was accessed.
+Identity recovery is controlled-logic coverage, not a real portal changing
+availability. Real capture was tested on Sway; GNOME/KDE and hardware coverage pending.
+
 ### Blocked fractional-scale investigation
 
 Historical record of the initial blockage; subsequent validation is in the next section.

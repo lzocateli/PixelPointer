@@ -150,6 +150,11 @@ são apresentados como erro de captura controlado, sem exceção não tratada.
 Se nenhum caminho estiver disponível para esse cenário, a captura falha;
 isso não equivale a suporte multi-monitor validado em todos os desktops.
 
+O nome da fonte acompanha a última captura concluída: se o ScreenCast voltar
+a funcionar depois de um fallback, o diagnóstico volta a indicar ScreenCast.
+Falha do fallback não informa uma fonte como concluída e cancelamento não
+aciona outra captura para contornar a recusa.
+
 **Diagnóstico por etapas.** Os totais `portal` e `primeiro quadro` são
 preservados: `portal` cobre criação da sessão, seleção/início do portal e
 persistência da autorização; `primeiro quadro` inclui abertura do remoto

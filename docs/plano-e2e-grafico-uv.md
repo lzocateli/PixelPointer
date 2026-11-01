@@ -418,6 +418,29 @@ sessão gráfica, D-Bus ou captura pessoal do host foi usada. Permanecem
 pendentes captura multi-monitor real com Screenshot disponível, seleção
 de monitor, HiDPI, GNOME/KDE e as outras arquiteturas/plataformas.
 
+### Identidade da fonte após fallback e recuperação
+
+Em 2026-11-01, `fix/capture-backend-recovery` separou a captura nativa da seleção
+com fallback pela interface `IScreenCapture` existente. O nome é atualizado
+somente após captura bem-sucedida: volta a ScreenCast após recuperação e não
+muda para Screenshot quando o fallback falha. Cancelamento continua sem fallback;
+sessão, consentimento, timeout e fechamento nativos não mudaram.
+
+Três testes focados usam fontes controladas para verificar sucesso → fallback
+→ recuperação, falha do fallback e cancelamento. O gate real passou com format,
+build sem avisos/erros, 164 testes, 23 cenários de governança, AOT e `selftest`.
+
+| Cenário nativo | Evidência local | Resultado |
+| --- | --- | --- |
+| Indisponibilidade sem render node | `artifacts/wayland/screencast-20261101T174558524-1a07a163` | Erro controlado e nenhum arquivo |
+| Captura e ciclo de vida | `artifacts/wayland/screencast-20261101T174601492-fccadfc0` | Desenho/zoom por IPC, status, quit e reinício passaram |
+| Recusa `GetAll` | `artifacts/wayland/screencast-20261101T174606129-0bb81304` | Leituras Get e capturas reais preservadas |
+
+nginx permaneceu isolado sem portas públicas; nenhuma sessão ou D-Bus do host
+foi acessado. A sequência de recuperação de identidade é cobertura de lógica
+controlada, não de um portal real alternando disponibilidades. A captura real
+foi validada no Sway; GNOME/KDE e a matriz de hardware continuam pendentes.
+
 ### Investigação de escala fracionária bloqueada
 
 Registro histórico do bloqueio inicial; a validação posterior está na seção seguinte.
