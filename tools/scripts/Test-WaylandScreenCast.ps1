@@ -34,6 +34,9 @@ reinicio com nova conexao do portal e captura valida no daemon reiniciado.
 Exige RenderNode; nao combina com RepeatDaemonCaptures. Depois do baseline,
 cria duas saidas virtuais e exige erro controlado sem Screenshot, sem capturar
 apenas um monitor nem criar arquivo. Nao comprova suporte multi-monitor completo.
+.PARAMETER OutputScale
+1, 1.5 ou 2; padrao 1. Escalas diferentes de 1 exigem RepeatDaemonCaptures.
+Valida escala do compositor, janela logica, pixels e densidade; nao testa caneta ou GPU fisica.
 .PARAMETER RemainingArguments
 Somente --help. Ajuda nao produz efeitos colaterais.
 .EXAMPLE
@@ -48,6 +51,8 @@ pwsh ./tools/scripts/Test-WaylandScreenCast.ps1 -Engine podman -RenderNode /dev/
 pwsh ./tools/scripts/Test-WaylandScreenCast.ps1 -Engine podman -RenderNode /dev/dri/renderD128 -RepeatDaemonCaptures -CheckDaemonLifecycle
 .EXAMPLE
 pwsh ./tools/scripts/Test-WaylandScreenCast.ps1 -Engine podman -RenderNode /dev/dri/renderD128 -CheckMultiMonitorPolicy
+.EXAMPLE
+pwsh ./tools/scripts/Test-WaylandScreenCast.ps1 -Engine podman -RenderNode /dev/dri/renderD128 -RepeatDaemonCaptures -CheckDaemonLifecycle -OutputScale 1.5
 .NOTES
 Requer PowerShell 7, Linux x64, Docker/Podman e o pacote gerado por Publish-Aot.ps1.
 Prazo do container: 120 segundos. Codigo 0: aprovado. Codigo 1: falha. Codigo 2: uso invalido.
@@ -62,6 +67,8 @@ param(
     [switch] $RepeatDaemonCaptures,
     [switch] $CheckDaemonLifecycle,
     [switch] $CheckMultiMonitorPolicy,
+    [ValidateSet('1', '1.5', '2')]
+    [string] $OutputScale = '1',
     [ValidateSet('docker', 'podman')] [string] $Engine,
     [Parameter(ValueFromRemainingArguments)] [string[]] $RemainingArguments
 )
@@ -77,7 +84,7 @@ if ($RemainingArguments.Count -gt 0) {
 }
 
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
-$image = 'localhost/pixelpointer-wayland:screencast-v1'
+$image = 'localhost/pixelpointer-wayland:screencast-v2'
 if ([string]::IsNullOrWhiteSpace($Engine)) { $Engine = $env:PIXELPOINTER_CONTAINER_ENGINE }
 if ([string]::IsNullOrWhiteSpace($Engine)) {
     $Engine = @('docker', 'podman') | Where-Object { Get-Command $_ -ErrorAction SilentlyContinue } | Select-Object -First 1
@@ -88,6 +95,9 @@ if ($Engine -notin @('docker', 'podman') -or -not (Get-Command $Engine -ErrorAct
 }
 
 try {
+    if ($OutputScale -ne '1' -and -not $RepeatDaemonCaptures) {
+        throw 'OutputScale diferente de 1 exige RepeatDaemonCaptures. Use --help.'
+    }
     if ($CheckMultiMonitorPolicy -and $RepeatDaemonCaptures) {
         throw 'CheckMultiMonitorPolicy nao combina com RepeatDaemonCaptures. Use --help.'
     }
@@ -173,6 +183,7 @@ try {
         $modeArguments += @('--volume', "${driver}:/opt/wayland/daemon.py:ro,Z", '--env', "DENY_GETALL=$deny",
             '--env', "CHECK_LIFECYCLE=$lifecycle",
             '--env', "CHECK_MULTI_MONITOR=$multiMonitor",
+            '--env', "OUTPUT_SCALE=$OutputScale",
             '--entrypoint', 'python')
     }
     $volume = "$container-evidence"
@@ -250,6 +261,10 @@ try {
             if ($daemon.passed -ne $true -or $daemon.quit -ne $true -or $daemon.sessions.Count -ne 2 -or
                 $daemon.queries.Count -ne 2 -or $invalidQueries -or $daemon.rejections -ne $expectedRejections) {
                 throw 'Resultado incompleto ou incoerente do daemon Wayland.'
+            }
+            $expectedScale = [double]::Parse($OutputScale, [System.Globalization.CultureInfo]::InvariantCulture)
+            if ($null -eq $daemon.output_scale -or [math]::Abs($daemon.output_scale - $expectedScale) -gt 0.01) {
+                throw 'Escala de saida nao foi validada pelo driver.'
             }
             if ($CheckDaemonLifecycle -and ($null -eq $daemon.lifecycle -or
                 $daemon.lifecycle.quit_open_overlay -ne $true -or $daemon.lifecycle.stopped_status -ne $true -or

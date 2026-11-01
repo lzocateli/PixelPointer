@@ -418,6 +418,83 @@ sessão gráfica, D-Bus ou captura pessoal do host foi usada. Permanecem
 pendentes captura multi-monitor real com Screenshot disponível, seleção
 de monitor, HiDPI, GNOME/KDE e as outras arquiteturas/plataformas.
 
+### Investigação de escala fracionária bloqueada
+
+Registro histórico do bloqueio inicial; a validação posterior está na seção seguinte.
+
+Em 2026-11-01, `test/wayland-output-scale` tentou acrescentar testes nas escalas
+1, 1,5 e 2. O teste de 1,5 não passou: a saída Sway era logicamente `533×400`,
+mas a janela permaneceu `1×1`, sem fullscreen. Evidência:
+`artifacts/wayland/screencast-20261101T134318812-3740613a/window-geometry.json`.
+Isso é um resultado do cenário isolado, não uma invalidação do aceite humano
+anterior no GNOME.
+
+Um probe SDL descartável comparou tamanho inicial zero, tamanho explícito e
+fullscreen solicitado após a criação. Candidatos locais de correção passaram
+no build, 161 testes, AOT/selftest e E2E X11, mas não na matriz Wayland: houve
+janela pequena na segunda sessão e depois falha da captura de inspeção de
+conteúdo estático. Não foram classificados como correções aprovadas.
+
+As alterações experimentais de produção e de dano de composição foram
+retiradas; `OverlaySession.cs` voltou ao conteúdo da `main`. O AOT experimental
+foi preservado em
+`artifacts/investigation/fullscreen-experimental-536b8551f28b4f36af044186905856f3`;
+não usar esse pacote como implementação validada. Reconstruir a partir da fonte
+antes de novos testes. As evidências de falha e os testes de escala permanecem
+locais, sem commit/push/PR. O incremento está **bloqueado**, não concluído.
+As escalas 1,5 e 2 não receberam aceite deste teste; geometria, composição e
+inspeção de quadros no fixture precisam ser investigadas antes de nova entrega.
+
+### HiDPI isolado após separar a inspeção
+
+Em 2026-11-01, a investigação separou dois problemas: criação inicial da janela
+Wayland com tamanho zero/fullscreen não aplicado, e inspeção da sobreposição
+estática por uma segunda sessão ScreenCast, que pode ficar sem dano no wlroots.
+A correção usa dimensões lógicas do display na criação Wayland e solicita
+fullscreen depois da criação do renderer apenas se a flag não foi aplicada.
+Não usa espera bloqueante `SDL_SyncWindow` nem altera os caminhos X11/Windows/macOS,
+consentimento, timeout de captura ou o opt-in de GPU.
+
+A imagem `localhost/pixelpointer-wayland:screencast-v2` fixa
+`grim=1.4.0+ds-2+b1` do snapshot Debian existente. A licença Expat/MIT do pacote
+exato, incluindo `debian/*`, foi verificada por extração do copyright do `.deb`
+assinado, sem executar seus scripts; pacote fornecido pela distribuição Debian
+trixie mantida. Os sites upstream/metadados web bloquearam acesso automatizado;
+a versão foi obtida do APT do snapshot, não presumida pelo site.
+Links nativos de grim: libwayland-client/libffi e pixman (MIT), libpng,
+zlib e runtime da distribuição; já presentes na imagem. Versões são inventariadas
+em `/opt/native-packages.tsv`. Essa ferramenta é apenas de teste, não integra
+o pacote PixelPointer nem sua captura de produção.
+
+O baseline continua exigindo ScreenCast/PipeWire real. O driver inspeciona os
+pixels da cena sintética pelo compositor com grim, sem abrir uma segunda
+sessão de portal: isso não comprova consentimento, que permanece coberto pelo
+baseline. Exige fullscreen e limites lógicos via JSON Sway, tamanho físico
+800×600, cor, densidade e ciclo de vida. Falhas antigas não foram reclassificadas.
+
+| Escala | Evidência local | Resultado |
+| --- | --- | --- |
+| 1 | `artifacts/wayland/screencast-20261101T143030541-59f79fcb` | Desenho, zoom, status, quit e reinício passaram |
+| 1,5 | `artifacts/wayland/screencast-20261101T143034841-b65dc44a` | Janela lógica 533×400, pixels 800×600, densidade 1,5; duas sessões e ciclo de vida passaram |
+| 2 | `artifacts/wayland/screencast-20261101T143038653-a3d322d0` | Janela lógica 400×300, pixels 800×600, densidade 2; duas sessões e ciclo de vida passaram |
+
+Format, build sem avisos/erros, 161 testes, 23 cenários de governança, AOT e
+`selftest` passaram. E2E X11 também passou em
+`artifacts/e2e/x11-20261101T143148779-500ce3d3/attempt-01`. nginx permaneceu
+isolado sem portas públicas; nenhum socket ou dado gráfico pessoal do host foi usado.
+
+Com imagem v2 construída, pacote AOT atual, render node autorizado e nginx
+isolado conforme os pré-requisitos anteriores:
+
+```powershell
+pwsh -NoProfile -File tools/scripts/Test-WaylandScreenCast.ps1 -Build -Engine podman -Package artifacts/aot/linux-x64 -RenderNode /dev/dri/renderD128 -RepeatDaemonCaptures -CheckDaemonLifecycle -OutputScale 1.5
+```
+
+`OutputScale` aceita 1/1.5/2; valores diferentes de 1 exigem
+`RepeatDaemonCaptures`. Capturas do compositor não são prova de atalhos físicos,
+caneta/pressão, paridade GPU, multi-monitor ou aceite GNOME/KDE/Windows/macOS.
+Esses recortes e o benchmark de latência continuam pendentes; F2/F3 não estão encerradas.
+
 ### Resultado local em 2026-10-30
 
 Etapas 1 a 6 implementadas para o primeiro alvo. A etapa 7 permanece expansão

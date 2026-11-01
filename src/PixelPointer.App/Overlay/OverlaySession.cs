@@ -79,17 +79,30 @@ internal sealed unsafe partial class OverlaySession
         }
 
         SDL_Window* window = null;
+        var initialWidth = 0;
+        var initialHeight = 0;
+        if (string.Equals(SDL_GetCurrentVideoDriver(), "wayland", StringComparison.Ordinal))
+        {
+            SDL_Rect displayBounds;
+            if (!SDL_GetDisplayBounds(SDL_GetPrimaryDisplay(), &displayBounds))
+            {
+                throw new InvalidOperationException($"SDL_GetDisplayBounds: {SDL_GetError()}");
+            }
+
+            initialWidth = displayBounds.w;
+            initialHeight = displayBounds.h;
+        }
         if (_gpuRequested)
         {
             GlOverlayTarget.PrepareWindowAttributes();
-            window = SDL_CreateWindow("PixelPointer", 0, 0, flags | SDL_WindowFlags.SDL_WINDOW_OPENGL);
+            window = SDL_CreateWindow("PixelPointer", initialWidth, initialHeight, flags | SDL_WindowFlags.SDL_WINDOW_OPENGL);
             if (window is null)
             {
                 Console.Error.WriteLine($"informação: janela OpenGL indisponível ({SDL_GetError()}); usando renderização em CPU.");
             }
         }
 
-        window = window is not null ? window : SDL_CreateWindow("PixelPointer", 0, 0, flags);
+        window = window is not null ? window : SDL_CreateWindow("PixelPointer", initialWidth, initialHeight, flags);
         if (window is null)
         {
             throw new InvalidOperationException($"SDL_CreateWindow: {SDL_GetError()}");
@@ -130,6 +143,12 @@ internal sealed unsafe partial class OverlaySession
         try
         {
             AppIcon.SetWindowIcon(window);
+            if (string.Equals(SDL_GetCurrentVideoDriver(), "wayland", StringComparison.Ordinal)
+                && (SDL_GetWindowFlags(window) & SDL_WindowFlags.SDL_WINDOW_FULLSCREEN) == 0
+                && !SDL_SetWindowFullscreen(window, true))
+            {
+                throw new InvalidOperationException($"SDL_SetWindowFullscreen: {SDL_GetError()}");
+            }
             while (running && !cancellationToken.IsCancellationRequested)
             {
                 int pw, ph;
