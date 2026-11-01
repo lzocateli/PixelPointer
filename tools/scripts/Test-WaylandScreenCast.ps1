@@ -27,6 +27,9 @@ ambas as capturas devem usar Get e continuar no ScreenCast/PipeWire.
 Depois do baseline, inicia um daemon e exercita draw/zoom por IPC na mesma
 conexao. Confere quadros, status e quit; com recusa de GetAll exige uma unica
 rejeicao do processo do daemon. Exige RenderNode. Nao testa atalhos fisicos.
+.PARAMETER CheckDaemonLifecycle
+Exige RepeatDaemonCaptures. Testa quit com sobreposicao aberta, status parado,
+reinicio com nova conexao do portal e captura valida no daemon reiniciado.
 .PARAMETER RemainingArguments
 Somente --help. Ajuda nao produz efeitos colaterais.
 .EXAMPLE
@@ -37,6 +40,8 @@ pwsh ./tools/scripts/Test-WaylandScreenCast.ps1 -Engine podman -RenderNode /dev/
 pwsh ./tools/scripts/Test-WaylandScreenCast.ps1 -Engine podman -RenderNode /dev/dri/renderD128 -DenyScreenCastGetAll
 .EXAMPLE
 pwsh ./tools/scripts/Test-WaylandScreenCast.ps1 -Engine podman -RenderNode /dev/dri/renderD128 -DenyScreenCastGetAll -RepeatDaemonCaptures
+.EXAMPLE
+pwsh ./tools/scripts/Test-WaylandScreenCast.ps1 -Engine podman -RenderNode /dev/dri/renderD128 -RepeatDaemonCaptures -CheckDaemonLifecycle
 .NOTES
 Requer PowerShell 7, Linux x64, Docker/Podman e o pacote gerado por Publish-Aot.ps1.
 Prazo do container: 120 segundos. Codigo 0: aprovado. Codigo 1: falha. Codigo 2: uso invalido.
@@ -49,6 +54,7 @@ param(
     [string] $RenderNode,
     [switch] $DenyScreenCastGetAll,
     [switch] $RepeatDaemonCaptures,
+    [switch] $CheckDaemonLifecycle,
     [ValidateSet('docker', 'podman')] [string] $Engine,
     [Parameter(ValueFromRemainingArguments)] [string[]] $RemainingArguments
 )
@@ -75,6 +81,9 @@ if ($Engine -notin @('docker', 'podman') -or -not (Get-Command $Engine -ErrorAct
 }
 
 try {
+    if ($CheckDaemonLifecycle -and -not $RepeatDaemonCaptures) {
+        throw 'CheckDaemonLifecycle exige RepeatDaemonCaptures. Use --help.'
+    }
     if (($DenyScreenCastGetAll -or $RepeatDaemonCaptures) -and [string]::IsNullOrWhiteSpace($RenderNode)) {
         throw 'DenyScreenCastGetAll e RepeatDaemonCaptures exigem RenderNode para validar captura real. Use --help.'
     }
@@ -149,7 +158,9 @@ try {
             throw 'Driver Wayland invalido ou link recusado.'
         }
         $deny = if ($DenyScreenCastGetAll) { '1' } else { '0' }
+        $lifecycle = if ($CheckDaemonLifecycle) { '1' } else { '0' }
         $modeArguments += @('--volume', "${driver}:/opt/wayland/daemon.py:ro,Z", '--env', "DENY_GETALL=$deny",
+            '--env', "CHECK_LIFECYCLE=$lifecycle",
             '--entrypoint', 'python')
     }
     $volume = "$container-evidence"
@@ -227,6 +238,11 @@ try {
             if ($daemon.passed -ne $true -or $daemon.quit -ne $true -or $daemon.sessions.Count -ne 2 -or
                 $daemon.queries.Count -ne 2 -or $invalidQueries -or $daemon.rejections -ne $expectedRejections) {
                 throw 'Resultado incompleto ou incoerente do daemon Wayland.'
+            }
+            if ($CheckDaemonLifecycle -and ($null -eq $daemon.lifecycle -or
+                $daemon.lifecycle.quit_open_overlay -ne $true -or $daemon.lifecycle.stopped_status -ne $true -or
+                $daemon.lifecycle.fresh_portal_connection -ne $true -or $daemon.lifecycle.restart_capture -ne $true)) {
+                throw 'Ciclo de vida do daemon incompleto.'
             }
             @{ passed = $true; mode = 'daemon-screencast'; daemon = $daemon } |
                 ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $output 'result.json') -Encoding utf8NoBOM

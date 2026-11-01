@@ -43,6 +43,18 @@ def windows():
     return found
 
 
+def inspect_overlay(name, expected):
+    screenshot = EVIDENCE / f'{name}.png'
+    capture = command([PACKAGE, 'capture', '--out', str(screenshot)])
+    (EVIDENCE / f'{name}-capture.out').write_text(capture.stdout)
+    (EVIDENCE / f'{name}-capture.err').write_text(capture.stderr)
+    if 'ScreenCast + PipeWire: 800x600' not in capture.stdout:
+        raise RuntimeError('Overlay inspection did not use ScreenCast')
+    pixel = command(['magick', str(screenshot), '-format', '%[pixel:p{400,300}]', 'info:']).stdout
+    if pixel not in (f'srgb({expected})', f'srgba({expected},1)'):
+        raise RuntimeError(f'{name}: unexpected frame color')
+
+
 def unique_name(process_id):
     names = command(['dbus-send', '--session', '--print-reply', '--dest=org.freedesktop.DBus',
                      '/org/freedesktop/DBus', 'org.freedesktop.DBus.ListNames']).stdout
@@ -91,6 +103,7 @@ def main():
             wait_for('property monitor', lambda: any('became a monitor' in line and f'pid={monitor.pid} ' in line
                      for line in (EVIDENCE / 'dbus.log').read_text().splitlines()))
             daemon = subprocess.Popen([PACKAGE, 'daemon'], stdout=output, stderr=errors)
+            original_pid = daemon.pid
             wait_for('daemon IPC', lambda: command([PACKAGE, 'status'], check=False).returncode == 0)
             sender = wait_for('daemon D-Bus identity', lambda: unique_name(daemon.pid))
             initial_count = (EVIDENCE / 'daemon.err').read_text().count('ScreenCast capacidades:')
@@ -103,15 +116,7 @@ def main():
                 if len(window) != 1:
                     raise RuntimeError('Expected one PixelPointer window')
                 wait_for(f'{mode} frame', lambda: (EVIDENCE / 'daemon.err').read_text().count('ScreenCast capacidades:') == initial_count + index)
-                screenshot = EVIDENCE / f'daemon-{mode}.png'
-                capture = command([PACKAGE, 'capture', '--out', str(screenshot)])
-                (EVIDENCE / f'daemon-{mode}-capture.out').write_text(capture.stdout)
-                (EVIDENCE / f'daemon-{mode}-capture.err').write_text(capture.stderr)
-                if 'ScreenCast + PipeWire: 800x600' not in capture.stdout:
-                    raise RuntimeError('Overlay inspection did not use ScreenCast')
-                pixel = command(['magick', str(screenshot), '-format', '%[pixel:p{400,300}]', 'info:']).stdout
-                if pixel not in (f'srgb({expected})', f'srgba({expected},1)'):
-                    raise RuntimeError(f'{mode}: unexpected frame color')
+                inspect_overlay(f'daemon-{mode}', expected)
                 command(['swaymsg', f'[con_id={window[0]["id"]}]', 'kill'])
                 wait_for(f'{mode} window closed', lambda: not windows())
                 wait_for(f'{mode} session ended', lambda: f'--- sessão {mode} ---' in (EVIDENCE / 'daemon.out').read_text())
@@ -135,9 +140,6 @@ def main():
             expected_rejections = 1 if expected_method == 'Get' else 0
             if len(daemon_rejections) != expected_rejections:
                 raise RuntimeError('Unexpected GetAll retry count on daemon connection')
-            command([PACKAGE, 'quit'])
-            if daemon.wait(timeout=10) != 0:
-                raise RuntimeError('Daemon did not exit cleanly')
             monitor.terminate()
             monitor.wait(timeout=5)
             calls = capability_calls((EVIDENCE / 'capabilities-monitor.log').read_text(), sender)
@@ -146,10 +148,39 @@ def main():
                 expected_calls = ['GetAll', 'GetAll']
             if calls != expected_calls:
                 raise RuntimeError('Unexpected capability query sequence on the daemon connection')
+
+            lifecycle = None
+            if os.environ.get('CHECK_LIFECYCLE') == '1':
+                command(['swaymsg', 'output', 'HEADLESS-1', 'bg', '#00aacc', 'solid_color'])
+                command([PACKAGE, 'draw'])
+                wait_for('quit with open overlay', lambda: windows())
+                inspect_overlay('quit-open-overlay', '0,170,204')
+                command([PACKAGE, 'quit'])
+                if daemon.wait(timeout=10) != 0:
+                    raise RuntimeError('Quit with open overlay failed')
+                wait_for('overlay removed by quit', lambda: not windows())
+                if command([PACKAGE, 'status'], check=False).returncode != 1:
+                    raise RuntimeError('Old daemon still reported as running')
+                daemon = subprocess.Popen([PACKAGE, 'daemon'], stdout=output, stderr=errors)
+                wait_for('restarted daemon IPC', lambda: command([PACKAGE, 'status'], check=False).returncode == 0)
+                restarted_sender = wait_for('restarted D-Bus identity', lambda: unique_name(daemon.pid))
+                if restarted_sender == sender:
+                    raise RuntimeError('Restart did not create a fresh portal connection')
+                command(['swaymsg', 'output', 'HEADLESS-1', 'bg', '#cc5500', 'solid_color'])
+                command([PACKAGE, 'zoom'])
+                wait_for('restarted overlay', lambda: windows())
+                inspect_overlay('restart-overlay', '204,85,0')
+                lifecycle = {'quit_open_overlay': True, 'stopped_status': True,
+                             'restart_pid': daemon.pid, 'fresh_portal_connection': True,
+                             'restart_capture': True}
+            command([PACKAGE, 'quit'])
+            if daemon.wait(timeout=10) != 0:
+                raise RuntimeError('Daemon did not exit cleanly')
+            wait_for('final overlay removed', lambda: not windows())
             (EVIDENCE / 'daemon-result.json').write_text(json.dumps({
-                'passed': True, 'pid': daemon.pid, 'queries': reads,
+                'passed': True, 'pid': original_pid, 'queries': reads,
                 'rejections': len(daemon_rejections), 'sessions': results,
-                'quit': True, 'capability_calls': calls,
+                'quit': True, 'capability_calls': calls, 'lifecycle': lifecycle,
             }))
     finally:
         if monitor is not None and monitor.poll() is None:

@@ -352,6 +352,38 @@ reutilização da conexão e novas consultas, não propriedades que mudem num
 portal naturalmente incompatível, atalhos físicos, Esc, tray ou quit com
 janela ainda aberta. GNOME/KDE e a meta de latência permanecem pendentes.
 
+### Quit com sobreposição aberta e reinício
+
+Em 2026-11-01, a branch `test/wayland-daemon-lifecycle` acrescentou o modo
+opt-in `-CheckDaemonLifecycle`, que exige `-RepeatDaemonCaptures`. Nenhum
+código de produção ou dependência foi alterado nesta etapa.
+
+O driver exige uma sobreposição aberta e verifica sua cor pelo portal antes
+de enviar `quit`. O processo deve encerrar com código zero, a janela sumir
+e `status` informar ausência do daemon. Depois inicia outro processo, exige
+uma nova identidade D-Bus, abre zoom por IPC, verifica o quadro atualizado
+e encerra novamente com `quit`. O JSON registra cada asserção; o orquestrador
+não aceita resultado de ciclo de vida incompleto.
+
+| Cenário | Evidência local | Resultado |
+| --- | --- | --- |
+| Teste anterior sem opção nova | `artifacts/wayland/screencast-20261101T130137628-161f4830` | Passou; comportamento anterior preservado |
+| Ciclo de vida normal | `artifacts/wayland/screencast-20261101T130141551-ca85f33c` | Quit com janela aberta, status parado, nova conexão e captura após reinício aprovados |
+| Ciclo de vida sob recusa `GetAll` | `artifacts/wayland/screencast-20261101T130145567-e269262d` | Mesmas verificações aprovadas com a política D-Bus de recusa |
+
+Com pacote AOT atual, Podman rootless, render node autorizado e nginx isolado
+conforme os pré-requisitos anteriores, na raiz do clone:
+
+```powershell
+pwsh -NoProfile -File tools/scripts/Test-WaylandScreenCast.ps1 -Engine podman -Package artifacts/aot/linux-x64 -RenderNode /dev/dri/renderD128 -RepeatDaemonCaptures -CheckDaemonLifecycle
+```
+
+Acrescente `-DenyScreenCastGetAll` para repetir sob recusa. nginx foi mantido
+sem portas públicas e com smoke; os containers foram removidos. Não houve
+acesso à sessão gráfica, D-Bus ou dados pessoais do host. O pacote testado
+foi o AOT já validado da etapa 1. Esta cobertura é Sway isolado/IPC, não
+atalhos físicos, Esc, tray, launcher ou aceite nativo GNOME/Windows/macOS.
+
 ### Resultado local em 2026-10-30
 
 Etapas 1 a 6 implementadas para o primeiro alvo. A etapa 7 permanece expansão

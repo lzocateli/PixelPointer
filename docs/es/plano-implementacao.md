@@ -231,9 +231,9 @@ incrementos locales en `perf/f2-wayland-capture`.
 
 | Etapa | Estado de ejecución |
 | --- | --- |
-| 1. Consolidar diagnóstico, capacidades y pruebas Wayland | Implementado y validado: 156 pruebas, AOT y escenarios Wayland aprobados. [PR #21](https://github.com/lzocateli/PixelPointer/pull/21) abierto; espera CI e integración del mantenedor |
-| 2. Nueva preview y aceptación GNOME real | Requiere integración aprobada de etapa 1, dispatch y aprobación del Environment `release`, luego prueba humana; no ejecutado |
-| 3. Ciclo de vida completo e interacción física | Aún no implementado como incremento nuevo; faltan quit con ventana abierta, atajos físicos, bandeja y lanzador |
+| 1. Consolidar diagnóstico, capacidades y pruebas Wayland | [PR #21](https://github.com/lzocateli/PixelPointer/pull/21) integrado en `df252e6`, con `Result` aprobado |
+| 2. Nueva preview y aceptación GNOME real | [Preview #16](https://github.com/lzocateli/PixelPointer/actions/runs/41308984865) iniciada desde commit integrado; gates, aprobación del Environment `release` y prueba humana pendientes. No concluida |
+| 3. Ciclo de vida completo e interacción física | Rama `test/wayland-daemon-lifecycle`: quit con ventana abierta y reinicio aprobados en prueba aislada. [PR #22](https://github.com/lzocateli/PixelPointer/pull/22) abierto; atajos físicos, Esc, bandeja y lanzador pendientes |
 | 4. Matriz de compatibilidad | Pendiente de entornos/compositores reales, hardware y arquitecturas adecuados |
 | 5. Completar F2 | GPU/4K, abstracciones, ScreenCaptureKit y bienvenida pendientes; no concluida |
 | 6. Herramientas avanzadas F3 | Aún no implementadas |

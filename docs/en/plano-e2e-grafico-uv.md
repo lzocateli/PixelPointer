@@ -339,6 +339,37 @@ connection reuse and fresh queries, not changing properties in a naturally
 incompatible portal, physical hotkeys, Esc, tray or quit with a window still
 open. GNOME/KDE and the latency target remain pending.
 
+### Quit with an open overlay and restart
+
+On 2026-11-01, `test/wayland-daemon-lifecycle` added opt-in
+`-CheckDaemonLifecycle`, requiring `-RepeatDaemonCaptures`. Production code
+and dependencies did not change in this step.
+
+The driver requires an open overlay and verifies its color through the portal
+before `quit`. The process must exit zero, the window disappear and `status`
+report no daemon. It then starts another process, requires a new D-Bus identity,
+opens zoom through IPC, verifies the updated frame and quits again. JSON records
+each assertion; the orchestrator rejects incomplete lifecycle results.
+
+| Scenario | Local evidence | Result |
+| --- | --- | --- |
+| Previous test without the new option | `artifacts/wayland/screencast-20261101T130137628-161f4830` | Passed; existing behavior preserved |
+| Normal lifecycle | `artifacts/wayland/screencast-20261101T130141551-ca85f33c` | Open-overlay quit, stopped status, new connection and post-restart capture passed |
+| Lifecycle with `GetAll` denied | `artifacts/wayland/screencast-20261101T130145567-e269262d` | Same checks passed with the denial policy |
+
+From the clone root, with current AOT package, rootless Podman, authorized render
+node and isolated nginx under the preceding prerequisites:
+
+```powershell
+pwsh -NoProfile -File tools/scripts/Test-WaylandScreenCast.ps1 -Engine podman -Package artifacts/aot/linux-x64 -RenderNode /dev/dri/renderD128 -RepeatDaemonCaptures -CheckDaemonLifecycle
+```
+
+Add `-DenyScreenCastGetAll` to repeat under denial. nginx had no public ports
+and passed its smoke check; containers were removed. No host graphical session,
+D-Bus or personal data was accessed. The package was stage 1's validated AOT.
+This is isolated Sway/IPC coverage, not physical hotkeys, Esc, tray, launcher
+or native GNOME/Windows/macOS acceptance.
+
 ### Local Results on 2026-10-30
 
 Steps 1–6 implemented for the first target; step 7 remains conditional expansion,
