@@ -150,6 +150,46 @@ Screenshot. En compositores wlroots (Sway, Hyprland), el cuadro solo llega tras
 algún cambio en la pantalla; si no, la captura usa Screenshot tras 2 s. La
 terminal informa el camino usado y el tiempo del portal y del primer cuadro.
 
+**Diagnóstico por etapas.** Se conservan los totales `portal` y `primeiro quadro`:
+`portal` cubre creación de sesión, selección/inicio del portal y persistencia
+de la autorización; `primeiro quadro` incluye abrir el remoto PipeWire y leer/
+convertir el cuadro. El mensaje también informa las duraciones por etapa:
+
+| Campo | Etapa |
+| --- | --- |
+| `sessao` | Crear la sesión ScreenCast |
+| `fontes` | Seleccionar fuentes de captura |
+| `inicio` | Iniciar sesión; incluye espera del consentimiento si el portal muestra diálogo |
+| `persistencia` | Intentar guardar autorización para la próxima captura |
+| `remoto` | Abrir la conexión PipeWire |
+| `leitura` | Obtener y convertir el primer cuadro |
+| `restore solicitado` | `sim`/`nao`: se proporcionó autorización anterior; nunca muestra su contenido |
+
+Los valores en milisegundos se redondean por separado; su suma puede diferir
+de los totales mostrados.
+
+`restore solicitado sim` no demuestra que el portal reutilizó autorización
+ni evitó el diálogo. Las mediciones excluyen consultas iniciales de capacidades,
+lectura de autorización, cierre de sesión y presentación de la superposición;
+no son la latencia completa de atajo a cuadro visible. No compares capturas con
+y sin diálogo como escenarios equivalentes. El diagnóstico no cambia
+consentimiento, backend, timeout o alternativa, ni expone tokens o contenido de pantalla.
+
+**Consulta de capacidades.** La captura intenta leer `version`,
+`AvailableSourceTypes` y `AvailableCursorModes` en una llamada `Properties.GetAll`.
+Los valores no se guardan en cache entre capturas. Si `GetAll` falla, no está
+soportado o devuelve propiedades ausentes/tipos inesperados, la conexión usa
+las lecturas `Get` anteriores con su orden y salidas anticipadas; una conexión
+nueva vuelve a intentar `GetAll`. La primera comprobación incompatible cuesta
+una llamada adicional, pero no se repite en esa conexión. Permisos,
+consentimiento, cursor, persistencia y alternativa de captura no cambian.
+
+`ScreenCast capacidades: ... ms; consulta GetAll` indica lectura agrupada;
+`consulta Get` indica compatibilidad mediante lecturas individuales. El tiempo
+separado no está incluido en los totales anteriores ni es la latencia completa
+del atajo. Menos consultas no demuestra por sí solo mejora perceptible ni la
+meta de rendimiento de tu escritorio.
+
 ### Linux con X11
 
 Los atajos y la captura funcionan sin permisos adicionales (XGrabKey y XGetImage).

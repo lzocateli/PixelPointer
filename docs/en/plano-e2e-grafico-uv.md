@@ -7,7 +7,7 @@
 | Date | 2026-10-30 |
 | Human authorization | Requester, in this conversation: authorization for isolated graphical E2E under the project rules |
 | Authorized decision | Allow a separate, isolated automated graphical suite |
-| Execution status | X11 executed with 10/10 stability; human video review closed by maintainer decision on 2026-10-31, with no recorded review. ScreenCast/PipeWire validated on isolated Sway with a render node (including restore token and frame after screen damage); no-GPU path handles unavailability. Manual Wayland acceptance below is for v0.1.2, before ScreenCast; real GNOME and other compositors remain pending |
+| Execution status | X11 executed with 10/10 stability; human video review closed by maintainer decision on 2026-10-31, with no recorded review. ScreenCast/PipeWire validated on isolated Sway with a render node; no-GPU path handled. Capture, zoom and drawing of v0.1.3-preview.14 manually accepted on Ubuntu 26.04.1/GNOME Wayland on 2026-10-31; token, indicator, latency without the dialog and additional matrix remain pending |
 | Functional reference version | v0.1.2, first functional version accepted as stable by the maintainer on 2026-10-30 on recorded GNOME X11/Wayland environments; not approval of the complete cross-platform matrix |
 | First target | Linux x64, X11 in a disposable desktop |
 | Expansion | GNOME X11, per-compositor Wayland and other systems after feasibility is established |
@@ -179,7 +179,7 @@ project-owned surfaces only after local container proof.
 | --- | --- |
 | Linux x64, minimum virtual X11 | Executed: 10/10 consecutive with compositor/tray; variants without compositor and without tray passed |
 | GNOME X11 | Manual acceptance: transparent drawing, automatic visual selection, zoom, PNG, CapsLock/NumLock, both monitors and Sair shutdown; screenshots confirm monitor 1, tray icon/menu and no-daemon status after exit; Zoom/Draw through tray, launcher and full matrix not individually proven |
-| Wayland | ScreenCast/PipeWire passed on isolated headless Sway with a render node: two captures, format/color, reused restore token and a fresh frame after damage; without a render node, unavailability is handled without an unhandled exception. Manual Ubuntu 26.04/GNOME acceptance for v0.1.2 predates this implementation. Real GNOME (consent, restore token, indicator and latency), multi-monitor and other compositors remain pending; no consent mocks or XTEST via XWayland as native-path evidence |
+| Wayland | ScreenCast/PipeWire passed on isolated Sway; no-GPU unavailability handled. v0.1.3-preview.14 manually accepted for capture, zoom and drawing on Ubuntu 26.04.1/GNOME Wayland, with consent observed. Token reuse, indicator duration, latency without the dialog, multi-monitor and other compositors remain pending; no consent mocks or XTEST via XWayland as native evidence |
 | Linux arm64 | Execute on appropriate architecture before claiming coverage |
 | Windows/macOS | Native backends and disposable graphical sessions; strategy depends on container compatibility and specific authorization for any exception |
 | Pen/GPU/physical monitors | Use on both 1920×1080 monitors at scale 1 manually confirmed; pen, other GPUs, scales/topologies pending |
@@ -193,6 +193,151 @@ Final acceptance requires the executed matrix with explicit limits, reproducible
 evidence and human review of initial videos/references. Authorization allows building
 the suite, not preapproval of tools, security exceptions, cross-platform support or
 results that do not exist yet.
+
+### Manual preview acceptance on GNOME Wayland
+
+On 2026-10-31, the requester reported that the Linux Wayland test passed,
+attached a screenshot and capture log, then explicitly authorized recording
+zoom and drawing as successful. The test ran on the requester's machine,
+not through automation connected to their graphical session.
+
+- Observed environment: Ubuntu 26.04.1 LTS x64, GNOME/Wayland, Native AOT,
+  `0.1.3-preview.14` from commit `cdd125e`; `probe` reported ScreenCast v5
+  and GlobalShortcuts v1. GNOME version and scale were not explicitly supplied.
+- The screenshot shows the sharing dialog with the internal monitor selected,
+  plus desktop entry and icon installation. The app registration warning in
+  `probe` preceded that installation; no new diagnostic proves it resolved.
+- The log confirms **xdg-desktop-portal ScreenCast + PipeWire**, a
+  **1920×1080** PNG, portal **20,830 ms**, first frame **122 ms** and
+  total **20,999 ms**. Portal timing includes human selection and confirmation
+  in the dialog; it does not prove hotkey-to-frame < 150 ms.
+- Capture, zoom and drawing are **manually accepted in this environment**
+  according to human confirmation. The still screenshot alone does not prove
+  interactive zoom/drawing; acceptance of those actions relies on the report.
+- This preview still lacks evidence for token reuse, indicator duration,
+  repetition without consent, physical hotkeys, tray/launcher actions, Ctrl+S,
+  alpha or live content, multi-monitor, other compositors, scales, GPUs and
+  Windows/macOS. Confirmation does not complete automated Wayland coverage
+  or phases F2/F3.
+
+The attachment remains in the conversation and is not copied to the repository;
+the personal screenshot is not published. The personal PNG path is omitted.
+
+### Stage diagnostics validation on 2026-10-31
+
+The local Native AOT binary with the unpublished diagnostics passed
+ScreenCast/PipeWire testing on isolated Sway with a render node. The existing
+runner verified two captures, colors/format and a fresh frame after scene
+changes. nginx stayed isolated without public ports, with smoke and cleanup;
+no host graphical session or D-Bus was accessed.
+
+Local evidence: `artifacts/wayland/screencast-20261101T015920989-305aa712`.
+First capture: portal 9 ms, remote 3 ms, reading 19 ms, legacy
+`primeiro quadro` 23 ms, `restore solicitado nao`. Second: portal 8 ms,
+remote 4 ms, reading 16 ms, legacy field 20 ms, `restore solicitado sim`.
+Values are rounded independently; they describe this run, not an equivalent
+benchmark to GNOME with a dialog or proof of the < 150 ms target.
+
+The local gate passed format, build with no warnings/errors, 139 unit tests,
+23 preview governance cases, Native AOT publication and `selftest`.
+The ScreenCast class had 23 tests pass after preparing Fontconfig in the
+container. Native Windows/macOS graphical tests and manual GNOME acceptance
+of the new diagnostics were not repeated. This does not complete F2/F3.
+
+### Grouped query validation on 2026-10-31
+
+The unpublished local Native AOT binary passed again on isolated Sway with a
+render node, isolated nginx without public ports and container cleanup.
+Evidence: `artifacts/wayland/screencast-20261101T022349873-b4ed0c2d`.
+Both captures, colors/format and a fresh frame after scene changes passed;
+both reported `ScreenCast capacidades: 0 ms; consulta GetAll`, confirming
+the grouped path. The rounded value does not mean zero cost and is not a
+GNOME benchmark.
+
+The gate passed format, build without warnings/errors, 156 unit tests,
+23 preview governance cases, Native AOT and `selftest`. The portal client's
+24 tests cover types/properties, monitor support and the old sequence with
+early exits and cancellation. Incompatible replies and legacy reads were
+tested as synthetic logic, not against a real portal rejecting `GetAll`.
+GNOME/KDE/other portal coverage and complete benchmarking remain pending;
+this run does not complete F2/F3.
+
+### GetAll compatibility under controlled denial
+
+On 2026-11-01, normal and `GetAll`-denied scenarios passed with the same local
+Native AOT package and existing Wayland image. nginx was isolated without
+public ports, with smoke and cleanup. No host graphical session, D-Bus or
+personal directories were accessed; only the previously authorized render node
+was exposed to the rootless container.
+
+- Control: `artifacts/wayland/screencast-20261101T121050665-764bf12c`,
+  two ScreenCast/PipeWire captures with an updated frame, without added policy.
+- Denial: `artifacts/wayland/screencast-20261101T121052886-6dcf124c`,
+  `result.json` with `passed=true`, `mode=getall-denied` and two rejections.
+  Both captures still used ScreenCast/PipeWire and reported `consulta Get`.
+- D-Bus configuration was derived from the image through XML parsing with DTD
+  and external resolution disabled, created without overwriting and mounted
+  read-only. The policy blocks `Properties.GetAll` for
+  `org.freedesktop.portal.Desktop` in the container, without examining call
+  arguments. `Get`, session creation/start and frame reading remain allowed.
+- Bus logs prove the rejections. Tests require both `Get` diagnostics and
+  correct captures; post-check failure writes `passed=false` rather than retaining
+  the runner's positive result. The portal and its consent were not replaced.
+
+Additional command from the clone root, with the current package in
+`artifacts/aot/linux-x64`, rootless Podman, the Wayland image available and
+isolated nginx already running under E2E rules:
+
+```powershell
+pwsh -NoProfile -File tools/scripts/Test-WaylandScreenCast.ps1 -Engine podman -Package artifacts/aot/linux-x64 -RenderNode /dev/dri/renderD128 -DenyScreenCastGetAll
+```
+
+Requires the new capability diagnostic, not the older published preview package.
+Without `RenderNode`, the mode is rejected before starting the scenario; help
+and unknown arguments were tested in a container. Production code did not change
+in this step; the normal scenario was also repeated successfully. Each `capture`
+command opens a new connection, so this does not verify repeated captures using
+the `Get` preference on one daemon connection. Naturally incompatible portals,
+GNOME/KDE, cross-platform coverage and the latency target remain pending.
+Fault injection does not complete this plan.
+
+### Repeated captures on the daemon connection
+
+On 2026-11-01, optional `-RepeatDaemonCaptures` passed in control and with
+`-DenyScreenCastGetAll` using the same local AOT package. The Python driver uses
+only the standard library and tools already in the image; it runs the existing
+baseline and then a real daemon on disposable D-Bus/Sway. A monitor records
+only portal property calls, without replies, tokens or screen content.
+Visual captures inspect a synthetic scene. nginx stayed isolated without
+public ports, with smoke and cleanup.
+
+| Scenario | Local evidence | Result |
+| --- | --- | --- |
+| Control | `artifacts/wayland/screencast-20261101T123222089-3df3f7ae` | One daemon, two sessions, two `GetAll` calls, no rejections |
+| Denial | `artifacts/wayland/screencast-20261101T123225959-89b40b94` | One daemon, one denied `GetAll`, six ordered `Get` calls for version/sources/cursor across two sessions |
+
+The driver identifies the D-Bus connection by daemon PID. Drawing and zoom use
+IPC; one window is required and a portal capture checks frame color, with a
+different color in the second session. `swaymsg` closes the window, the process
+must remain active according to `status`, and `quit` must exit with code zero.
+`daemon-result.json` records calls, colors and lifecycle; the orchestrator
+requires a complete result and propagates failures to `result.json`.
+Incomplete startup or verification is not success.
+
+From the clone root, with image, current package, authorized render node,
+rootless Podman and isolated nginx running under the previous rules:
+
+```powershell
+pwsh -NoProfile -File tools/scripts/Test-WaylandScreenCast.ps1 -Engine podman -Package artifacts/aot/linux-x64 -RenderNode /dev/dri/renderD128 -RepeatDaemonCaptures
+```
+
+Add `-DenyScreenCastGetAll` to repeat under denial. The driver is mounted
+read-only; the option requires a render node and leaves the normal scenario
+unchanged. The orchestrator remains PowerShell 7; Python runs only inside the
+container. Production code did not change. This isolated acceptance covers
+connection reuse and fresh queries, not changing properties in a naturally
+incompatible portal, physical hotkeys, Esc, tray or quit with a window still
+open. GNOME/KDE and the latency target remain pending.
 
 ### Local Results on 2026-10-30
 

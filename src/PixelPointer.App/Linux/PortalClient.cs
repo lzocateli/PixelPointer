@@ -13,6 +13,11 @@ internal enum AppIdRegistrationStatus
 
 internal sealed record AppIdRegistrationResult(AppIdRegistrationStatus Status, string? Detail = null);
 
+internal readonly record struct ScreenCastCapabilities(uint Version, uint AvailableSourceTypes, uint AvailableCursorModes)
+{
+    internal bool SupportsMonitor => (AvailableSourceTypes & 1u) != 0;
+}
+
 /// <summary>Cliente mínimo dos portais XDG (Registry, Screenshot, ScreenCast e GlobalShortcuts) sobre o barramento de sessão.</summary>
 internal sealed class PortalClient : IDisposable
 {
@@ -23,6 +28,7 @@ internal sealed class PortalClient : IDisposable
 
     private readonly DBusConnection _connection;
     private int _tokenCounter;
+    private bool _useScreenCastGetAll = true;
 
     private PortalClient(DBusConnection connection) => _connection = connection;
 
@@ -123,6 +129,72 @@ internal sealed class PortalClient : IDisposable
         {
             return 0;
         }
+    }
+
+    /// <summary>Lê capacidades atualizadas em uma chamada, com compatibilidade pelas propriedades individuais.</summary>
+    internal async Task<(ScreenCastCapabilities Capabilities, bool Grouped)> GetScreenCastCapabilitiesAsync()
+    {
+        if (_useScreenCastGetAll)
+        {
+            try
+            {
+                var message = CreateMessage((ref MessageWriter writer) =>
+                {
+                    writer.WriteMethodCallHeader(Destination, DesktopPath, "org.freedesktop.DBus.Properties", "GetAll", "s");
+                    writer.WriteString(ScreenCastInterface);
+                });
+                var properties = await _connection.CallMethodAsync(message,
+                    static (message, _) => message.GetBodyReader().ReadDictionaryOfStringToVariantValue()).ConfigureAwait(false);
+                if (TryReadScreenCastCapabilities(properties, out var capabilities))
+                {
+                    return (capabilities, true);
+                }
+            }
+            catch (Exception ex) when (ex is DBusErrorReplyException or InvalidOperationException or NotSupportedException)
+            {
+                _useScreenCastGetAll = false;
+            }
+
+            _useScreenCastGetAll = false;
+        }
+
+        var legacy = await ReadLegacyScreenCastCapabilitiesAsync(
+            property => GetUInt32PropertyAsync(ScreenCastInterface, property)).ConfigureAwait(false);
+        return (legacy, false);
+    }
+
+    internal static async Task<ScreenCastCapabilities> ReadLegacyScreenCastCapabilitiesAsync(Func<string, Task<uint>> readProperty)
+    {
+        var version = await readProperty("version").ConfigureAwait(false);
+        if (version == 0)
+        {
+            return default;
+        }
+
+        var sources = await readProperty("AvailableSourceTypes").ConfigureAwait(false);
+        var result = new ScreenCastCapabilities(version, sources, 0);
+        if (!result.SupportsMonitor)
+        {
+            return result;
+        }
+
+        var cursors = await readProperty("AvailableCursorModes").ConfigureAwait(false);
+        return new ScreenCastCapabilities(version, sources, cursors);
+    }
+
+    internal static bool TryReadScreenCastCapabilities(IReadOnlyDictionary<string, VariantValue> properties,
+        out ScreenCastCapabilities capabilities)
+    {
+        capabilities = default;
+        if (!properties.TryGetValue("version", out var version) || version.Type != VariantValueType.UInt32
+            || !properties.TryGetValue("AvailableSourceTypes", out var sources) || sources.Type != VariantValueType.UInt32
+            || !properties.TryGetValue("AvailableCursorModes", out var cursors) || cursors.Type != VariantValueType.UInt32)
+        {
+            return false;
+        }
+
+        capabilities = new ScreenCastCapabilities(version.GetUInt32(), sources.GetUInt32(), cursors.GetUInt32());
+        return true;
     }
 
     /// <summary>Cria uma sessão ScreenCast e devolve o handle da sessão.</summary>

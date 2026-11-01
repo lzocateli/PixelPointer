@@ -11,7 +11,6 @@ namespace PixelPointer.App.Linux;
 /// </summary>
 internal sealed class ScreenCastCapture(PortalClient portal, RestoreTokenStore? tokens) : IScreenCapture
 {
-    private const uint SourceMonitor = 1;
     private const uint CursorHidden = 1;
     // Compositores wlroots só entregam quadro após dano na tela; sem ele, volta ao Screenshot sem prender o usuário.
     private static readonly TimeSpan FrameTimeout = TimeSpan.FromSeconds(2);
@@ -45,38 +44,44 @@ internal sealed class ScreenCastCapture(PortalClient portal, RestoreTokenStore? 
 
     private async Task<SKBitmap> CaptureScreenCastAsync(CancellationToken cancellationToken)
     {
-        var version = await portal.GetVersionAsync("org.freedesktop.portal.ScreenCast").ConfigureAwait(false);
-        if (version == 0)
+        var capabilitiesStarted = Stopwatch.GetTimestamp();
+        var (capabilities, grouped) = await portal.GetScreenCastCapabilitiesAsync().ConfigureAwait(false);
+        var capabilitiesMs = Stopwatch.GetElapsedTime(capabilitiesStarted).TotalMilliseconds;
+        if (capabilities.Version == 0)
         {
             throw new NotSupportedException("portal ScreenCast ausente");
         }
 
-        var sources = await portal.GetUInt32PropertyAsync("org.freedesktop.portal.ScreenCast", "AvailableSourceTypes")
-            .ConfigureAwait(false);
-        if ((sources & SourceMonitor) == 0)
+        if (!capabilities.SupportsMonitor)
         {
             throw new NotSupportedException("o portal não oferece captura de monitor");
         }
 
-        var cursors = await portal.GetUInt32PropertyAsync("org.freedesktop.portal.ScreenCast", "AvailableCursorModes")
-            .ConfigureAwait(false);
-        var persist = version >= 4 && tokens is not null;
+        var cursors = capabilities.AvailableCursorModes;
+        var persist = capabilities.Version >= 4 && tokens is not null;
         var restoreToken = persist ? tokens!.Read() : null;
 
         var timer = Stopwatch.StartNew();
         var session = await portal.CreateScreenCastSessionAsync(cancellationToken).ConfigureAwait(false);
+        var sessionCreatedMs = timer.Elapsed.TotalMilliseconds;
         try
         {
             await portal.SelectScreenCastSourcesAsync(session, (cursors & CursorHidden) != 0 ? CursorHidden : 0, persist,
                 restoreToken, cancellationToken).ConfigureAwait(false);
+            var sourcesSelectedMs = timer.Elapsed.TotalMilliseconds;
             var (nodeId, newToken) = await portal.StartScreenCastAsync(session, cancellationToken).ConfigureAwait(false);
+            var sessionStartedMs = timer.Elapsed.TotalMilliseconds;
             SaveToken(newToken);
             var portalMs = timer.Elapsed.TotalMilliseconds;
             using var remote = await portal.OpenPipeWireRemoteAsync(session).ConfigureAwait(false);
+            var remoteOpenedMs = timer.Elapsed.TotalMilliseconds;
             var bitmap = await PipeWireFrameReader.ReadFrameAsync(remote, nodeId, FrameTimeout, cancellationToken)
                 .ConfigureAwait(false);
-            Console.Error.WriteLine(
-                $"ScreenCast: portal {portalMs:0} ms, primeiro quadro {timer.Elapsed.TotalMilliseconds - portalMs:0} ms");
+            var frameReadyMs = timer.Elapsed.TotalMilliseconds;
+            Console.Error.WriteLine(FormatTimings(sessionCreatedMs, sourcesSelectedMs, sessionStartedMs, portalMs,
+                remoteOpenedMs, frameReadyMs, restoreToken is not null));
+            Console.Error.WriteLine(FormattableString.Invariant(
+                $"ScreenCast capacidades: {capabilitiesMs:0} ms; consulta {(grouped ? "GetAll" : "Get")}"));
             return bitmap;
         }
         finally
@@ -84,6 +89,10 @@ internal sealed class ScreenCastCapture(PortalClient portal, RestoreTokenStore? 
             await portal.CloseSessionAsync(session).ConfigureAwait(false);
         }
     }
+
+    internal static string FormatTimings(double sessionCreatedMs, double sourcesSelectedMs, double sessionStartedMs,
+        double portalMs, double remoteOpenedMs, double frameReadyMs, bool restoreRequested) =>
+        FormattableString.Invariant($"ScreenCast: portal {portalMs:0} ms, primeiro quadro {frameReadyMs - portalMs:0} ms (sessao {sessionCreatedMs:0} ms; fontes {sourcesSelectedMs - sessionCreatedMs:0} ms; inicio {sessionStartedMs - sourcesSelectedMs:0} ms; persistencia {portalMs - sessionStartedMs:0} ms; remoto {remoteOpenedMs - portalMs:0} ms; leitura {frameReadyMs - remoteOpenedMs:0} ms; restore solicitado {(restoreRequested ? "sim" : "nao")})");
 
     private void SaveToken(string? token)
     {
