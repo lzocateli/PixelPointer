@@ -161,6 +161,7 @@ mode the daemon's messages are not shown; to diagnose hotkey conflicts, run
 | Tab + drag | Ellipse |
 | R G B Y O P | Red, green, blue, yellow, orange, pink |
 | Shift + R G B Y O P | Translucent highlighter in that color |
+| X / Shift+X | Blur / strong blur (rectangle and ellipse are filled) |
 | Ctrl+wheel | Pen width |
 | Ctrl+Z / E | Undo / erase all |
 | W / K | Whiteboard / blackboard |

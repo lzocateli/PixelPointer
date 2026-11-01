@@ -162,6 +162,7 @@ execute `pixelpointer daemon` em primeiro plano.
 | Tab + arrastar | Elipse |
 | R G B Y O P | Vermelho, verde, azul, amarelo, laranja, rosa |
 | Shift + R G B Y O P | Marca-texto translúcido na cor |
+| X / Shift+X | Desfoque / desfoque forte (retângulo e elipse preenchidos) |
 | Ctrl+roda | Espessura da caneta |
 | Ctrl+Z / E | Desfazer / apagar tudo |
 | W / K | Quadro branco / quadro preto |

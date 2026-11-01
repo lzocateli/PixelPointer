@@ -205,7 +205,7 @@ não desative proteções do Windows para contornar alertas.
 #### Roteiro de teste e retorno à estável
 
 - Confirme a versão escolhida, o `selftest` e a sessão/portais no `probe`.
-- Teste Ctrl+1, roda do mouse, Ctrl+2, cores, marca-texto (Shift+cor), formas (Shift, Ctrl, Ctrl+Shift e Tab ao arrastar) e Ctrl+Z.
+- Teste Ctrl+1, roda do mouse, Ctrl+2, cores, marca-texto (Shift+cor), desfoque (X e Shift+X), formas (Shift, Ctrl, Ctrl+Shift e Tab ao arrastar) e Ctrl+Z.
 - Teste Ctrl+S: PNG na pasta XDG Imagens/`Screenshots` do Linux ou na pasta
    especial Imagens/`Screenshots` do Windows, respeitando OneDrive.
 - Esc fecha a sobreposição; `status` deve confirmar que o daemon continua
