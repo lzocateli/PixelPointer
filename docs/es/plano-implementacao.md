@@ -232,7 +232,7 @@ incrementos locales en `perf/f2-wayland-capture`.
 | Etapa | Estado de ejecución |
 | --- | --- |
 | 1. Consolidar diagnóstico, capacidades y pruebas Wayland | [PR #21](https://github.com/lzocateli/PixelPointer/pull/21) integrado en `df252e6`, con `Result` aprobado |
-| 2. Nueva preview y aceptación GNOME real | [Preview #16](https://github.com/lzocateli/PixelPointer/actions/runs/41308984865): builds, smokes y atestaciones aprobados; espera aprobación del Environment `release` y prueba humana. No concluida |
+| 2. Nueva preview y aceptación GNOME real | [Preview #16](https://github.com/lzocateli/PixelPointer/actions/runs/41308984865) publicada y aceptada manualmente por el mantenedor el 2026-11-01 en una segunda máquina GNOME Wayland (1920×1080, escala 1,25): `install-desktop-file`, `grant`, daemon, Ctrl+1/Ctrl+2 mediante GlobalShortcuts, zoom, dibujo, pizarras blanca/negra, PNG, menú de la bandeja y Salir en dos ejecuciones. Correcciones locales posteriores, aún fuera de una preview: socket IPC huérfano, entrada de escritorio de otra extracción y aviso de icono repetido |
 | 3. Ciclo de vida completo e interacción física | [PR #22](https://github.com/lzocateli/PixelPointer/pull/22) integrado en `0ad417f`, con `Result` aprobado; atajos físicos, Esc, bandeja y lanzador pendientes |
 | 4. Matriz de compatibilidad | [PR #23](https://github.com/lzocateli/PixelPointer/pull/23) integrado en `05b0c40`. En `test/wayland-output-scale`, corrección de ventana y escalas 1/1,5/2 aprobadas en prueba aislada; [PR #24](https://github.com/lzocateli/PixelPointer/pull/24) abierto. Entornos reales, hardware y arquitecturas pendientes |
 | 5. Completar F2 | [PR #25](https://github.com/lzocateli/PixelPointer/pull/25) integrado. En `feat/first-use-setup`, 178 pruebas/AOT y cierre gráfico sin efectos aprobados; [PR #26](https://github.com/lzocateli/PixelPointer/pull/26) abierto. Generar preview tras integración/CI verde para aceptación humana. Consentimiento GNOME real, GPU/4K, abstracciones restantes y ScreenCaptureKit pendientes |
@@ -240,16 +240,17 @@ incrementos locales en `perf/f2-wayland-capture`.
 | 7. F4–F7 | Temporizador, recorte, Live Zoom, grabación y DemoType aún no implementados |
 | 8. F8–F9 | Distribución adicional y traducciones anteriores pendientes |
 
-Actualizado el 2026-10-31. El [plan de la issue #3, pt-BR](../plano-correcao-issue-3.md)
+Actualizado el 2026-11-01. El [plan de la issue #3, pt-BR](../plano-correcao-issue-3.md)
 se cerró junto con la issue y se conserva como registro histórico. Sus ítems
 abiertos y los del [plan de E2E](plano-e2e-grafico-uv.md) se siguen aquí, además
 de las fases F2 a F9 de la sección 5.
 
 | Pendiente | Origen | Situación |
 | --- | --- | --- |
-| Aceptación manual de Zoom y Desenhar accionados desde la bandeja en GNOME X11 | Issue #3, 3.5 | Icono, menú y Sair aceptados; ambas acciones aún sin confirmar |
-| Apertura desde el menú de aplicaciones de GNOME sin terminal | Issue #3, 3.6 | Aprobó en el E2E con lanzador sintético; falta aceptación real |
-| Matriz Wayland por compositor: portales con y sin Registry, permisos denegados, bandeja y E2E aislado con libei/EIS | Issue #3, 3.1, 3.3 y 5; E2E, 8 | ScreenCast/PipeWire pasó en Sway aislado y captura, zoom y dibujo tuvieron aceptación manual con v0.1.3-preview.14 en Ubuntu 26.04.1/GNOME Wayland. Consentimiento observado; reutilización del token, duración del indicador, latencia sin diálogo, varios monitores y otros compositores siguen pendientes |
+| Aceptación manual de Zoom y Desenhar accionados desde la bandeja en GNOME X11 | Issue #3, 3.5 | Icono, menú y Sair aceptados; ambas acciones aún sin confirmar en X11. En GNOME Wayland, Zoom y Desenhar desde la bandeja fueron aceptados con la preview.16 el 2026-11-01 |
+| Apertura desde el menú de aplicaciones de GNOME sin terminal | Issue #3, 3.6 | Aceptación real en GNOME Wayland con la preview.16 el 2026-11-01: el icono en Aplicaciones inició el daemon con bandeja; GNOME X11 sin confirmar |
+| El indicador de pantalla compartida permanece activo en GNOME Wayland | Aceptación de la preview.16 | Problema abierto: tras capturas ScreenCast, el indicador naranja sigue activo incluso después de Sair, sin otra compartición activa. El código cierra la sesión del portal tras el primer cuadro; causa en investigación con diagnóstico en la máquina afectada |
+| Matriz Wayland por compositor: portales con y sin Registry, permisos denegados, bandeja y E2E aislado con libei/EIS | Issue #3, 3.1, 3.3 y 5; E2E, 8 | ScreenCast/PipeWire pasó en Sway aislado y captura, zoom y dibujo tuvieron aceptación manual con v0.1.3-preview.14 y v0.1.3-preview.16 en GNOME Wayland. Con la preview.16, sesiones repetidas reutilizaron el token sin diálogo (portal ~20 ms; primer cuadro ~160–176 ms tras el comando). Duración del indicador, varios monitores y otros compositores siguen pendientes |
 | Ctrl+S nativo: Known Folder en Windows, incluido OneDrive, y preferencia de macOS, con filesystem real por SO | Issue #3, 3.7 | Cerrado por decisión del mantenedor el 2026-10-31; lógica cubierta por pruebas, sin validación nativa registrada |
 | Recorrido manual completo en Windows | F0; issue #3 | Evidencia parcial el 2026-10-31, descrita abajo |
 | Recorrido manual completo en macOS | F0; issue #3 | Sin evidencia nativa |
