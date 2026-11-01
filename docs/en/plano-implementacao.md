@@ -228,7 +228,7 @@ on `perf/f2-wayland-capture`.
 
 | Step | Execution status |
 | --- | --- |
-| 1. Consolidate Wayland diagnostics, capabilities and tests | Implemented locally; dedicated branch, validation and PR being prepared |
+| 1. Consolidate Wayland diagnostics, capabilities and tests | Implemented and validated: 156 tests, AOT and Wayland scenarios passed. [PR #21](https://github.com/lzocateli/PixelPointer/pull/21) open; awaits CI and maintainer integration |
 | 2. New preview and real GNOME acceptance | Requires approved integration of step 1, dispatch and `release` Environment approval, then human testing; not executed |
 | 3. Complete lifecycle and physical interaction | Not yet implemented as a new increment; quit with open window, physical hotkeys, tray and launcher remain |
 | 4. Compatibility matrix | Requires real environments/compositors, suitable hardware and architectures |

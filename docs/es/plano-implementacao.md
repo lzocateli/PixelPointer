@@ -231,7 +231,7 @@ incrementos locales en `perf/f2-wayland-capture`.
 
 | Etapa | Estado de ejecución |
 | --- | --- |
-| 1. Consolidar diagnóstico, capacidades y pruebas Wayland | Implementado localmente; rama propia, validación y PR en preparación |
+| 1. Consolidar diagnóstico, capacidades y pruebas Wayland | Implementado y validado: 156 pruebas, AOT y escenarios Wayland aprobados. [PR #21](https://github.com/lzocateli/PixelPointer/pull/21) abierto; espera CI e integración del mantenedor |
 | 2. Nueva preview y aceptación GNOME real | Requiere integración aprobada de etapa 1, dispatch y aprobación del Environment `release`, luego prueba humana; no ejecutado |
 | 3. Ciclo de vida completo e interacción física | Aún no implementado como incremento nuevo; faltan quit con ventana abierta, atajos físicos, bandeja y lanzador |
 | 4. Matriz de compatibilidad | Pendiente de entornos/compositores reales, hardware y arquitecturas adecuados |
