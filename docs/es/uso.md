@@ -57,6 +57,10 @@ arrastrar para dibujar, R/G/B/Y/O/P para colores, Ctrl+rueda para el grosor,
 Ctrl+Z para deshacer, E para borrar, W/K para pizarra blanca/negra, Ctrl+S para
 guardar un PNG en la carpeta de capturas del usuario, Esc o clic derecho para salir.
 
+Formas, como en ZoomIt: mantén la tecla al empezar a arrastrar — Shift dibuja
+una línea recta, Ctrl un rectángulo, Ctrl+Shift una flecha y Tab una elipse. La
+forma sigue al mouse hasta soltar el botón y usa el color y el grosor actuales.
+
 ## Dónde guarda Ctrl+S
 
 | Sistema | Destino |

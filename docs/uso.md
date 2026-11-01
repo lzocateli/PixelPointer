@@ -56,6 +56,10 @@ para desenhar, R/G/B/Y/O/P para cores, Ctrl+roda para a espessura, Ctrl+Z para
 desfazer, E para apagar, W/K para quadro branco/preto, Ctrl+S para salvar PNG
 na pasta de capturas do usuário, Esc ou botão direito para sair.
 
+Formas, como no ZoomIt: segure a tecla ao começar a arrastar — Shift desenha
+linha reta, Ctrl retângulo, Ctrl+Shift seta e Tab elipse. A forma acompanha o
+mouse até soltar o botão e usa a cor e a espessura atuais.
+
 ## Onde o Ctrl+S salva
 
 | Sistema | Destino |

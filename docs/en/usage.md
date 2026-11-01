@@ -58,6 +58,11 @@ R/G/B/Y/O/P for colors, Ctrl+wheel for pen width, Ctrl+Z to undo, E to erase,
 W/K for whiteboard/blackboard, Ctrl+S to save a PNG to the user's screenshots
 folder, Esc or right click to exit.
 
+Shapes, as in ZoomIt: hold the key when you start dragging — Shift draws a
+straight line, Ctrl a rectangle, Ctrl+Shift an arrow and Tab an ellipse. The
+shape follows the mouse until you release the button and uses the current color
+and width.
+
 ## Where Ctrl+S saves
 
 | System | Destination |

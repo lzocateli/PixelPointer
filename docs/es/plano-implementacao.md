@@ -236,7 +236,7 @@ incrementos locales en `perf/f2-wayland-capture`.
 | 3. Ciclo de vida completo e interacción física | [PR #22](https://github.com/lzocateli/PixelPointer/pull/22) integrado en `0ad417f`, con `Result` aprobado; atajos físicos, Esc, bandeja y lanzador pendientes |
 | 4. Matriz de compatibilidad | [PR #23](https://github.com/lzocateli/PixelPointer/pull/23) integrado en `05b0c40`. En `test/wayland-output-scale`, corrección de ventana y escalas 1/1,5/2 aprobadas en prueba aislada; [PR #24](https://github.com/lzocateli/PixelPointer/pull/24) abierto. Entornos reales, hardware y arquitecturas pendientes |
 | 5. Completar F2 | [PR #25](https://github.com/lzocateli/PixelPointer/pull/25) integrado. En `feat/first-use-setup`, 178 pruebas/AOT y cierre gráfico sin efectos aprobados; [PR #26](https://github.com/lzocateli/PixelPointer/pull/26) abierto. Generar preview tras integración/CI verde para aceptación humana. Consentimiento GNOME real, GPU/4K, abstracciones restantes y ScreenCaptureKit pendientes |
-| 6. Herramientas avanzadas F3 | Aún no implementadas |
+| 6. Herramientas avanzadas F3 | Branch `feat/f3-shapes`: línea, flecha, rectángulo y elipse con modificadores de ZoomIt (Shift, Ctrl+Shift, Ctrl, Tab), en el modelo de Core, el renderer y la superposición, con pruebas de modelo y de imagen; aceptación manual pendiente. Marcador, desenfoque, texto, varios monitores y copiar siguen pendientes |
 | 7. F4–F7 | Temporizador, recorte, Live Zoom, grabación y DemoType aún no implementados |
 | 8. F8–F9 | Distribución adicional y traducciones anteriores pendientes |
 
