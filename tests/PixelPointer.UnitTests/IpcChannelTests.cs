@@ -180,4 +180,53 @@ public sealed class IpcChannelTests
             runtimeDirectory.Delete(recursive: true);
         }
     }
+
+    [Fact]
+    public async Task ServeAsync_ReplacesSocketLeftByTerminatedDaemon()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var runtimeDirectory = Directory.CreateTempSubdirectory("pixelpointer-ipc-");
+        var previousRuntimeDirectory = Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR");
+        if (OperatingSystem.IsLinux())
+        {
+            File.SetUnixFileMode(runtimeDirectory.FullName,
+                UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        }
+
+        Environment.SetEnvironmentVariable("XDG_RUNTIME_DIR", runtimeDirectory.FullName);
+        using var cancellation = new CancellationTokenSource();
+        Task? server = null;
+        try
+        {
+            // O .NET remove o socket que criou ao descartá-lo; movê-lo antes simula um daemon morto.
+            var boundPath = IpcChannel.SocketPath + ".orphan";
+            using (var orphan = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified))
+            {
+                orphan.Bind(new UnixDomainSocketEndPoint(boundPath));
+                File.Move(boundPath, IpcChannel.SocketPath);
+            }
+
+            Assert.True(File.Exists(IpcChannel.SocketPath));
+            server = IpcChannel.ServeAsync(_ => { }, () => "running", cancellation.Cancel, cancellation.Token);
+            Assert.Equal("running", await IpcChannel.SendControlCommandAsync("status"));
+            Assert.Equal("quitting", await IpcChannel.SendControlCommandAsync("quit"));
+            await server;
+            Assert.False(File.Exists(IpcChannel.SocketPath));
+        }
+        finally
+        {
+            cancellation.Cancel();
+            if (server is not null)
+            {
+                await server;
+            }
+
+            Environment.SetEnvironmentVariable("XDG_RUNTIME_DIR", previousRuntimeDirectory);
+            runtimeDirectory.Delete(recursive: true);
+        }
+    }
 }
