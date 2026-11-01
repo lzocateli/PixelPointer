@@ -2,7 +2,7 @@
 .SYNOPSIS
 Testa a publicacao de previews sem acessar o GitHub.
 .DESCRIPTION
-Usa arquivos reais descartaveis e uma funcao gh sintetica em processos filhos.
+Usa arquivos reais descartaveis e funcoes git/gh sinteticas em processos filhos.
 Confere checksum, caminhos, origem, criacao de rascunho, finalizacao e recusa
 de releases ou assets incompativeis. Executar somente em container de validacao.
 .PARAMETER RemainingArguments
@@ -62,6 +62,12 @@ try {
 `$global:fixture = Get-Content -LiteralPath '$fixturePath' -Raw | ConvertFrom-Json -AsHashtable
 `$global:commit = '$commit'
 `$global:calls = '$calls'
+function global:git {
+    `$global:LASTEXITCODE = 0
+    if (`$args.Count -ne 6 -or `$args[2] -ne 'merge-base' -or `$args[3] -ne '--is-ancestor' -or `$args[-2] -ne `$global:commit -or `$args[-1] -ne 'origin/main' -or `$global:mode -eq 'wrong-ancestry') {
+        `$global:LASTEXITCODE = 1
+    }
+}
 function global:gh {
     `$arguments = @(`$args)
     `$method = `$arguments[[Array]::IndexOf(`$arguments, '--method') + 1]
@@ -114,7 +120,7 @@ function global:gh {
     Invoke-Case @{ Publish = $true } 'new'
     Invoke-Case @{ Publish = $true }
     Invoke-Case @{ Publish = $true; Stage = 'publish' }
-    foreach ($mode in @('bad-digest', 'missing-assets', 'published', 'stable', 'wrong-commit', 'api-error', 'existing-tag', 'new')) {
+    foreach ($mode in @('bad-digest', 'missing-assets', 'published', 'stable', 'wrong-commit', 'wrong-ancestry', 'api-error', 'existing-tag', 'new')) {
         Invoke-Case @{ Publish = $true; Stage = 'publish' } $mode 1
     }
     Invoke-Case @{ Publish = $true } 'existing-tag' 1
@@ -128,7 +134,7 @@ function global:gh {
     Invoke-Case @{} 'draft' 1
     Set-Content -LiteralPath (Join-Path $directory 'unexpected.txt') -Value 'unexpected'
     Invoke-Case @{} 'draft' 1
-    Write-Output "Aprovado: $count casos de preview; filesystem real, API sintetica, nenhuma publicacao."
+    Write-Output "Aprovado: $count casos de preview; filesystem real, Git/API sinteticos, nenhuma publicacao."
 }
 finally {
     Remove-Item -LiteralPath $temporary -Recurse -Force
