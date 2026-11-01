@@ -232,7 +232,7 @@ on `perf/f2-wayland-capture`.
 | 2. New preview and real GNOME acceptance | [Preview #16](https://github.com/lzocateli/PixelPointer/actions/runs/41308984865): builds, smokes and attestations passed; awaits `release` Environment approval and human testing. Not complete |
 | 3. Complete lifecycle and physical interaction | [PR #22](https://github.com/lzocateli/PixelPointer/pull/22) merged at `0ad417f`, with `Result` passed; physical hotkeys, Esc, tray and launcher pending |
 | 4. Compatibility matrix | `test/wayland-multi-monitor-policy`: single-monitor policy and controlled failure without Screenshot validated with two virtual outputs; [PR #23](https://github.com/lzocateli/PixelPointer/pull/23) open. Real environments/compositors, hardware and architectures pending |
-| 5. Complete F2 | GPU/4K, abstractions, ScreenCaptureKit and welcome window remain pending; not complete |
+| 5. Complete F2 | Increment on `fix/capture-backend-recovery`: native capture separated from fallback selection through the existing interface; source name follows success and recovery. Focused tests passed; gates/PR being prepared. GPU/4K, remaining abstractions, ScreenCaptureKit and welcome window pending |
 | 6. Advanced F3 tools | Not implemented yet |
 | 7. F4–F7 | Timer, snipping, Live Zoom, recording and DemoType not implemented yet |
 | 8. F8–F9 | Additional distribution and legacy translations remain pending |

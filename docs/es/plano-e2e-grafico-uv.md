@@ -406,6 +406,29 @@ nginx no publicó puertos y se eliminaron containers. No se usó sesión gráfic
 D-Bus ni captura personal del host. Captura multi-monitor real con Screenshot,
 selección de monitor, HiDPI, GNOME/KDE y otras arquitecturas/plataformas pendientes.
 
+### Identidad de fuente tras fallback y recuperación
+
+El 2026-11-01, `fix/capture-backend-recovery` separó captura nativa y selección
+con fallback mediante `IScreenCapture`. El nombre cambia solo tras éxito:
+vuelve a ScreenCast después de recuperarse y no cambia a Screenshot si falla
+el fallback. Cancelación sigue sin fallback; sesión, consentimiento, timeout
+y cierre nativos no cambiaron.
+
+Tres pruebas focadas usan fuentes controladas para éxito → fallback → recuperación,
+fallback fallido y cancelación. El gate pasó format, build sin avisos/errores,
+164 pruebas, 23 casos de gobernanza, AOT y `selftest`.
+
+| Escenario nativo | Evidencia local | Resultado |
+| --- | --- | --- |
+| Sin render node | `artifacts/wayland/screencast-20261101T174558524-1a07a163` | Error controlado, ningún archivo |
+| Captura y ciclo de vida | `artifacts/wayland/screencast-20261101T174601492-fccadfc0` | Draw/zoom por IPC, status, quit y reinicio aprobados |
+| Rechazo `GetAll` | `artifacts/wayland/screencast-20261101T174606129-0bb81304` | Lecturas Get y capturas reales preservadas |
+
+nginx aislado sin puertos públicos; no se accedió a sesión ni D-Bus del host.
+La recuperación de identidad se probó como lógica controlada, no con portal
+real cambiando disponibilidad. Captura real probada en Sway; GNOME/KDE y
+cobertura de hardware pendientes.
+
 ### Resultado local del 2026-10-30
 
 Etapas 1–6 implementadas para primer objetivo; etapa 7 es expansión condicionada,

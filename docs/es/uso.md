@@ -156,6 +156,11 @@ controlados de captura, sin excepción no tratada. Si no hay ruta disponible
 para ese escenario, la captura falla; no equivale a soporte multi-monitor
 validado en todos los escritorios.
 
+El nombre de la fuente corresponde a la última captura completada: tras
+recuperarse ScreenCast de un fallback, vuelve a indicarse ScreenCast.
+Un fallback fallido no informa una fuente como completada y la cancelación
+no activa otra captura para eludir la negativa.
+
 **Diagnóstico por etapas.** Se conservan los totales `portal` y `primeiro quadro`:
 `portal` cubre creación de sesión, selección/inicio del portal y persistencia
 de la autorización; `primeiro quadro` incluye abrir el remoto PipeWire y leer/

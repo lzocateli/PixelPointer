@@ -153,6 +153,11 @@ errors, without an unhandled exception. If no capture path is available for
 that scenario, capture fails; this is not validated multi-monitor support
 across all desktops.
 
+The source name tracks the last successful capture: after ScreenCast recovers
+from fallback, diagnostics report ScreenCast again. Failed fallback does not
+report a completed source, and cancellation does not trigger another capture
+to bypass refusal.
+
 **Stage diagnostics.** The `portal` and `primeiro quadro` totals are preserved:
 `portal` covers session creation, portal selection/start and authorization
 persistence; `primeiro quadro` includes opening the PipeWire remote and
