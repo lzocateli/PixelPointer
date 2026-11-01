@@ -7,7 +7,7 @@
 | Data | 2026-10-30 |
 | Autorização humana | Solicitante, nesta conversa: “Eu autorizo os E2E gráficos isolados nas regras do projeto” |
 | Decisão autorizada | Permitir uma suíte gráfica automatizada separada e isolada |
-| Estado de execução | X11 executado com estabilidade 10/10; revisão humana dos vídeos encerrada por decisão do mantenedor em 2026-10-31, sem revisão registrada. ScreenCast/PipeWire validado em Sway isolado com render node (inclui restore token e quadro após dano) e caminho sem GPU tratado. Aceite manual Wayland registrado abaixo é da v0.1.2, anterior ao ScreenCast; GNOME real e demais compositores continuam pendentes |
+| Estado de execução | X11 executado com estabilidade 10/10; revisão humana dos vídeos encerrada por decisão do mantenedor em 2026-10-31, sem revisão registrada. ScreenCast/PipeWire validado em Sway isolado com render node e caminho sem GPU tratado. Captura, zoom e desenho da preview v0.1.3-preview.14 aceitos manualmente no Ubuntu 26.04.1/GNOME Wayland em 2026-10-31; token, indicador, latência sem diálogo e matriz adicional continuam pendentes |
 | Versão funcional de referência | v0.1.2, primeira versão funcional aceita como estável pelo mantenedor em 2026-10-30 nos ambientes GNOME X11 e Wayland registrados; não é aprovação da matriz multiplataforma completa |
 | Primeiro alvo | Linux x64, X11 em desktop descartável |
 | Expansão | GNOME X11, Wayland por compositor e demais sistemas após viabilidade comprovada |
@@ -189,7 +189,7 @@ somente superfícies do projeto autorizadas, após a prova local em containers.
 | --- | --- |
 | Linux x64, X11 mínimo virtual | Executado: 10/10 consecutivos com compositor/tray; variantes sem compositor e sem tray passaram |
 | GNOME X11 | Aceite manual concluído: desenho transparente, visual automático, zoom, PNG, CapsLock/NumLock, uso nos dois monitores e encerramento por Sair; prints confirmam monitor 1, ícone/menu da tray e status sem daemon após saída; Zoom/Desenhar pela tray, launcher e matriz completa ainda sem comprovação manual |
-| Wayland | ScreenCast/PipeWire passou em Sway headless isolado com render node: duas capturas, formato/cor, restore token reutilizado e quadro novo após dano; sem render node, indisponibilidade tratada sem exceção não tratada. Aceite manual Ubuntu 26.04/GNOME da v0.1.2 é anterior a esta implementação. GNOME real (consentimento, restore token, indicador e latência), multi-monitor e outros compositores pendentes; sem mock de consentimento ou XTEST via XWayland como prova nativa |
+| Wayland | ScreenCast/PipeWire passou em Sway isolado; indisponibilidade sem GPU tratada. Preview v0.1.3-preview.14 aceita manualmente para captura, zoom e desenho no Ubuntu 26.04.1/GNOME Wayland, com consentimento observado. Reutilização do token, duração do indicador, latência sem diálogo, multi-monitor e outros compositores pendentes; sem mock de consentimento ou XTEST via XWayland como prova nativa |
 | Linux arm64 | Executar em arquitetura apropriada antes de declarar cobertura |
 | Windows/macOS | Backends nativos e sessão gráfica descartável próprios; estratégia depende de compatibilidade com a regra de containers e autorização específica se exigir exceção |
 | Caneta/GPU/monitores físicos | Uso nos dois monitores 1920×1080 em escala 1 confirmado manualmente; caneta, outras GPUs, escalas e topologias continuam pendentes |
@@ -204,6 +204,153 @@ O aceite final exige a matriz executada com limites explícitos, evidências
 reproduzíveis e revisão humana dos primeiros vídeos/referências. A autorização
 registrada permite construir a suíte; não aprova antecipadamente ferramentas,
 exceções de segurança, suporte multiplataforma ou resultados ainda inexistentes.
+
+### Aceite manual da preview no GNOME Wayland
+
+Em 2026-10-31, o solicitante informou que o teste Linux Wayland passou,
+anexou um print e o log da captura, e confirmou em seguida: “Pode registrar
+o zoom e desenho como ok.” O teste foi realizado na máquina do solicitante,
+não por automação conectada à sua sessão gráfica.
+
+- Ambiente observado: Ubuntu 26.04.1 LTS x64, GNOME/Wayland, Native AOT,
+  versão `0.1.3-preview.14` do commit `cdd125e`; ScreenCast v5 e
+  GlobalShortcuts v1 informados por `probe`. A versão do GNOME e a escala
+  não foram fornecidas explicitamente.
+- O print mostra o diálogo de compartilhamento com o monitor interno
+  selecionado e a instalação da entrada desktop e do ícone. O aviso de
+  registro do app no `probe` ocorreu antes dessa instalação; não há novo
+  diagnóstico que comprove sua resolução.
+- O log confirma uma captura via **xdg-desktop-portal ScreenCast + PipeWire**,
+  PNG de **1920×1080**, portal **20.830 ms**, primeiro quadro **122 ms** e
+  total **20.999 ms**. O tempo do portal inclui a escolha e confirmação
+  humana no diálogo; não comprova a meta de atalho até quadro < 150 ms.
+- Captura, zoom e desenho ficam **aceitos manualmente nesse ambiente**,
+  conforme confirmação humana. O print estático não comprova sozinho a
+  interação de zoom/desenho; o aceite dessas ações se baseia no relato.
+- Permanecem sem evidência desta preview: reutilização do restore token,
+  duração do indicador, repetição sem consentimento, atalhos físicos,
+  ações da tray/launcher, Ctrl+S, alfa ou conteúdo ao vivo, multi-monitor,
+  outros compositores, escalas, GPUs e Windows/macOS. A confirmação não
+  conclui a matriz Wayland automatizada nem as fases F2/F3.
+
+O anexo permanece na conversa, sem cópia para o repositório; não se publica
+a captura de tela pessoal. O destino pessoal do PNG foi omitido deste registro.
+
+### Validação do diagnóstico por etapas em 2026-10-31
+
+O binário Native AOT local, com o novo diagnóstico ainda não publicado, passou
+no teste ScreenCast/PipeWire em Sway isolado com render node. Duas capturas,
+cores/formato e quadro novo após mudança da cena foram verificados pelo runner
+existente. O nginx ficou isolado, sem portas públicas, com smoke e limpeza;
+nenhuma sessão gráfica ou D-Bus do host foi acessada.
+
+Evidências locais: `artifacts/wayland/screencast-20261101T015920989-305aa712`.
+Primeira captura: portal 9 ms, remoto 3 ms, leitura 19 ms, campo legado
+`primeiro quadro` 23 ms, `restore solicitado nao`. Segunda: portal 8 ms,
+remoto 4 ms, leitura 16 ms, campo legado 20 ms, `restore solicitado sim`.
+Valores arredondados independentemente; são resultados desta execução, não
+benchmark equivalente ao GNOME com diálogo nem comprovação da meta < 150 ms.
+
+O gate local passou com format, build sem avisos/erros, 139 testes unitários,
+23 cenários de governança de preview, publicação Native AOT e `selftest`.
+A classe ScreenCast teve 23 testes aprovados após preparar Fontconfig no
+container. Não foram repetidos testes gráficos nativos Windows/macOS nem
+aceite manual GNOME do novo diagnóstico. Este resultado não encerra F2/F3.
+
+### Validação da consulta agrupada em 2026-10-31
+
+O binário Native AOT local, ainda não publicado, passou novamente no Sway
+isolado com render node, nginx isolado sem portas públicas e limpeza dos
+containers. Evidências: `artifacts/wayland/screencast-20261101T022349873-b4ed0c2d`.
+As duas capturas, cores/formato e quadro novo após mudança da cena passaram;
+ambas informaram `ScreenCast capacidades: 0 ms; consulta GetAll`, confirmando
+o caminho agrupado. O valor arredondado não significa custo zero e não é
+benchmark no GNOME.
+
+O gate passou com format, build sem avisos/erros, 156 testes unitários,
+23 cenários de governança de preview, Native AOT e `selftest`. Os 24 testes
+do cliente de portais cobrem tipos/propriedades, monitor e a sequência antiga
+com saídas antecipadas e cancelamento. Respostas incompatíveis e leituras
+legadas foram exercitadas como lógica sintética; não houve teste contra um
+portal real que rejeite `GetAll`. A matriz GNOME/KDE/outros portais e o
+benchmark completo continuam pendentes; esta execução não encerra F2/F3.
+
+### Compatibilidade GetAll sob recusa controlada
+
+Em 2026-11-01, o cenário padrão e o de recusa de `GetAll` passaram usando o
+mesmo pacote Native AOT local e a imagem Wayland existente. O nginx esteve
+isolado e sem portas públicas, com smoke e limpeza. A sessão gráfica, D-Bus e
+diretórios pessoais do host não foram acessados; somente o render node já
+autorizado foi exposto ao container pelo modo rootless.
+
+- Controle: `artifacts/wayland/screencast-20261101T121050665-764bf12c`,
+  duas capturas ScreenCast/PipeWire com quadro atualizado, sem política adicional.
+- Recusa: `artifacts/wayland/screencast-20261101T121052886-6dcf124c`,
+  `result.json` com `passed=true`, `mode=getall-denied` e duas rejeições.
+  Ambas as capturas continuaram via ScreenCast/PipeWire e informaram `consulta Get`.
+- A configuração D-Bus foi derivada da imagem por parser XML com DTD e
+  resolução externa desativadas, criada sem sobrescrita e montada somente para
+  leitura. A política bloqueia `Properties.GetAll` para o serviço
+  `org.freedesktop.portal.Desktop` no container; não examina os argumentos da
+  chamada. `Get`, criação/início da sessão e leitura de quadros permanecem permitidos.
+- O log do barramento comprova as rejeições. O teste exige os dois diagnósticos
+  `Get` e capturas corretas; falha posterior grava `passed=false`, não mantém
+  um resultado positivo do runner. Não se substituiu o portal ou seu consentimento.
+
+Comando adicional, na raiz do clone, com pacote atual em `artifacts/aot/linux-x64`,
+Podman rootless, imagem Wayland disponível e nginx isolado já iniciado conforme
+as regras E2E:
+
+```powershell
+pwsh -NoProfile -File tools/scripts/Test-WaylandScreenCast.ps1 -Engine podman -Package artifacts/aot/linux-x64 -RenderNode /dev/dri/renderD128 -DenyScreenCastGetAll
+```
+
+Exige o diagnóstico de capacidades do novo código, não o pacote da preview
+anterior. Sem `RenderNode`, o modo é recusado antes de iniciar o cenário; ajuda
+e argumento desconhecido foram testados em container. Não houve mudança de
+produção nesta etapa; o cenário padrão também foi repetido e passou.
+Cada comando `capture` abre uma conexão nova: este teste não comprova a
+preferência `Get` em capturas repetidas numa única conexão do daemon.
+Portais naturalmente incompatíveis, GNOME/KDE, matriz multiplataforma e a meta
+de latência continuam pendentes. O plano não fica encerrado por esta injeção.
+
+### Capturas repetidas na conexão do daemon
+
+Em 2026-11-01, o cenário opcional `-RepeatDaemonCaptures` passou no controle
+e com `-DenyScreenCastGetAll`, usando o mesmo pacote AOT local. O driver Python
+usa apenas a biblioteca padrão e ferramentas já presentes na imagem; inicia
+o baseline existente e depois um daemon real no mesmo D-Bus/Sway descartável.
+Um monitor registra somente chamadas de propriedades ao portal, sem respostas,
+tokens ou conteúdo de tela. As capturas visuais inspecionam uma cena sintética.
+nginx permaneceu isolado, sem portas públicas, com smoke e limpeza.
+
+| Cenário | Evidências locais | Resultado |
+| --- | --- | --- |
+| Controle | `artifacts/wayland/screencast-20261101T123222089-3df3f7ae` | Um daemon, duas sessões, duas chamadas `GetAll`, nenhuma recusa |
+| Recusa | `artifacts/wayland/screencast-20261101T123225959-89b40b94` | Um daemon, uma `GetAll` recusada, seis `Get` ordenados para versão/fontes/cursor em duas sessões |
+
+O driver identifica a conexão D-Bus pelo PID do daemon. Desenho e zoom são
+acionados por IPC, uma janela é exigida e uma captura pelo portal verifica
+a cor do quadro; a segunda sessão usa uma cor diferente. A janela é fechada
+por `swaymsg`, o processo deve continuar ativo com `status` e `quit` deve
+encerrar com código zero. `daemon-result.json` registra chamadas, cores e
+ciclo de vida; o orquestrador exige esse resultado completo e propaga falhas
+para `result.json`. Uma inicialização ou verificação incompleta não é sucesso.
+
+Na raiz do clone, com imagem, pacote atual, render node autorizado, Podman
+rootless e nginx isolado iniciado conforme as regras anteriores:
+
+```powershell
+pwsh -NoProfile -File tools/scripts/Test-WaylandScreenCast.ps1 -Engine podman -Package artifacts/aot/linux-x64 -RenderNode /dev/dri/renderD128 -RepeatDaemonCaptures
+```
+
+Acrescente `-DenyScreenCastGetAll` para repetir sob recusa. O driver é montado
+somente para leitura; a opção exige render node e não altera o cenário padrão.
+O orquestrador permanece PowerShell 7; o Python executa somente no container.
+Não houve alteração de produção nesta etapa. Este aceite isolado cobre
+reutilização da conexão e novas consultas, não propriedades que mudem num
+portal naturalmente incompatível, atalhos físicos, Esc, tray ou quit com
+janela ainda aberta. GNOME/KDE e a meta de latência permanecem pendentes.
 
 ### Resultado local em 2026-10-30
 

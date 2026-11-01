@@ -147,6 +147,45 @@ after something changes on screen; otherwise capture uses Screenshot after 2 s.
 The terminal reports the path used and the time spent in the portal and on the
 first frame.
 
+**Stage diagnostics.** The `portal` and `primeiro quadro` totals are preserved:
+`portal` covers session creation, portal selection/start and authorization
+persistence; `primeiro quadro` includes opening the PipeWire remote and
+reading/converting the frame. The message also reports stage durations:
+
+| Field | Stage |
+| --- | --- |
+| `sessao` | Create the ScreenCast session |
+| `fontes` | Select capture sources |
+| `inicio` | Start the session; includes consent waiting if the portal shows a dialog |
+| `persistencia` | Attempt to save authorization for the next capture |
+| `remoto` | Open the PipeWire connection |
+| `leitura` | Obtain and convert the first frame |
+| `restore solicitado` | `sim`/`nao`: previous authorization was provided; its contents are never displayed |
+
+Millisecond values are rounded independently; stage sums can differ from
+the displayed totals.
+
+`restore solicitado sim` does not prove that the portal reused authorization
+or skipped the dialog. These measurements exclude initial capability queries,
+authorization reading, session closure and overlay presentation; they are not
+complete hotkey-to-visible-frame latency. Do not compare a capture with a
+dialog to one without a dialog as equivalent scenarios. Diagnostics do not
+change consent, backend, timeout or fallback and expose no tokens or screen content.
+
+**Capability queries.** Capture attempts to read `version`,
+`AvailableSourceTypes` and `AvailableCursorModes` with one `Properties.GetAll`
+call. Values are not cached between captures. If `GetAll` fails, is unsupported
+or returns missing properties/unexpected types, the connection uses the
+previous `Get` reads with their order and early exits; a new connection tries
+`GetAll` again. The first incompatible probe costs one extra call but is not
+repeated on that connection. Permissions, consent, cursor, persistence and
+capture fallback remain unchanged.
+
+`ScreenCast capacidades: ... ms; consulta GetAll` indicates grouped reading;
+`consulta Get` indicates individual-read compatibility. This separate timing
+is outside the legacy totals and is not complete hotkey latency. Fewer queries
+alone do not prove a noticeable improvement or your desktop's performance target.
+
 ### Linux on X11
 
 Hotkeys and capture work without extra permissions (XGrabKey and XGetImage).

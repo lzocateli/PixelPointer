@@ -47,7 +47,24 @@ supported by the human report and visual evidence of the overlay. Screenshots
 do not demonstrate continuous playback beneath the same stroke or PNG alpha;
 these objective checks remain separate from manual acceptance.
 
+**Preview acceptance on 2026-10-31:** the requester tested
+`0.1.3-preview.14` on Ubuntu 26.04.1 LTS x64/GNOME Wayland, attached a
+ScreenCast consent screenshot and a PipeWire capture log, and explicitly
+confirmed that zoom and drawing work. Capture, zoom and drawing have manual
+acceptance on this machine. The PNG was 1920×1080; the portal took
+20,830 ms including dialog interaction, the first frame 122 ms and the
+total 20,999 ms. This does not prove hotkey-to-first-frame < 150 ms, restore
+token reuse, indicator duration, physical hotkeys, tray, launcher, Ctrl+S
+or live transparency. Other monitors/desktops and Windows/macOS do not
+inherit acceptance. [Evidence and limits](plano-e2e-grafico-uv.md#manual-preview-acceptance-on-gnome-wayland).
+
 ## 1. Objective
+
+**Maintainer evolution requirement (2026-10-31):** further implementations must
+preserve accepted experience and quality and be limited to legitimate improvements
+and fixes. Known regressions block integration; experimental changes do not become
+defaults without evidence. Each increment must validate its scope and affected
+behavior and record what was not tested.
 
 PixelPointer is a Native AOT presentation tool (`pixelpointer`) for Linux,
 Windows and macOS, with ZoomIt (Sysinternals/PowerToys) functionality: screen
@@ -106,8 +123,52 @@ unavailable with EGL (Wayland), in which case the CPU is used. Manual acceptance
 on real hardware and 4K measurement are required
 before making it the default. On Wayland with one monitor, capture uses on-demand
 ScreenCast + PipeWire (D13): 36 ms on isolated Wayland with sway, against ~550 ms
-for Screenshot on GNOME in F0; measurement on real GNOME is pending. Shapes, text, configurable hotkeys and the other
+for Screenshot on GNOME in F0. Capture, zoom and drawing had manual acceptance
+on real GNOME on 2026-10-31; the first frame took 122 ms, but portal timing
+included human consent. Hotkey-to-frame latency without that dialog remains
+unmeasured; these are not equivalent benchmarks. Shapes, text, configurable hotkeys and the other
 modules above remain pending.
+
+**F2 diagnostics increment (2026-10-31):** capture now reports session creation,
+selection, start, authorization persistence, PipeWire remote opening and frame
+reading/conversion times. It preserves the legacy `portal` and `primeiro quadro`
+totals; the latter includes remote opening, not just reading. It only reports
+whether restoration was requested, never the token. Consent, timeout, closure
+and fallback flow remain unchanged. Deterministic tests cover formatting; these
+times do not include every step from hotkey to presentation.
+[Interpretation](usage.md) and real GNOME benchmarking remain separate; this
+diagnostic does not complete F2.
+
+**Grouped capability queries (F2, 2026-10-31):** version, source types and cursor
+modes are read with `Properties.GetAll`, reducing three individual reads to
+one when the response is compatible. Values are not cached. Missing, incomplete
+or unsupported replies retain the previous `Get` path on that connection with
+the same order and early exits; the initial incompatible probe costs one extra
+call. `ScreenCast capacidades` reports timing and the method used. Tests cover
+types, missing properties, monitor support, legacy reads and cancellation.
+Consent and capture flow remain unchanged; benchmarking and the compatibility
+matrix remain pending.
+
+**Controlled-denial compatibility (2026-11-01):** the
+`Test-WaylandScreenCast.ps1` orchestrator now accepts `-DenyScreenCastGetAll`,
+injecting a mandatory policy only into disposable D-Bus. The normal scenario
+passed with `GetAll`; the denial scenario confirmed two bus rejections, `Get`
+reads, two captures through real ScreenCast/PipeWire portals and an updated frame.
+Production code, portals and consent were not changed. This does not mean
+the portal naturally rejects `GetAll`: it is audited fault injection.
+GNOME/KDE and naturally incompatible replies remain pending. Repeated capture
+on one connection was validated in the isolated scenario below.
+[Evidence and command](plano-e2e-grafico-uv.md#getall-compatibility-under-controlled-denial).
+
+**Daemon repetition (2026-11-01):** `-RepeatDaemonCaptures` started one daemon
+and exercised drawing and zoom through IPC. A D-Bus monitor restricted to
+property calls confirmed fresh capabilities: two `GetAll` calls in control,
+or one denied probe followed by six ordered `Get` calls, without a second
+`GetAll` attempt. Frame colors changed, the daemon stayed active after the
+compositor closed each window, and `quit` exited normally. Production code
+did not change in this step. This does not prove physical hotkeys, Esc, tray,
+quit with an open overlay or GNOME/KDE coverage.
+[Record](plano-e2e-grafico-uv.md#repeated-captures-on-the-daemon-connection).
 
 The same binary is both app and CLI: `pixelpointer zoom|draw|timer <min>|snip`
 sends a command through a Unix socket (`$XDG_RUNTIME_DIR` or temporary directory;
@@ -118,7 +179,7 @@ AF_UNIX also on Windows 10+) to the running instance.
 | Capability | Windows | macOS | Linux X11 | Linux Wayland |
 | --- | --- | --- | --- | --- |
 | Global hotkey | RegisterHotKey | RegisterEventHotKey | XGrabKey | GlobalShortcuts portal (**validated on GNOME 50**); desktop shortcut + IPC fallback |
-| Static capture | DXGI/WGC | ScreenCaptureKit (Screen Recording permission) | XShm | Screenshot portal (**validated**, ~550 ms) → continuous ScreenCast/PipeWire |
+| Static capture | DXGI/WGC | ScreenCaptureKit (Screen Recording permission) | XShm | On-demand ScreenCast/PipeWire with one monitor (manual preview acceptance); Screenshot fallback |
 | Full-screen overlay | SDL3 | SDL3 + window level | SDL3 | Native SDL3 Wayland (**validated**, fractional scaling works) |
 | Live Zoom | Magnification API or WGC | ScreenCaptureKit excluding its own window | XComposite (complex) | ScreenCast + layer-shell where available; GNOME best effort |
 | Recording | Media Foundation | AVFoundation | System ffmpeg / GIF | ScreenCast + ffmpeg / GIF |
@@ -160,6 +221,22 @@ AF_UNIX also on Windows 10+) to the running instance.
 
 ## 8. Consolidated Pending Items
 
+**Execution sequence requested on 2026-11-01:** each step needs its own branch,
+tests before commit, push and PR; container results do not replace human
+approval or native validation. The first delivery consolidates local increments
+on `perf/f2-wayland-capture`.
+
+| Step | Execution status |
+| --- | --- |
+| 1. Consolidate Wayland diagnostics, capabilities and tests | Implemented and validated: 156 tests, AOT and Wayland scenarios passed. [PR #21](https://github.com/lzocateli/PixelPointer/pull/21) open; awaits CI and maintainer integration |
+| 2. New preview and real GNOME acceptance | Requires approved integration of step 1, dispatch and `release` Environment approval, then human testing; not executed |
+| 3. Complete lifecycle and physical interaction | Not yet implemented as a new increment; quit with open window, physical hotkeys, tray and launcher remain |
+| 4. Compatibility matrix | Requires real environments/compositors, suitable hardware and architectures |
+| 5. Complete F2 | GPU/4K, abstractions, ScreenCaptureKit and welcome window remain pending; not complete |
+| 6. Advanced F3 tools | Not implemented yet |
+| 7. F4–F7 | Timer, snipping, Live Zoom, recording and DemoType not implemented yet |
+| 8. F8–F9 | Additional distribution and legacy translations remain pending |
+
 Updated on 2026-10-31. The [issue #3 plan, pt-BR](../plano-correcao-issue-3.md)
 was closed together with the issue and remains as a historical record. Its open
 items and those of the [E2E plan](plano-e2e-grafico-uv.md) are tracked here, in
@@ -169,13 +246,14 @@ addition to phases F2 to F9 in section 5.
 | --- | --- | --- |
 | Manual acceptance of Zoom and Draw triggered from the tray on GNOME X11 | Issue #3, 3.5 | Icon, menu and Sair accepted; both actions still unconfirmed |
 | Launch from the GNOME applications menu without a terminal | Issue #3, 3.6 | Passed in E2E with a synthetic launcher; real acceptance missing |
-| Wayland matrix per compositor: portals with and without Registry, denied permissions, tray and isolated E2E with libei/EIS | Issue #3, 3.1, 3.3 and 5; E2E, 8 | ScreenCast/PipeWire passed on isolated Sway with a render node; no-GPU mode is handled. ScreenCast acceptance on real GNOME (consent, token, indicator and latency), multi-monitor and other compositors remain pending; v0.1.2 acceptance predates this implementation |
+| Wayland matrix per compositor: portals with and without Registry, denied permissions, tray and isolated E2E with libei/EIS | Issue #3, 3.1, 3.3 and 5; E2E, 8 | ScreenCast/PipeWire passed on isolated Sway; capture, zoom and drawing had manual acceptance with v0.1.3-preview.14 on Ubuntu 26.04.1/GNOME Wayland. Consent observed; token reuse, indicator duration, latency without the dialog, multi-monitor and other compositors remain pending |
 | Native Ctrl+S: Windows Known Folder, including OneDrive, and macOS preference, with a real filesystem per OS | Issue #3, 3.7 | Closed by maintainer decision on 2026-10-31; logic covered by tests, no recorded native validation |
 | Full manual checklist on Windows | F0; issue #3 | Partial evidence on 2026-10-31, described below |
 | Full manual checklist on macOS | F0; issue #3 | No native evidence |
 | Human review of X11 E2E videos and references | E2E, 6 and 8 | Closed by maintainer decision on 2026-10-31, with no recorded review |
 | Physical hotkey conflict with another application, fractional scaling, other topologies and GPUs, pen | Issue #3, 3.2 and 3.3; E2E, 8 | Pending |
 | Linux arm64 on suitable hardware | E2E, 8 | Pending |
+| Complete translations of legacy authored documents | F9; multilingual documentation rule | [F0 report](../f0-relatorio.md) and historical issue #3 plan still lack en/es versions; translated current READMEs and guides do not complete that coverage |
 
 **Partial Windows evidence on 2026-10-31:** the requester attached four
 screenshots in this conversation. They show installation through `install.ps1`

@@ -6,6 +6,24 @@ namespace PixelPointer.UnitTests;
 
 public sealed class ScreenCastTests
 {
+    [Theory]
+    [InlineData(true, "sim")]
+    [InlineData(false, "nao")]
+    public void Timings_SeparatePortalRemoteAndFrameWithoutChangingLegacyFields(bool restoreRequested, string restoreStatus)
+    {
+        var message = ScreenCastCapture.FormatTimings(2, 3, 20830, 20832, 20840, 20954, restoreRequested);
+
+        Assert.Equal($"ScreenCast: portal 20832 ms, primeiro quadro 122 ms (sessao 2 ms; fontes 1 ms; inicio 20827 ms; persistencia 2 ms; remoto 8 ms; leitura 114 ms; restore solicitado {restoreStatus})", message);
+    }
+
+    [Fact]
+    public void Timings_HandleSubMillisecondStages()
+    {
+        var message = ScreenCastCapture.FormatTimings(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, false);
+
+        Assert.Equal("ScreenCast: portal 0 ms, primeiro quadro 0 ms (sessao 0 ms; fontes 0 ms; inicio 0 ms; persistencia 0 ms; remoto 0 ms; leitura 0 ms; restore solicitado nao)", message);
+    }
+
     [Fact]
     public void EnumFormat_IsAlignedVideoFormatObject()
     {
