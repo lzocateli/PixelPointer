@@ -54,14 +54,13 @@ On-screen command labels remain Portuguese, like other native app messages.
 | `pixelpointer --version` / `--help` | Version and help |
 
 Overlay keys: mouse wheel or arrows to zoom, click and drag to draw,
-R/G/B/Y/O/P for colors, Ctrl+wheel for pen width, Ctrl+Z to undo, E to erase,
-W/K for whiteboard/blackboard, Ctrl+S to save a PNG to the user's screenshots
-folder, Esc or right click to exit.
+Shift/Ctrl/Ctrl+Shift/Tab when you start dragging for a straight
+line/rectangle/arrow/ellipse, R/G/B/Y/O/P for colors, Ctrl+wheel for pen width,
+Ctrl+Z to undo, E to erase, W/K for whiteboard/blackboard, Ctrl+S to save a PNG
+to the user's screenshots folder, Esc or right click to exit.
 
-Shapes, as in ZoomIt: hold the key when you start dragging — Shift draws a
-straight line, Ctrl a rectangle, Ctrl+Shift an arrow and Tab an ellipse. The
-shape follows the mouse until you release the button and uses the current color
-and width.
+Shapes follow ZoomIt: hold the key when you start dragging; the shape follows
+the mouse until you release the button and uses the current color and width.
 
 ## Where Ctrl+S saves
 

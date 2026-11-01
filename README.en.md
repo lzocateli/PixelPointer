@@ -155,6 +155,10 @@ mode the daemon's messages are not shown; to diagnose hotkey conflicts, run
 | `pixelpointer quit` | Stop the daemon and any active overlay |
 | Mouse wheel / arrows | Zoom in or out |
 | Click and drag | Draw (pen pressure is supported) |
+| Shift + drag | Straight line |
+| Ctrl + drag | Rectangle |
+| Ctrl+Shift + drag | Arrow |
+| Tab + drag | Ellipse |
 | R G B Y O P | Red, green, blue, yellow, orange, pink |
 | Ctrl+wheel | Pen width |
 | Ctrl+Z / E | Undo / erase all |

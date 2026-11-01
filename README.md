@@ -156,6 +156,10 @@ execute `pixelpointer daemon` em primeiro plano.
 | `pixelpointer quit` | Encerra o daemon e a sobreposição ativa |
 | Roda do mouse / setas | Mais ou menos zoom |
 | Clique e arraste | Desenhar (caneta com pressão é suportada) |
+| Shift + arrastar | Linha reta |
+| Ctrl + arrastar | Retângulo |
+| Ctrl+Shift + arrastar | Seta |
+| Tab + arrastar | Elipse |
 | R G B Y O P | Vermelho, verde, azul, amarelo, laranja, rosa |
 | Ctrl+roda | Espessura da caneta |
 | Ctrl+Z / E | Desfazer / apagar tudo |
