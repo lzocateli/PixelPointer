@@ -370,6 +370,37 @@ D-Bus or personal data was accessed. The package was stage 1's validated AOT.
 This is isolated Sway/IPC coverage, not physical hotkeys, Esc, tray, launcher
 or native GNOME/Windows/macOS acceptance.
 
+### Multi-monitor policy and Screenshot errors
+
+On 2026-11-01, `test/wayland-multi-monitor-policy` validated the existing policy:
+ScreenCast only with exactly one monitor. Five unit cases cover negative, zero,
+one, two and three counts. Screenshot fallback D-Bus errors are now controlled
+errors, retaining cancellation and the earlier fallback's unavailable message.
+
+Opt-in `-CheckMultiMonitorPolicy` runs the capture baseline and creates two
+active virtual Sway outputs, verified through JSON. The image has no Screenshot;
+`capture` must exit 1, without a PNG, ScreenCast message or unhandled exception.
+This proves policy and safe unavailability, not successful multi-monitor capture.
+
+| Scenario | Local evidence | Result |
+| --- | --- | --- |
+| No render node | `artifacts/wayland/screencast-20261101T131754378-903d3b19` | Unavailability and previous message preserved |
+| One monitor and lifecycle | `artifacts/wayland/screencast-20261101T131758088-7c112c2c` | Capture, quit and restart still pass |
+| Two outputs without Screenshot | `artifacts/wayland/screencast-20261101T131802565-e28d49cf` | `passed=true`, 2 outputs, exit 1, no file, controlled error |
+
+From clone root with current AOT package, existing image, rootless Podman,
+authorized render node and isolated nginx under previous prerequisites:
+
+```powershell
+pwsh -NoProfile -File tools/scripts/Test-WaylandScreenCast.ps1 -Engine podman -Package artifacts/aot/linux-x64 -RenderNode /dev/dri/renderD128 -CheckMultiMonitorPolicy
+```
+
+Cannot combine with `-RepeatDaemonCaptures`. The gate passed format, build
+without warnings/errors, 161 tests, 23 governance cases, AOT and `selftest`.
+nginx had no public ports; containers were removed. No host graphical session,
+D-Bus or personal capture was used. Real multi-monitor capture with Screenshot,
+monitor selection, HiDPI, GNOME/KDE and other architectures/platforms remain pending.
+
 ### Local Results on 2026-10-30
 
 Steps 1–6 implemented for the first target; step 7 remains conditional expansion,

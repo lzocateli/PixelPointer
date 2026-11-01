@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using PixelPointer.App.Capture;
 using PixelPointer.App.Linux;
 using SkiaSharp;
 
@@ -6,6 +7,15 @@ namespace PixelPointer.UnitTests;
 
 public sealed class ScreenCastTests
 {
+    [Theory]
+    [InlineData(-1, false)]
+    [InlineData(0, false)]
+    [InlineData(1, true)]
+    [InlineData(2, false)]
+    [InlineData(3, false)]
+    public void CapturePolicy_UsesScreenCastOnlyForExactlyOneDisplay(int displayCount, bool expected) =>
+        Assert.Equal(expected, ScreenCaptureFactory.UseScreenCast(displayCount));
+
     [Theory]
     [InlineData(true, "sim")]
     [InlineData(false, "nao")]

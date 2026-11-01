@@ -144,6 +144,12 @@ Screenshot. Em compositores wlroots (Sway, Hyprland), o quadro só chega após
 alguma mudança na tela; sem ela, a captura usa o Screenshot após 2 s. O terminal
 informa o caminho usado e o tempo do portal e do primeiro quadro.
 
+Com vários monitores, ScreenCast não é usado silenciosamente para capturar
+apenas um deles: o caminho selecionado é Screenshot. Erros D-Bus desse portal
+são apresentados como erro de captura controlado, sem exceção não tratada.
+Se nenhum caminho estiver disponível para esse cenário, a captura falha;
+isso não equivale a suporte multi-monitor validado em todos os desktops.
+
 **Diagnóstico por etapas.** Os totais `portal` e `primeiro quadro` são
 preservados: `portal` cobre criação da sessão, seleção/início do portal e
 persistência da autorização; `primeiro quadro` inclui abertura do remoto

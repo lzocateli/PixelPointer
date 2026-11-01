@@ -232,9 +232,9 @@ incrementos locales en `perf/f2-wayland-capture`.
 | Etapa | Estado de ejecución |
 | --- | --- |
 | 1. Consolidar diagnóstico, capacidades y pruebas Wayland | [PR #21](https://github.com/lzocateli/PixelPointer/pull/21) integrado en `df252e6`, con `Result` aprobado |
-| 2. Nueva preview y aceptación GNOME real | [Preview #16](https://github.com/lzocateli/PixelPointer/actions/runs/41308984865) iniciada desde commit integrado; gates, aprobación del Environment `release` y prueba humana pendientes. No concluida |
-| 3. Ciclo de vida completo e interacción física | Rama `test/wayland-daemon-lifecycle`: quit con ventana abierta y reinicio aprobados en prueba aislada. [PR #22](https://github.com/lzocateli/PixelPointer/pull/22) abierto; atajos físicos, Esc, bandeja y lanzador pendientes |
-| 4. Matriz de compatibilidad | Pendiente de entornos/compositores reales, hardware y arquitecturas adecuados |
+| 2. Nueva preview y aceptación GNOME real | [Preview #16](https://github.com/lzocateli/PixelPointer/actions/runs/41308984865): builds, smokes y atestaciones aprobados; espera aprobación del Environment `release` y prueba humana. No concluida |
+| 3. Ciclo de vida completo e interacción física | [PR #22](https://github.com/lzocateli/PixelPointer/pull/22) integrado en `0ad417f`, con `Result` aprobado; atajos físicos, Esc, bandeja y lanzador pendientes |
+| 4. Matriz de compatibilidad | Rama `test/wayland-multi-monitor-policy`: política de un monitor y fallo controlado sin Screenshot validados con dos salidas virtuales; [PR #23](https://github.com/lzocateli/PixelPointer/pull/23) abierto. Entornos/compositores reales, hardware y arquitecturas pendientes |
 | 5. Completar F2 | GPU/4K, abstracciones, ScreenCaptureKit y bienvenida pendientes; no concluida |
 | 6. Herramientas avanzadas F3 | Aún no implementadas |
 | 7. F4–F7 | Temporizador, recorte, Live Zoom, grabación y DemoType aún no implementados |

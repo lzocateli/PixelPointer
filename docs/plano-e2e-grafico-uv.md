@@ -384,6 +384,40 @@ acesso à sessão gráfica, D-Bus ou dados pessoais do host. O pacote testado
 foi o AOT já validado da etapa 1. Esta cobertura é Sway isolado/IPC, não
 atalhos físicos, Esc, tray, launcher ou aceite nativo GNOME/Windows/macOS.
 
+### Política multi-monitor e erro de Screenshot
+
+Em 2026-11-01, a branch `test/wayland-multi-monitor-policy` validou a política
+existente: ScreenCast somente com exatamente um monitor. Cinco casos unitários
+cobrem contagens negativas, zero, um, dois e três. Erros D-Bus do fallback
+Screenshot agora são convertidos em erro controlado, mantendo cancelamento
+e a mensagem de indisponibilidade usada pelo caminho de fallback anterior.
+
+O modo opt-in `-CheckMultiMonitorPolicy` executa o baseline de captura e cria
+duas saídas Sway virtuais ativas, verificadas por JSON. A imagem não oferece
+Screenshot; o comando `capture` deve terminar com código 1, sem PNG, sem
+mensagem de ScreenCast e sem exceção não tratada. Isso comprova a política e
+a indisponibilidade segura, não captura bem-sucedida de uma área multi-monitor.
+
+| Cenário | Evidência local | Resultado |
+| --- | --- | --- |
+| Sem render node | `artifacts/wayland/screencast-20261101T131754378-903d3b19` | Indisponibilidade e mensagem anterior preservadas |
+| Um monitor e ciclo de vida | `artifacts/wayland/screencast-20261101T131758088-7c112c2c` | Captura, quit e reinício continuam aprovados |
+| Duas saídas, sem Screenshot | `artifacts/wayland/screencast-20261101T131802565-e28d49cf` | `passed=true`, 2 saídas, código 1, nenhum arquivo, erro controlado |
+
+Com pacote AOT atual, imagem existente, Podman rootless, render node autorizado
+e nginx isolado conforme os pré-requisitos anteriores, na raiz do clone:
+
+```powershell
+pwsh -NoProfile -File tools/scripts/Test-WaylandScreenCast.ps1 -Engine podman -Package artifacts/aot/linux-x64 -RenderNode /dev/dri/renderD128 -CheckMultiMonitorPolicy
+```
+
+O modo não combina com `-RepeatDaemonCaptures`. O gate passou com format,
+build sem avisos/erros, 161 testes, 23 cenários de governança, AOT e `selftest`.
+nginx ficou sem portas públicas; os containers foram removidos. Nenhuma
+sessão gráfica, D-Bus ou captura pessoal do host foi usada. Permanecem
+pendentes captura multi-monitor real com Screenshot disponível, seleção
+de monitor, HiDPI, GNOME/KDE e as outras arquiteturas/plataformas.
+
 ### Resultado local em 2026-10-30
 
 Etapas 1 a 6 implementadas para o primeiro alvo. A etapa 7 permanece expansão

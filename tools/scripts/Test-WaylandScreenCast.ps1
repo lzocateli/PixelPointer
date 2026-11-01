@@ -30,6 +30,10 @@ rejeicao do processo do daemon. Exige RenderNode. Nao testa atalhos fisicos.
 .PARAMETER CheckDaemonLifecycle
 Exige RepeatDaemonCaptures. Testa quit com sobreposicao aberta, status parado,
 reinicio com nova conexao do portal e captura valida no daemon reiniciado.
+.PARAMETER CheckMultiMonitorPolicy
+Exige RenderNode; nao combina com RepeatDaemonCaptures. Depois do baseline,
+cria duas saidas virtuais e exige erro controlado sem Screenshot, sem capturar
+apenas um monitor nem criar arquivo. Nao comprova suporte multi-monitor completo.
 .PARAMETER RemainingArguments
 Somente --help. Ajuda nao produz efeitos colaterais.
 .EXAMPLE
@@ -42,6 +46,8 @@ pwsh ./tools/scripts/Test-WaylandScreenCast.ps1 -Engine podman -RenderNode /dev/
 pwsh ./tools/scripts/Test-WaylandScreenCast.ps1 -Engine podman -RenderNode /dev/dri/renderD128 -DenyScreenCastGetAll -RepeatDaemonCaptures
 .EXAMPLE
 pwsh ./tools/scripts/Test-WaylandScreenCast.ps1 -Engine podman -RenderNode /dev/dri/renderD128 -RepeatDaemonCaptures -CheckDaemonLifecycle
+.EXAMPLE
+pwsh ./tools/scripts/Test-WaylandScreenCast.ps1 -Engine podman -RenderNode /dev/dri/renderD128 -CheckMultiMonitorPolicy
 .NOTES
 Requer PowerShell 7, Linux x64, Docker/Podman e o pacote gerado por Publish-Aot.ps1.
 Prazo do container: 120 segundos. Codigo 0: aprovado. Codigo 1: falha. Codigo 2: uso invalido.
@@ -55,6 +61,7 @@ param(
     [switch] $DenyScreenCastGetAll,
     [switch] $RepeatDaemonCaptures,
     [switch] $CheckDaemonLifecycle,
+    [switch] $CheckMultiMonitorPolicy,
     [ValidateSet('docker', 'podman')] [string] $Engine,
     [Parameter(ValueFromRemainingArguments)] [string[]] $RemainingArguments
 )
@@ -81,11 +88,14 @@ if ($Engine -notin @('docker', 'podman') -or -not (Get-Command $Engine -ErrorAct
 }
 
 try {
+    if ($CheckMultiMonitorPolicy -and $RepeatDaemonCaptures) {
+        throw 'CheckMultiMonitorPolicy nao combina com RepeatDaemonCaptures. Use --help.'
+    }
     if ($CheckDaemonLifecycle -and -not $RepeatDaemonCaptures) {
         throw 'CheckDaemonLifecycle exige RepeatDaemonCaptures. Use --help.'
     }
-    if (($DenyScreenCastGetAll -or $RepeatDaemonCaptures) -and [string]::IsNullOrWhiteSpace($RenderNode)) {
-        throw 'DenyScreenCastGetAll e RepeatDaemonCaptures exigem RenderNode para validar captura real. Use --help.'
+    if (($DenyScreenCastGetAll -or $RepeatDaemonCaptures -or $CheckMultiMonitorPolicy) -and [string]::IsNullOrWhiteSpace($RenderNode)) {
+        throw 'Os modos de captura real exigem RenderNode. Use --help.'
     }
     $artifactRoot = [IO.Path]::GetFullPath((Join-Path $root 'artifacts'))
     $packagePath = [IO.Path]::GetFullPath($Package, $root)
@@ -151,7 +161,7 @@ try {
         $modeArguments += @('--volume', "${configPath}:/usr/share/dbus-1/session.conf:ro,Z")
     }
     $container = "pixelpointer-$runId"
-    if ($RepeatDaemonCaptures) {
+    if ($RepeatDaemonCaptures -or $CheckMultiMonitorPolicy) {
         $driver = Join-Path $root 'tests/wayland/daemon.py'
         $driverFile = Get-Item -LiteralPath $driver -Force
         if ($driverFile.PSIsContainer -or ($driverFile.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
@@ -159,8 +169,10 @@ try {
         }
         $deny = if ($DenyScreenCastGetAll) { '1' } else { '0' }
         $lifecycle = if ($CheckDaemonLifecycle) { '1' } else { '0' }
+        $multiMonitor = if ($CheckMultiMonitorPolicy) { '1' } else { '0' }
         $modeArguments += @('--volume', "${driver}:/opt/wayland/daemon.py:ro,Z", '--env', "DENY_GETALL=$deny",
             '--env', "CHECK_LIFECYCLE=$lifecycle",
+            '--env', "CHECK_MULTI_MONITOR=$multiMonitor",
             '--entrypoint', 'python')
     }
     $volume = "$container-evidence"
@@ -170,7 +182,7 @@ try {
         & $Engine volume create $volume | Out-Null
         if ($LASTEXITCODE -ne 0) { throw 'Falha ao criar volume de evidencias.' }
         $volumeCreated = $true
-        [string[]] $entryArguments = if ($RepeatDaemonCaptures) { @('/opt/wayland/daemon.py') } else { @() }
+        [string[]] $entryArguments = if ($RepeatDaemonCaptures -or $CheckMultiMonitorPolicy) { @('/opt/wayland/daemon.py') } else { @() }
         & $Engine run --detach --name $container --network none --read-only --cap-drop ALL `
             --security-opt no-new-privileges --pids-limit 256 --memory 2g --cpus 2 `
             --tmpfs '/tmp:rw,nosuid,nodev,size=512m' --volume "${volume}:/evidence" `
@@ -201,7 +213,7 @@ try {
 
     Write-Output "Evidencias: $output"
     if ($exitCode -ne 0) {
-        if ($RepeatDaemonCaptures) {
+        if ($RepeatDaemonCaptures -or $CheckMultiMonitorPolicy) {
             @{ passed = $false; mode = 'daemon-screencast'; error = 'container failed' } |
                 ConvertTo-Json | Set-Content -LiteralPath (Join-Path $output 'result.json') -Encoding utf8NoBOM
         }
@@ -253,6 +265,23 @@ try {
             throw
         }
         Write-Output 'Daemon aprovado: draw/zoom por IPC, capacidades atualizadas na mesma conexao, status e quit.'
+    }
+    if ($CheckMultiMonitorPolicy) {
+        try {
+            $result = Get-Content -LiteralPath (Join-Path $output 'multi-monitor-result.json') -Raw | ConvertFrom-Json
+            if ($result.passed -ne $true -or $result.active_outputs -ne 2 -or $result.capture_exit -ne 1 -or
+                $result.no_file -ne $true -or $result.controlled_error -ne $true) {
+                throw 'Resultado multi-monitor incompleto.'
+            }
+            @{ passed = $true; mode = 'multi-monitor-policy'; policy = $result } |
+                ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $output 'result.json') -Encoding utf8NoBOM
+        }
+        catch {
+            @{ passed = $false; mode = 'multi-monitor-policy'; error = $_.Exception.Message } |
+                ConvertTo-Json | Set-Content -LiteralPath (Join-Path $output 'result.json') -Encoding utf8NoBOM
+            throw
+        }
+        Write-Output 'Politica multi-monitor aprovada: duas saidas, erro controlado sem Screenshot e nenhum arquivo.'
     }
     Write-Output 'Validacao Wayland ScreenCast aprovada.'
     exit 0

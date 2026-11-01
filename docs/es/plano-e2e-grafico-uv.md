@@ -374,6 +374,38 @@ gráfica, D-Bus ni datos personales del host. Se usó el AOT validado de etapa 1
 Es cobertura Sway aislado/IPC, no atajos físicos, Esc, bandeja, lanzador ni
 aceptación nativa GNOME/Windows/macOS.
 
+### Política multi-monitor y errores de Screenshot
+
+El 2026-11-01, `test/wayland-multi-monitor-policy` validó la política existente:
+ScreenCast solo con exactamente un monitor. Cinco casos unitarios cubren
+conteos negativos, cero, uno, dos y tres. Errores D-Bus del fallback Screenshot
+se convierten en errores controlados, conservando cancelación y el mensaje
+de indisponibilidad del fallback anterior.
+
+`-CheckMultiMonitorPolicy` ejecuta el baseline y crea dos salidas virtuales
+Sway activas, verificadas por JSON. La imagen no ofrece Screenshot; `capture`
+debe terminar con código 1, sin PNG, mensaje ScreenCast ni excepción no tratada.
+Comprueba política e indisponibilidad segura, no captura multi-monitor exitosa.
+
+| Escenario | Evidencia local | Resultado |
+| --- | --- | --- |
+| Sin render node | `artifacts/wayland/screencast-20261101T131754378-903d3b19` | Indisponibilidad y mensaje anterior preservados |
+| Un monitor y ciclo de vida | `artifacts/wayland/screencast-20261101T131758088-7c112c2c` | Captura, quit y reinicio siguen aprobados |
+| Dos salidas sin Screenshot | `artifacts/wayland/screencast-20261101T131802565-e28d49cf` | `passed=true`, 2 salidas, código 1, ningún archivo, error controlado |
+
+Desde raíz del clone, con AOT actual, imagen existente, Podman rootless,
+render node autorizado y nginx aislado según los requisitos anteriores:
+
+```powershell
+pwsh -NoProfile -File tools/scripts/Test-WaylandScreenCast.ps1 -Engine podman -Package artifacts/aot/linux-x64 -RenderNode /dev/dri/renderD128 -CheckMultiMonitorPolicy
+```
+
+No combina con `-RepeatDaemonCaptures`. El gate pasó format, build sin
+avisos/errores, 161 pruebas, 23 casos de gobernanza, AOT y `selftest`.
+nginx no publicó puertos y se eliminaron containers. No se usó sesión gráfica,
+D-Bus ni captura personal del host. Captura multi-monitor real con Screenshot,
+selección de monitor, HiDPI, GNOME/KDE y otras arquitecturas/plataformas pendientes.
+
 ### Resultado local del 2026-10-30
 
 Etapas 1–6 implementadas para primer objetivo; etapa 7 es expansión condicionada,

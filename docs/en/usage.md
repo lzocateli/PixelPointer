@@ -147,6 +147,12 @@ after something changes on screen; otherwise capture uses Screenshot after 2 s.
 The terminal reports the path used and the time spent in the portal and on the
 first frame.
 
+With multiple monitors, ScreenCast is not silently used to capture only one:
+Screenshot is selected. Its D-Bus failures are reported as controlled capture
+errors, without an unhandled exception. If no capture path is available for
+that scenario, capture fails; this is not validated multi-monitor support
+across all desktops.
+
 **Stage diagnostics.** The `portal` and `primeiro quadro` totals are preserved:
 `portal` covers session creation, portal selection/start and authorization
 persistence; `primeiro quadro` includes opening the PipeWire remote and
