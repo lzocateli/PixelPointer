@@ -137,6 +137,41 @@ public sealed class SceneRendererTests
     }
 
     [Fact]
+    public void Draw_HighlighterKeepsUniformAlphaWhereTheStrokeOverlapsItself()
+    {
+        var document = new AnnotationDocument(PenColor.Red, 10f);
+        document.SelectColor(PenColor.Red, highlighter: true);
+        document.BeginStroke(10, 50, 0.5f, 1f);
+        document.ContinueStroke(50, 50, 0.6f);
+        document.ContinueStroke(90, 50, 0.7f);
+        document.ContinueStroke(50, 52, 0.8f);
+        document.EndStroke();
+
+        using var bitmap = Render(document, background: null, Full, transparent: true);
+
+        // Segmentos com pressão se sobrepõem em (50, 50); o alfa não deve acumular.
+        Assert.Equal(AnnotationDocument.HighlighterAlpha, bitmap.GetPixel(30, 50).Alpha);
+        Assert.Equal(AnnotationDocument.HighlighterAlpha, bitmap.GetPixel(50, 50).Alpha);
+    }
+
+    [Fact]
+    public void Draw_HighlighterLetsTheBackgroundShowThrough()
+    {
+        var document = new AnnotationDocument(PenColor.Yellow, 20f);
+        document.ToggleBoard(Board.Black);
+        document.SelectColor(PenColor.Yellow, highlighter: true);
+        document.BeginStroke(10, 50, 1f, 1f);
+        document.ContinueStroke(90, 50, 1f);
+
+        using var bitmap = Render(document, background: null, Full, transparent: false);
+        var pixel = bitmap.GetPixel(50, 50);
+
+        Assert.InRange(pixel.Red, 80, 110);
+        Assert.InRange(pixel.Green, 80, 110);
+        Assert.Equal(0, pixel.Blue);
+    }
+
+    [Fact]
     public void Draw_RejectsEmptyView()
     {
         using var surface = SKSurface.Create(new SKImageInfo(Size, Size));

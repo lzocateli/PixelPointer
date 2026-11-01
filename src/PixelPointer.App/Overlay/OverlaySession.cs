@@ -380,6 +380,7 @@ internal sealed unsafe partial class OverlaySession
     private bool HandleKey(SDL_KeyboardEvent key)
     {
         var ctrl = (key.mod & SDL_Keymod.SDL_KMOD_CTRL) != 0;
+        var shift = (key.mod & SDL_Keymod.SDL_KMOD_SHIFT) != 0;
         switch (key.key)
         {
             case SDL_Keycode.SDLK_ESCAPE:
@@ -409,22 +410,22 @@ internal sealed unsafe partial class OverlaySession
                 SaveSnapshot();
                 break;
             case SDL_Keycode.SDLK_R:
-                _annotations.SelectColor(PenColor.Red);
+                _annotations.SelectColor(PenColor.Red, shift);
                 break;
             case SDL_Keycode.SDLK_G:
-                _annotations.SelectColor(PenColor.Green);
+                _annotations.SelectColor(PenColor.Green, shift);
                 break;
             case SDL_Keycode.SDLK_B:
-                _annotations.SelectColor(PenColor.Blue);
+                _annotations.SelectColor(PenColor.Blue, shift);
                 break;
             case SDL_Keycode.SDLK_Y:
-                _annotations.SelectColor(PenColor.Yellow);
+                _annotations.SelectColor(PenColor.Yellow, shift);
                 break;
             case SDL_Keycode.SDLK_O:
-                _annotations.SelectColor(PenColor.Orange);
+                _annotations.SelectColor(PenColor.Orange, shift);
                 break;
             case SDL_Keycode.SDLK_P:
-                _annotations.SelectColor(PenColor.Pink);
+                _annotations.SelectColor(PenColor.Pink, shift);
                 break;
         }
 

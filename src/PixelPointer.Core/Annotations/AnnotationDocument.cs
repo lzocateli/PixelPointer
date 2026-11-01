@@ -27,6 +27,7 @@ public sealed class AnnotationDocument
     public const float MaxPenWidth = 60f;
     public const float PenWidthStep = 2f;
     public const float DefaultPenWidth = 6f;
+    public const byte HighlighterAlpha = 0x60;
 
     private readonly List<Stroke> _strokes = [];
     private Stroke? _current;
@@ -46,7 +47,11 @@ public sealed class AnnotationDocument
 
     public PenColor Color { get; private set; }
 
-    public uint ColorArgb => ToArgb(Color);
+    public bool Highlighter { get; private set; }
+
+    public uint ColorArgb => Highlighter
+        ? (ToArgb(Color) & 0x00FFFFFFu) | ((uint)HighlighterAlpha << 24)
+        : ToArgb(Color);
 
     public float PenWidth { get; private set; }
 
@@ -65,10 +70,12 @@ public sealed class AnnotationDocument
         _ => throw new ArgumentOutOfRangeException(nameof(color), color, null),
     };
 
-    public void SelectColor(PenColor color)
+    /// <summary>Seleciona a cor; com <paramref name="highlighter"/>, a caneta fica translúcida (marca-texto).</summary>
+    public void SelectColor(PenColor color, bool highlighter = false)
     {
         _ = ToArgb(color);
         Color = color;
+        Highlighter = highlighter;
     }
 
     /// <summary>Aumenta (positivo) ou reduz (negativo) a espessura em um passo, dentro dos limites.</summary>
