@@ -1,5 +1,7 @@
 # Governança do PixelPointer
 
+**Português (Brasil)** · [English](GOVERNANCE.en.md) · [Español](GOVERNANCE.es.md)
+
 ## Responsabilidade
 
 `@lzocateli` é o proprietário e único mantenedor com autoridade para aceitar
@@ -32,10 +34,19 @@ sozinho não bloqueia merge: a imposição depende dos rulesets ativos no GitHub
 
 ### Tags de release e Environments
 
-Tags `v*` são criadas somente pelo GitHub App `Altivy Release`, no merge do
-Release PR aberto pelo release-please; nem o administrador cria tags manualmente.
-Antes de publicar, `gw-release.yml` confere que a tag corresponde às versões do
-repositório e que o commit é ancestral de `origin/main`.
+Tags `v*` são criadas somente pelo GitHub App `Altivy Release`; nem o
+administrador cria tags manualmente. Tags estáveis `vX.Y.Z` continuam sendo
+criadas no merge do Release PR aberto pelo release-please. Antes de publicar,
+`gw-release.yml` confere a versão e a ancestralidade de `origin/main`.
+
+Em 2026-10-31, o mantenedor autorizou a exceção de previews públicas:
+`workflow_dispatch` do `publish.yml` em `main` pode criar `vX.Y.Z-preview.N`
+pelo mesmo App, após build, testes e aprovação no Environment `release`.
+O job verifica commit, checksums e digests remotos; publica como Pre-release,
+sem `Latest`, Homebrew, winget ou deploy. PRs continuam sem secrets e não
+publicam previews. A exceção não libera criação manual, alteração ou exclusão
+de tags; o ruleset `gw-release-tags` permanece inalterado.
+Detalhes e recuperação: [processo de release](../docs/release.md#preview-obrigatória).
 
 O Environment `release` exige aprovação de `@lzocateli` para anexar os assets à
 release em rascunho e, de novo, para atualizar o tap Homebrew no
@@ -76,7 +87,8 @@ um usuário individual. O repositório foi criado em 2026-10-30 a partir da F0 (
 Issue → fase do [plano](../docs/plano-implementacao.md) → branch → PR.
 
 Publicação e aprovação do Environment `release` são controles separados do
-merge de PRs comuns: somente o merge do Release PR inicia uma release. Consulte o
+merge de PRs comuns: somente o merge do Release PR inicia uma release estável;
+a preview pública segue a exceção aprovada acima. Consulte o
 [processo de release](../docs/release.md).
 
 ## Verificação e recuperação
