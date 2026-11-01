@@ -222,9 +222,15 @@ internal static class IpcChannel
         }
         catch (SocketException ex) when (!OperatingSystem.IsWindows() && ex.SocketErrorCode == SocketError.ConnectionRefused)
         {
-            throw new InvalidOperationException(
-                "O socket IPC existe, mas não aceita conexões. Verifique se o daemon terminou antes de removê-lo.",
-                ex);
+            // Com o lock da instância retido, nenhum daemon escuta aqui; sockets têm tamanho zero, arquivos com conteúdo são preservados.
+            var existing = new FileInfo(SocketPath);
+            if (!existing.Exists || existing.Length != 0)
+            {
+                throw new InvalidOperationException("O caminho do socket IPC existe, mas não é um socket obsoleto.", ex);
+            }
+
+            Console.Error.WriteLine("aviso: removendo socket IPC obsoleto de uma execução anterior.");
+            existing.Delete();
         }
         catch (SocketException ex) when (ex.SocketErrorCode is SocketError.AddressNotAvailable or SocketError.HostNotFound)
         {

@@ -121,6 +121,15 @@ with the desktop yet, run `./pixelpointer install-desktop-file`. Do not force
 replacement of an existing entry: conflicts are preserved. This step registers
 the application in the menu without replacing its binaries.
 
+If registration reports `App info not found` followed by `An app id is required`,
+the portal could not find the application identity; this does not indicate an
+invalid checksum. Run `./pixelpointer install-desktop-file` from this directory
+and restart the daemon only after registration succeeds without conflicts.
+Registering the identity does not grant capture permission. The daemon handles
+D-Bus hotkey refusals with a warning and keeps IPC running; previews before this
+fix may terminate with an exception. Without global hotkeys, use `zoom`/`draw`;
+capture still requires portal consent.
+
 On GNOME, run `./pixelpointer grant`, press Enter in the window and authorize
 capture. Then test capture and start the daemon in the foreground to observe
 possible errors:

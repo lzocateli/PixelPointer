@@ -231,9 +231,10 @@ static int Daemon()
         cancellation.Cancel();
     }
 
-    // SIGTERM chega no logout e via systemd; SIGINT é o Ctrl+C do terminal.
+    // SIGTERM chega no logout e via systemd; SIGINT é o Ctrl+C; SIGHUP, ao fechar o terminal.
     using var sigint = PosixSignalRegistration.Create(PosixSignal.SIGINT, Stop);
     using var sigterm = PosixSignalRegistration.Create(PosixSignal.SIGTERM, Stop);
+    using var sighup = PosixSignalRegistration.Create(PosixSignal.SIGHUP, Stop);
 
     using var portal = SessionInfo.IsWayland ? ConnectPortal() : null;
     using var queue = new BlockingCollection<(HotkeyCommand Command, Stopwatch Received)>();
@@ -266,9 +267,15 @@ static int Daemon()
             {
                 Console.WriteLine($"Atalhos ......... {hotkeys.Name}: {hotkeys.StartAsync(Enqueue, cancellation.Token).GetAwaiter().GetResult()}");
             }
-            catch (Exception ex) when (ex is NotSupportedException or InvalidOperationException or OperationCanceledException)
+            catch (Exception ex) when (HotkeyStartup.IsRecoverable(ex))
             {
-                Console.WriteLine($"Atalhos ......... indisponíveis ({ex.Message})");
+                Console.WriteLine(ex is Tmds.DBus.Protocol.DBusErrorReplyException
+                    ? "Atalhos ......... indisponíveis (o portal recusou a solicitação)."
+                    : $"Atalhos ......... indisponíveis ({ex.Message})");
+                if (ex is Tmds.DBus.Protocol.DBusErrorReplyException)
+                {
+                    Console.WriteLine("Execute 'pixelpointer install-desktop-file' no Linux e reinicie o daemon; confirme os diálogos do desktop. Sem atalhos globais, use 'pixelpointer zoom' ou 'pixelpointer draw'.");
+                }
             }
         }
 
