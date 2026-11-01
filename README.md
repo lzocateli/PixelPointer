@@ -36,6 +36,12 @@ RHEL/Rocky 9 ou mais novos), `win-x64`, `win-arm64`, `osx-arm64` e `osx-x64`.
 Os instaladores conferem o SHA-256 com o `SHA256SUMS` da release, não se
 autoelevam e não alteram perfis nem o `PATH`:
 
+Para testar uma **preview**, escolha a versão marcada **Pre-release** em
+[Releases](https://github.com/lzocateli/PixelPointer/releases) e siga o
+[guia de pacotes preview](docs/release.md#usar-um-pacote-preview), com comandos
+para Linux/Wayland e Windows. Os instaladores abaixo são da versão estável;
+previews usam pacotes portáteis e não são distribuídas por Homebrew/winget.
+
 ```bash
 # Linux e macOS: aplicativo em ~/.local/lib/pixelpointer, comando em ~/.local/bin
 curl -fsSL https://github.com/lzocateli/PixelPointer/releases/latest/download/install.sh | sh

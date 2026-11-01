@@ -57,6 +57,160 @@ Previews do not include `install.sh`/`install.ps1`, are not served by
 `releases/latest` and are not accepted by Groundwork deploy. Preview approval
 does not replace the human Release PR merge or production approval.
 
+### Using a preview package
+
+Open [Releases](https://github.com/lzocateli/PixelPointer/releases) and choose
+a version marked **Pre-release**, not `releases/latest`. These examples use
+`0.1.3-preview.14`; replace `version` with your chosen version without its
+initial `v`. Neither .NET nor a repository clone is needed. Previews do not
+include installers; Homebrew and winget still point to stable versions.
+
+Choose the RID of the machine that will run the app, not the download machine:
+
+| Machine | RID | Portable package |
+| --- | --- | --- |
+| Linux Intel/AMD 64-bit (`uname -m`: `x86_64`) | `linux-x64` | `.tar.gz` |
+| Linux ARM 64-bit (`uname -m`: `aarch64`) | `linux-arm64` | `.tar.gz` |
+| Windows Intel/AMD 64-bit | `win-x64` | `.zip` |
+| Windows ARM 64-bit | `win-arm64` | `.zip` |
+
+If stable is running, stop it first with `pixelpointer quit`: both versions
+share an identity and IPC, so a preview command could reach the old daemon.
+Always use the extracted executable path, not an old `pixelpointer` found
+through `PATH`. The examples create a new directory without replacing stable
+or changing profiles, registry or `PATH`. The `.deb` is another option on
+Debian/Ubuntu, but installs the same system package and may replace stable;
+prefer `.tar.gz` for a separate binary test. Per-user settings and permissions
+remain shared; this is not a sandbox.
+
+#### Linux on Wayland
+
+Run on the target machine in a terminal of the graphical session, not over SSH.
+`echo "$XDG_SESSION_TYPE"` must report `wayland`. glibc 2.34+, Fontconfig,
+libstdc++, libX11 and XDG portals with your desktop backend are required;
+ScreenCast also uses the system `libpipewire-0.3`. SDL3/Skia do not need a
+separate installation: they are bundled.
+
+Download and verify in a new directory under your home. For ARM, change
+`rid` to `linux-arm64`:
+
+```bash
+version="0.1.3-preview.14"
+rid="linux-x64"
+base="https://github.com/lzocateli/PixelPointer/releases/download/v$version"
+workdir="$(mktemp -d "$HOME/pixelpointer-preview.XXXXXX")" &&
+cd "$workdir" &&
+curl -fSLO "$base/pixelpointer-$rid.tar.gz" &&
+curl -fSLO "$base/SHA256SUMS" &&
+sha256sum --check --ignore-missing SHA256SUMS &&
+tar -xzf "pixelpointer-$rid.tar.gz"
+```
+
+**Continue only if download and verification succeed and report `OK`.** If
+they fail, do not run the package. Keep libraries beside the executable:
+
+```bash
+./pixelpointer --version
+./pixelpointer selftest
+./pixelpointer probe
+```
+
+The version must include the selected suffix and `selftest` must pass; it does
+not prove capture, hotkeys or graphical behavior. If the app is not registered
+with the desktop yet, run `./pixelpointer install-desktop-file`. Do not force
+replacement of an existing entry: conflicts are preserved. This step registers
+the application in the menu without replacing its binaries.
+
+On GNOME, run `./pixelpointer grant`, press Enter in the window and authorize
+capture. Then test capture and start the daemon in the foreground to observe
+possible errors:
+
+```bash
+./pixelpointer capture --out preview.png
+./pixelpointer daemon
+```
+
+Choose and authorize the monitor in the portal prompt. With one monitor,
+ScreenCast/PipeWire reads a frame and closes the session; the sharing indicator
+is transient. Canceling the dialog cancels the operation. On GNOME before 48
+and desktops without GlobalShortcuts, configure desktop hotkeys using the
+absolute preview executable path with `zoom` and `draw`. Details:
+[Wayland permissions](usage.md). Wayland drawing stays over a frozen capture,
+not live content. Test with one monitor first; multi-monitor and other desktops
+have limitations and do not automatically inherit acceptance from a tested machine.
+
+#### Windows
+
+Run in Windows PowerShell 5.1+ or PowerShell 7 on the target machine. For ARM,
+change `rid` to `win-arm64`. This example creates a new directory in
+`LOCALAPPDATA`, verifies exactly the ZIP entry in `SHA256SUMS`, then extracts:
+
+```powershell
+$ErrorActionPreference = 'Stop'
+[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor 3072
+$version = '0.1.3-preview.14'
+$rid = 'win-x64'
+$base = "https://github.com/lzocateli/PixelPointer/releases/download/v$version"
+$dir = Join-Path $env:LOCALAPPDATA ("PixelPointerPreview\" + [guid]::NewGuid())
+New-Item -ItemType Directory -Path $dir | Out-Null
+$zip = "pixelpointer-$rid.zip"
+Invoke-WebRequest "$base/$zip" -UseBasicParsing -OutFile "$dir\$zip"
+Invoke-WebRequest "$base/SHA256SUMS" -UseBasicParsing -OutFile "$dir\SHA256SUMS"
+$pattern = '^[0-9a-fA-F]{64}  ' + [regex]::Escape($zip) + '$'
+$entries = @(Get-Content "$dir\SHA256SUMS" | Where-Object { $_ -match $pattern })
+if ($entries.Count -ne 1) { throw 'SHA256SUMS: missing, invalid or duplicate entry.' }
+$expected = ($entries[0] -split '\s+')[0]
+if ((Get-FileHash "$dir\$zip" -Algorithm SHA256).Hash -ne $expected) {
+      throw 'Invalid checksum; do not run the package.'
+}
+Expand-Archive "$dir\$zip" -DestinationPath "$dir\app"
+Set-Location "$dir\app"
+```
+
+Stop on any error: do not run or manually extract the rejected file. After
+verification and extraction, keep `SDL3.dll` and `libSkiaSharp.dll` beside the
+executable and run:
+
+```powershell
+.\pixelpointer.exe --version
+.\pixelpointer.exe selftest
+.\pixelpointer.exe probe
+.\pixelpointer.exe daemon
+```
+
+The daemon runs in the foreground; Ctrl+C stops it. After stopping it, start
+without blocking PowerShell with:
+
+```powershell
+Start-Process "$PWD\pixelpointer.exe" -ArgumentList daemon -WindowStyle Hidden
+```
+
+Then check `.\pixelpointer.exe status` and stop with `.\pixelpointer.exe quit`.
+If a hotkey is occupied, run in the foreground to see the conflict. Binaries
+are not Authenticode-signed; do not disable Windows protections to bypass warnings.
+
+#### Test checklist and returning to stable
+
+- Confirm the chosen version, `selftest`, and session/portals in `probe`.
+- Test Ctrl+1, mouse wheel, Ctrl+2, colors and Ctrl+Z.
+- Test Ctrl+S: PNG under XDG Pictures/`Screenshots` on Linux or the special
+   Pictures/`Screenshots` folder on Windows, respecting OneDrive.
+- Esc closes the overlay; `status` must confirm the daemon remains active
+   and `quit` must stop it.
+
+To return to stable, stop the preview daemon using its executable and start
+the stable installation daemon. If you registered a desktop entry for preview,
+remove it using `./pixelpointer uninstall-desktop-file` before removing its
+files and register stable again if needed. Preserve modified entries and
+settings; deleting the portable directory does not remove captures or revoke
+portal permissions.
+
+When reporting a failure, include version, OS, architecture, desktop/version,
+X11/Wayland, monitor count, steps and error message. Do not share sensitive
+captures, tokens or complete logs. These examples are a manual test guide:
+passing CI smoke tests does not prove graphical acceptance on every machine
+and desktop combination.
+
 ### Preview security and recovery
 
 | Risk | Control |
