@@ -45,11 +45,12 @@ def windows():
 
 def inspect_overlay(name, expected):
     screenshot = EVIDENCE / f'{name}.png'
-    capture = command([PACKAGE, 'capture', '--out', str(screenshot)])
+    capture = command(['grim', '-o', 'HEADLESS-1', str(screenshot)])
     (EVIDENCE / f'{name}-capture.out').write_text(capture.stdout)
     (EVIDENCE / f'{name}-capture.err').write_text(capture.stderr)
-    if 'ScreenCast + PipeWire: 800x600' not in capture.stdout:
-        raise RuntimeError('Overlay inspection did not use ScreenCast')
+    dimensions = command(['magick', str(screenshot), '-format', '%wx%h', 'info:']).stdout
+    if dimensions != '800x600':
+        raise RuntimeError('Overlay inspection returned unexpected physical dimensions')
     pixel = command(['magick', str(screenshot), '-format', '%[pixel:p{400,300}]', 'info:']).stdout
     if pixel not in (f'srgb({expected})', f'srgba({expected},1)'):
         raise RuntimeError(f'{name}: unexpected frame color')
@@ -126,6 +127,15 @@ def main():
     if os.environ.get('CHECK_MULTI_MONITOR') == '1':
         check_multi_monitor()
         return
+    output_scale = float(os.environ.get('OUTPUT_SCALE', '1'))
+    if output_scale not in (1, 1.5, 2):
+        raise RuntimeError('Unsupported output scale')
+    command(['swaymsg', 'output', 'HEADLESS-1', 'scale', str(output_scale)])
+    def scaled_output():
+        outputs = json.loads(command(['swaymsg', '-t', 'get_outputs']).stdout)
+        return next((output for output in outputs if output.get('name') == 'HEADLESS-1'
+                     and output.get('active') and abs(output.get('scale', 0) - output_scale) < 0.01), None)
+    display = wait_for('requested output scale', scaled_output)
     daemon = None
     monitor = None
     try:
@@ -147,9 +157,23 @@ def main():
             for index, (mode, background, expected) in enumerate(samples, start=1):
                 command(['swaymsg', 'output', 'HEADLESS-1', 'bg', background, 'solid_color'])
                 command([PACKAGE, mode])
-                window = wait_for(f'{mode} window', lambda: windows())
+                def configured_window():
+                    candidates = windows()
+                    (EVIDENCE / 'window-geometry.json').write_text(json.dumps({
+                        'output': {'scale': display['scale'], 'rect': display['rect']},
+                        'windows': [{'rect': candidate.get('rect'), 'fullscreen_mode': candidate.get('fullscreen_mode')}
+                                    for candidate in candidates],
+                    }))
+                    if len(candidates) != 1:
+                        return None
+                    bounds = candidates[0]['rect']
+                    return candidates if candidates[0].get('fullscreen_mode', 0) > 0 and bounds['width'] == display['rect']['width'] and bounds['height'] == display['rect']['height'] else None
+                window = wait_for(f'{mode} configured window', configured_window)
                 if len(window) != 1:
                     raise RuntimeError('Expected one PixelPointer window')
+                rect = window[0]['rect']
+                if rect['width'] != display['rect']['width'] or rect['height'] != display['rect']['height']:
+                    raise RuntimeError('Overlay does not cover the logical output')
                 wait_for(f'{mode} frame', lambda: (EVIDENCE / 'daemon.err').read_text().count('ScreenCast capacidades:') == initial_count + index)
                 inspect_overlay(f'daemon-{mode}', expected)
                 command(['swaymsg', f'[con_id={window[0]["id"]}]', 'kill'])
@@ -157,7 +181,19 @@ def main():
                 wait_for(f'{mode} session ended', lambda: f'--- sessão {mode} ---' in (EVIDENCE / 'daemon.out').read_text())
                 if daemon.poll() is not None or command([PACKAGE, 'status']).returncode != 0:
                     raise RuntimeError('Daemon stopped after overlay closure')
-                results.append({'mode': mode, 'color': expected, 'daemon_running': True})
+                session = (EVIDENCE / 'daemon.out').read_text().split(f'--- sessão {mode} ---', 1)[1]
+                dimensions = re.search(r'janela\s+\.+.*?(\d+)x(\d+) px, densidade ([0-9.]+)', session)
+                if dimensions is None:
+                    raise RuntimeError('Missing overlay pixel metrics')
+                pixel_width, pixel_height = int(dimensions.group(1)), int(dimensions.group(2))
+                density = float(dimensions.group(3))
+                if output_scale > 1 and density <= 1:
+                    raise RuntimeError('Requested HiDPI scale was not applied to the overlay')
+                if abs(pixel_width - rect['width'] * density) > 2 or abs(pixel_height - rect['height'] * density) > 2:
+                    raise RuntimeError('Logical and pixel dimensions disagree with density')
+                results.append({'mode': mode, 'color': expected, 'daemon_running': True,
+                                'logical_width': rect['width'], 'logical_height': rect['height'],
+                                'pixel_width': pixel_width, 'pixel_height': pixel_height, 'density': density})
 
             diagnostic = (EVIDENCE / 'daemon.err').read_text()
             reads = re.findall(r'^ScreenCast capacidades: [0-9]+ ms; consulta (GetAll|Get)$', diagnostic, re.MULTILINE)
@@ -215,7 +251,7 @@ def main():
             (EVIDENCE / 'daemon-result.json').write_text(json.dumps({
                 'passed': True, 'pid': original_pid, 'queries': reads,
                 'rejections': len(daemon_rejections), 'sessions': results,
-                'quit': True, 'capability_calls': calls, 'lifecycle': lifecycle,
+                'quit': True, 'capability_calls': calls, 'lifecycle': lifecycle, 'output_scale': output_scale,
             }))
     finally:
         if monitor is not None and monitor.poll() is None:

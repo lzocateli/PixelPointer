@@ -6,7 +6,7 @@ RUN rm /etc/apt/sources.list.d/debian.sources && \
     apt-get -o APT::Sandbox::User=root update -qq && \
     apt-get -o APT::Sandbox::User=root install -y --no-install-recommends \
       sway swaybg xdg-desktop-portal xdg-desktop-portal-wlr pipewire pipewire-bin wireplumber \
-      dbus-daemon dbus-bin imagemagick libfontconfig1 libwayland-egl1 libdecor-0-0 && \
+      dbus-daemon dbus-bin imagemagick grim=1.4.0+ds-2+b1 libfontconfig1 libwayland-egl1 libdecor-0-0 && \
     dpkg-query -W -f='${Package}\t${Version}\n' > /opt/native-packages.tsv && \
     rm -rf /var/lib/apt/lists/*
 COPY sway.conf xdpw.conf run.sh /opt/wayland/

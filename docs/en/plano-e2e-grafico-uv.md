@@ -401,6 +401,79 @@ nginx had no public ports; containers were removed. No host graphical session,
 D-Bus or personal capture was used. Real multi-monitor capture with Screenshot,
 monitor selection, HiDPI, GNOME/KDE and other architectures/platforms remain pending.
 
+### Blocked fractional-scale investigation
+
+Historical record of the initial blockage; subsequent validation is in the next section.
+
+On 2026-11-01, `test/wayland-output-scale` attempted tests at scales 1, 1.5 and 2.
+The 1.5 test did not pass: Sway's logical output was `533×400`, but the window
+stayed `1×1` without fullscreen. Evidence:
+`artifacts/wayland/screencast-20261101T134318812-3740613a/window-geometry.json`.
+This isolated result does not invalidate earlier human GNOME acceptance.
+
+A disposable SDL probe compared zero initial size, explicit size and fullscreen
+requested after creation. Local fix candidates passed build, 161 tests,
+AOT/selftest and X11 E2E but not the Wayland matrix: the second session had a
+small window, followed by inspection capture failure on static content.
+They were not classified as accepted fixes.
+
+Production and compositor-damage experiments were withdrawn; `OverlaySession.cs`
+matches `main` again. Experimental AOT was preserved at
+`artifacts/investigation/fullscreen-experimental-536b8551f28b4f36af044186905856f3`;
+do not use it as a validated implementation. Rebuild from source before new tests.
+Failure evidence and scale tests remain local without commit/push/PR. This
+increment is **blocked**, not complete. Scales 1.5 and 2 were not accepted by
+this test; geometry, composition and frame inspection in the fixture require
+investigation before delivery.
+
+### Isolated HiDPI after separating inspection
+
+On 2026-11-01, the investigation separated two problems: a zero-sized initial
+Wayland window/unapplied fullscreen, and inspecting a static overlay through
+a second ScreenCast session that can receive no damage on wlroots. The fix
+uses logical display dimensions for Wayland creation and requests fullscreen
+after renderer creation only if its flag was not applied. It does not block
+with `SDL_SyncWindow` or change X11/Windows/macOS, consent, capture timeout or GPU opt-in.
+
+`localhost/pixelpointer-wayland:screencast-v2` pins `grim=1.4.0+ds-2+b1`
+from the existing Debian snapshot. Exact-package Expat/MIT licensing, including
+`debian/*`, was verified by extracting copyright from the signed `.deb` without
+running package scripts; the package is supplied by maintained Debian trixie.
+Upstream/web metadata sites blocked automated access; version came from
+snapshot APT, not assumptions about a website. Native links: wayland-client/
+libffi and pixman (MIT), libpng, zlib and distribution runtime, already in the
+image; versions are inventoried in `/opt/native-packages.tsv`. This is test-only,
+not part of PixelPointer packages or production capture.
+
+The baseline still requires real ScreenCast/PipeWire. The driver inspects
+synthetic scene pixels through the compositor with grim, avoiding another
+portal session; this does not prove consent, which remains covered by the
+baseline. It requires fullscreen/logical bounds through Sway JSON, physical
+800×600 size, color, density and lifecycle. Old failures were not reclassified.
+
+| Scale | Local evidence | Result |
+| --- | --- | --- |
+| 1 | `artifacts/wayland/screencast-20261101T143030541-59f79fcb` | Drawing, zoom, status, quit and restart passed |
+| 1.5 | `artifacts/wayland/screencast-20261101T143034841-b65dc44a` | Logical 533×400, pixels 800×600, density 1.5; both sessions and lifecycle passed |
+| 2 | `artifacts/wayland/screencast-20261101T143038653-a3d322d0` | Logical 400×300, pixels 800×600, density 2; both sessions and lifecycle passed |
+
+Format, warning/error-free build, 161 tests, 23 governance cases, AOT and
+`selftest` passed. X11 E2E also passed at
+`artifacts/e2e/x11-20261101T143148779-500ce3d3/attempt-01`. nginx stayed isolated
+without public ports; no host socket or personal graphical data was used.
+
+With v2 image built, current AOT package, authorized render node and isolated
+nginx under the preceding prerequisites:
+
+```powershell
+pwsh -NoProfile -File tools/scripts/Test-WaylandScreenCast.ps1 -Build -Engine podman -Package artifacts/aot/linux-x64 -RenderNode /dev/dri/renderD128 -RepeatDaemonCaptures -CheckDaemonLifecycle -OutputScale 1.5
+```
+
+`OutputScale` accepts 1/1.5/2; non-1 values require `RepeatDaemonCaptures`.
+Compositor captures do not prove physical hotkeys, pen/pressure, GPU parity,
+multi-monitor or native GNOME/KDE/Windows/macOS acceptance. Those slices and
+latency benchmarking remain pending; F2/F3 are not complete.
+
 ### Local Results on 2026-10-30
 
 Steps 1–6 implemented for the first target; step 7 remains conditional expansion,
