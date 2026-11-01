@@ -122,6 +122,14 @@ registrado no desktop, execute `./pixelpointer install-desktop-file`.
 Não force a substituição de um registro existente: conflitos são preservados.
 Essa etapa registra o aplicativo no menu, sem substituir seus binários.
 
+Se aparecer `App info not found` no registro seguido de `An app id is required`,
+o portal não encontrou a identidade do aplicativo; isso não indica checksum
+inválido. Execute `./pixelpointer install-desktop-file` nessa pasta e reinicie o
+daemon somente após o registro concluir sem conflito. Registrar a identidade não
+concede permissão de captura. O daemon trata recusas D-Bus dos atalhos com aviso
+e mantém o IPC; previews anteriores a essa correção podem encerrar com exceção.
+Sem atalhos globais, use `zoom`/`draw`; a captura ainda exige o consentimento do portal.
+
 No GNOME, execute `./pixelpointer grant`, pressione Enter na janela e autorize
 a captura. Depois teste a captura e inicie o daemon em primeiro plano para
 observar eventuais erros:

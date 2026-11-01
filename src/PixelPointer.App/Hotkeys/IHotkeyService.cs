@@ -19,3 +19,10 @@ internal static class HotkeyDefaults
         ("draw", "Desenhar", "CTRL+2", '2'),
     ];
 }
+
+internal static class HotkeyStartup
+{
+    internal static bool IsRecoverable(Exception error) =>
+        error is NotSupportedException or InvalidOperationException or OperationCanceledException
+            or Tmds.DBus.Protocol.DBusErrorReplyException;
+}
