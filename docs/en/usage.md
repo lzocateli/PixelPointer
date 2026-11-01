@@ -55,7 +55,8 @@ On-screen command labels remain Portuguese, like other native app messages.
 
 Overlay keys: mouse wheel or arrows to zoom, click and drag to draw,
 Shift/Ctrl/Ctrl+Shift/Tab when you start dragging for a straight
-line/rectangle/arrow/ellipse, R/G/B/Y/O/P for colors, Ctrl+wheel for pen width,
+line/rectangle/arrow/ellipse, R/G/B/Y/O/P for colors, Shift+color for a
+translucent highlighter, Ctrl+wheel for pen width,
 Ctrl+Z to undo, E to erase, W/K for whiteboard/blackboard, Ctrl+S to save a PNG
 to the user's screenshots folder, Esc or right click to exit.
 
