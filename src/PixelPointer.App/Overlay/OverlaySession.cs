@@ -427,6 +427,9 @@ internal sealed unsafe partial class OverlaySession
             case SDL_Keycode.SDLK_P:
                 _annotations.SelectColor(PenColor.Pink, shift);
                 break;
+            case SDL_Keycode.SDLK_X:
+                _annotations.SelectBlur(shift);
+                break;
         }
 
         return true;
@@ -483,7 +486,9 @@ internal sealed unsafe partial class OverlaySession
         DrawScene(canvas, _view, width);
         if (_mode == OverlayMode.Draw)
         {
-            using var cursor = new SKPaint { Color = new SKColor(_annotations.ColorArgb), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 2 };
+            // Na caneta de desfoque, o cursor fica cinza porque a cor não é usada.
+            var cursorColor = _annotations.Effect == StrokeEffect.None ? _annotations.ColorArgb : 0xFFC0C0C0u;
+            using var cursor = new SKPaint { Color = new SKColor(cursorColor), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 2 };
             canvas.DrawCircle(_mouseX, _mouseY, _annotations.PenWidth / 2, cursor);
         }
 

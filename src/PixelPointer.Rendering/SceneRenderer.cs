@@ -6,6 +6,9 @@ namespace PixelPointer.Rendering;
 /// <summary>Desenha fundo, quadro e anotações de uma sobreposição, independente de janela e de backend (CPU ou GPU).</summary>
 public static class SceneRenderer
 {
+    public const float BlurSigma = 6f;
+    public const float StrongBlurSigma = 16f;
+
     /// <summary>
     /// Desenha a cena; <paramref name="view"/> é a região da imagem exibida e <paramref name="outputWidth"/>
     /// a largura de saída em pixels. Com <paramref name="transparent"/>, o fundo sem imagem fica com alfa zero.
@@ -46,6 +49,12 @@ public static class SceneRenderer
     {
         ArgumentNullException.ThrowIfNull(canvas);
         ArgumentNullException.ThrowIfNull(stroke);
+        if (stroke.Effect != StrokeEffect.None)
+        {
+            DrawBlurStroke(canvas, stroke);
+            return;
+        }
+
         var color = new SKColor(stroke.Color);
         if (color.Alpha == 255)
         {
@@ -55,12 +64,27 @@ public static class SceneRenderer
 
         // Camada opaca composta uma vez: sobreposições do próprio traço não escurecem o marca-texto.
         using var layer = new SKPaint { Color = SKColors.White.WithAlpha(color.Alpha) };
-        canvas.SaveLayer(Bounds(stroke), layer);
+        canvas.SaveLayer(Bounds(stroke, 0), layer);
         DrawOpaqueStroke(canvas, stroke, color.WithAlpha(255));
         canvas.Restore();
     }
 
-    private static SKRect Bounds(Stroke stroke)
+    /// <summary>Desfoca o que já foi desenhado sob o traço; retângulo e elipse são preenchidos.</summary>
+    private static void DrawBlurStroke(SKCanvas canvas, Stroke stroke)
+    {
+        var sigma = stroke.Effect == StrokeEffect.StrongBlur ? StrongBlurSigma : BlurSigma;
+        var bounds = Bounds(stroke, sigma * 3);
+        using var blur = SKImageFilter.CreateBlur(sigma, sigma);
+        canvas.SaveLayer(new SKCanvasSaveLayerRec { Bounds = bounds, Backdrop = blur });
+        // A máscara cobre a camada inteira: fora do traço o desfoque é descartado.
+        using var mask = new SKPaint { BlendMode = SKBlendMode.DstIn };
+        canvas.SaveLayer(bounds, mask);
+        DrawOpaqueStroke(canvas, stroke, SKColors.White, fill: true);
+        canvas.Restore();
+        canvas.Restore();
+    }
+
+    private static SKRect Bounds(Stroke stroke, float extra)
     {
         var points = stroke.Points;
         var bounds = new SKRect(points[0].X, points[0].Y, points[0].X, points[0].Y);
@@ -70,18 +94,20 @@ public static class SceneRenderer
         }
 
         // Margem para a espessura e a ponta da seta.
-        var margin = (stroke.Width * 5) + 12;
+        var margin = (stroke.Width * 5) + 12 + extra;
         bounds.Inflate(margin, margin);
         return bounds;
     }
 
-    private static void DrawOpaqueStroke(SKCanvas canvas, Stroke stroke, SKColor color)
+    private static void DrawOpaqueStroke(SKCanvas canvas, Stroke stroke, SKColor color, bool fill = false)
     {
         using var paint = new SKPaint
         {
             Color = color,
             IsAntialias = true,
-            Style = SKPaintStyle.Stroke,
+            Style = fill && stroke.Shape is StrokeShape.Rectangle or StrokeShape.Ellipse
+                ? SKPaintStyle.StrokeAndFill
+                : SKPaintStyle.Stroke,
             StrokeCap = SKStrokeCap.Round,
             StrokeJoin = SKStrokeJoin.Round,
             StrokeWidth = stroke.Width,

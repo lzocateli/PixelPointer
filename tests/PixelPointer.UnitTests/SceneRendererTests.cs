@@ -172,12 +172,68 @@ public sealed class SceneRendererTests
     }
 
     [Fact]
+    public void Draw_BlurRectangleSoftensOnlyTheContentInside()
+    {
+        using var background = Quadrants();
+        var document = BlurRectangle(strong: false);
+
+        using var bitmap = Render(document, background, Full, transparent: false);
+
+        // Dentro do retângulo, a borda vermelho/verde em x = 50 se mistura; fora dele, continua nítida.
+        var inside = bitmap.GetPixel(47, 40);
+        Assert.True(inside.Green > 40 && inside.Red < 230, $"Esperava mistura, obtido {inside}");
+        Assert.Equal(SKColors.Red, bitmap.GetPixel(47, 10));
+        Assert.Equal(SKColors.Lime, bitmap.GetPixel(53, 10));
+    }
+
+    [Fact]
+    public void Draw_StrongBlurSpreadsFurther()
+    {
+        using var background = Quadrants();
+
+        using var normal = Render(BlurRectangle(strong: false), background, Full, transparent: false);
+        using var strong = Render(BlurRectangle(strong: true), background, Full, transparent: false);
+
+        Assert.True(strong.GetPixel(40, 40).Green > normal.GetPixel(40, 40).Green);
+    }
+
+    [Fact]
+    public void Draw_BlurAlsoSoftensEarlierAnnotations()
+    {
+        var document = new AnnotationDocument(PenColor.Red, 2f);
+        document.ToggleBoard(Board.White);
+        document.BeginStroke(50, 10, 1f, 1f, StrokeShape.Line);
+        document.ContinueStroke(50, 90, 1f);
+        document.EndStroke();
+        document.SelectBlur(strong: false);
+        document.BeginStroke(30, 30, 1f, 1f, StrokeShape.Rectangle);
+        document.ContinueStroke(70, 70, 1f);
+        document.EndStroke();
+
+        using var bitmap = Render(document, background: null, Full, transparent: false);
+
+        Assert.Equal(SKColors.Red, bitmap.GetPixel(50, 15));
+        Assert.NotEqual(SKColors.Red, bitmap.GetPixel(50, 50));
+        Assert.NotEqual(SKColors.White, bitmap.GetPixel(53, 50));
+    }
+
+    [Fact]
     public void Draw_RejectsEmptyView()
     {
         using var surface = SKSurface.Create(new SKImageInfo(Size, Size));
 
         Assert.Throws<ArgumentOutOfRangeException>(() => SceneRenderer.Draw(surface.Canvas, new AnnotationDocument(),
             null, Full, SKRect.Empty, Size, transparent: true));
+    }
+
+    private static AnnotationDocument BlurRectangle(bool strong)
+    {
+        var document = new AnnotationDocument(PenColor.Red, 2f);
+        document.SelectBlur(strong);
+        document.BeginStroke(30, 30, 1f, 1f, StrokeShape.Rectangle);
+        document.ContinueStroke(70, 70, 1f);
+        document.EndStroke();
+        return document;
     }
 
     private static SKBitmap RenderShape(StrokeShape shape, float x1, float y1, float x2, float y2, (int X, int Y) ignored)

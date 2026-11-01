@@ -54,12 +54,15 @@ executar a partir de um terminal; os detalhes e erros ficam nessa saída.
 Teclas na sobreposição: roda do mouse ou setas para o zoom, clique e arraste
 para desenhar, Shift/Ctrl/Ctrl+Shift/Tab ao começar a arrastar para linha
 reta/retângulo/seta/elipse, R/G/B/Y/O/P para cores, Shift+cor para marca-texto
-translúcido, Ctrl+roda para a espessura,
+translúcido, X/Shift+X para desfoque/desfoque forte, Ctrl+roda para a espessura,
 Ctrl+Z para desfazer, E para apagar, W/K para quadro branco/preto, Ctrl+S para
 salvar PNG na pasta de capturas do usuário, Esc ou botão direito para sair.
 
 As formas seguem o ZoomIt: segure a tecla ao começar a arrastar; a forma
 acompanha o mouse até soltar o botão e usa a cor e a espessura atuais.
+O desfoque age sobre a captura e as anotações já feitas; retângulo e elipse com
+desfoque são preenchidos, úteis para ocultar dados. No desenho transparente não
+há captura para desfocar. Uma tecla de cor volta à caneta normal.
 
 ## Onde o Ctrl+S salva
 

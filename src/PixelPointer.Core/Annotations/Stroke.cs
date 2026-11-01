@@ -26,16 +26,26 @@ public static class StrokeShapes
     };
 }
 
+/// <summary>Efeito aplicado ao conteúdo sob o traço em vez de pintar com a cor.</summary>
+public enum StrokeEffect
+{
+    None,
+    Blur,
+    StrongBlur,
+}
+
 /// <summary>Traço com cor ARGB e espessura em coordenadas da imagem.</summary>
 public sealed class Stroke
 {
     private readonly List<StrokePoint> _points;
 
-    internal Stroke(uint color, float width, StrokePoint first, StrokeShape shape = StrokeShape.Freehand)
+    internal Stroke(uint color, float width, StrokePoint first, StrokeShape shape = StrokeShape.Freehand,
+        StrokeEffect effect = StrokeEffect.None)
     {
         Color = color;
         Width = width;
         Shape = shape;
+        Effect = effect;
         _points = shape == StrokeShape.Freehand ? [first] : [first, first];
     }
 
@@ -44,6 +54,8 @@ public sealed class Stroke
     public float Width { get; }
 
     public StrokeShape Shape { get; }
+
+    public StrokeEffect Effect { get; }
 
     public IReadOnlyList<StrokePoint> Points => _points;
 
