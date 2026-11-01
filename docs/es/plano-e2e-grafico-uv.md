@@ -342,6 +342,38 @@ nuevas, no cambios de propiedades en un portal naturalmente incompatible,
 atajos físicos, Esc, bandeja ni quit con ventana abierta. GNOME/KDE y meta
 de latencia siguen pendientes.
 
+### Quit con superposición abierta y reinicio
+
+El 2026-11-01, la rama `test/wayland-daemon-lifecycle` añadió
+`-CheckDaemonLifecycle` como opción, exigiendo `-RepeatDaemonCaptures`.
+No cambió código de producción ni dependencias en esta etapa.
+
+El driver exige superposición abierta y verifica su color mediante el portal
+antes de `quit`. El proceso debe terminar con código cero, desaparecer la
+ventana y `status` indicar ausencia del daemon. Luego inicia otro proceso,
+exige identidad D-Bus nueva, abre zoom por IPC, verifica cuadro actualizado
+y termina con `quit`. El JSON registra las aserciones; el orquestador rechaza
+resultados incompletos del ciclo de vida.
+
+| Escenario | Evidencia local | Resultado |
+| --- | --- | --- |
+| Prueba anterior sin opción nueva | `artifacts/wayland/screencast-20261101T130137628-161f4830` | Aprobada; comportamiento anterior preservado |
+| Ciclo de vida normal | `artifacts/wayland/screencast-20261101T130141551-ca85f33c` | Quit con ventana abierta, status parado, conexión nueva y captura tras reinicio aprobados |
+| Ciclo de vida con rechazo `GetAll` | `artifacts/wayland/screencast-20261101T130145567-e269262d` | Mismas verificaciones aprobadas bajo política de rechazo |
+
+Desde raíz del clone, con paquete AOT actual, Podman rootless, render node
+autorizado y nginx aislado según los requisitos anteriores:
+
+```powershell
+pwsh -NoProfile -File tools/scripts/Test-WaylandScreenCast.ps1 -Engine podman -Package artifacts/aot/linux-x64 -RenderNode /dev/dri/renderD128 -RepeatDaemonCaptures -CheckDaemonLifecycle
+```
+
+Añade `-DenyScreenCastGetAll` para repetir bajo rechazo. nginx permaneció sin
+puertos públicos y pasó smoke; se eliminaron containers. No se accedió a sesión
+gráfica, D-Bus ni datos personales del host. Se usó el AOT validado de etapa 1.
+Es cobertura Sway aislado/IPC, no atajos físicos, Esc, bandeja, lanzador ni
+aceptación nativa GNOME/Windows/macOS.
+
 ### Resultado local del 2026-10-30
 
 Etapas 1–6 implementadas para primer objetivo; etapa 7 es expansión condicionada,
