@@ -181,6 +181,22 @@ public sealed class AnnotationDocumentTests
         Assert.Equal(PenColor.Red, document.Color);
     }
 
+    [Fact]
+    public void Highlighter_IsTranslucentUntilAnOpaqueColorIsSelected()
+    {
+        var document = new AnnotationDocument();
+
+        document.SelectColor(PenColor.Yellow, highlighter: true);
+        document.BeginStroke(0, 0, 1f, 1f);
+        document.EndStroke();
+        document.SelectColor(PenColor.Yellow);
+        document.BeginStroke(0, 0, 1f, 1f);
+
+        Assert.False(document.Highlighter);
+        Assert.Equal(0x60FFFF00u, document.Strokes[0].Color);
+        Assert.Equal(0xFFFFFF00u, document.Strokes[1].Color);
+    }
+
     [Theory]
     [InlineData(1f, true)]
     [InlineData(0.5f, false)]

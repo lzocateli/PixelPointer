@@ -161,6 +161,7 @@ execute `pixelpointer daemon` em primeiro plano.
 | Ctrl+Shift + arrastar | Seta |
 | Tab + arrastar | Elipse |
 | R G B Y O P | Vermelho, verde, azul, amarelo, laranja, rosa |
+| Shift + R G B Y O P | Marca-texto translúcido na cor |
 | Ctrl+roda | Espessura da caneta |
 | Ctrl+Z / E | Desfazer / apagar tudo |
 | W / K | Quadro branco / quadro preto |

@@ -163,6 +163,7 @@ de atajos, ejecuta `pixelpointer daemon` en primer plano.
 | Ctrl+Shift + arrastrar | Flecha |
 | Tab + arrastrar | Elipse |
 | R G B Y O P | Rojo, verde, azul, amarillo, naranja, rosa |
+| Shift + R G B Y O P | Marcador translúcido en ese color |
 | Ctrl+rueda | Grosor del lápiz |
 | Ctrl+Z / E | Deshacer / borrar todo |
 | W / K | Pizarra blanca / pizarra negra |

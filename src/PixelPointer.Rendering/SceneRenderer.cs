@@ -46,9 +46,40 @@ public static class SceneRenderer
     {
         ArgumentNullException.ThrowIfNull(canvas);
         ArgumentNullException.ThrowIfNull(stroke);
+        var color = new SKColor(stroke.Color);
+        if (color.Alpha == 255)
+        {
+            DrawOpaqueStroke(canvas, stroke, color);
+            return;
+        }
+
+        // Camada opaca composta uma vez: sobreposições do próprio traço não escurecem o marca-texto.
+        using var layer = new SKPaint { Color = SKColors.White.WithAlpha(color.Alpha) };
+        canvas.SaveLayer(Bounds(stroke), layer);
+        DrawOpaqueStroke(canvas, stroke, color.WithAlpha(255));
+        canvas.Restore();
+    }
+
+    private static SKRect Bounds(Stroke stroke)
+    {
+        var points = stroke.Points;
+        var bounds = new SKRect(points[0].X, points[0].Y, points[0].X, points[0].Y);
+        foreach (var point in points)
+        {
+            bounds.Union(new SKRect(point.X, point.Y, point.X, point.Y));
+        }
+
+        // Margem para a espessura e a ponta da seta.
+        var margin = (stroke.Width * 5) + 12;
+        bounds.Inflate(margin, margin);
+        return bounds;
+    }
+
+    private static void DrawOpaqueStroke(SKCanvas canvas, Stroke stroke, SKColor color)
+    {
         using var paint = new SKPaint
         {
-            Color = new SKColor(stroke.Color),
+            Color = color,
             IsAntialias = true,
             Style = SKPaintStyle.Stroke,
             StrokeCap = SKStrokeCap.Round,

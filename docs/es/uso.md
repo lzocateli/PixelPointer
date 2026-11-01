@@ -54,7 +54,8 @@ visibles permanecen en portugués como otros mensajes nativos de la aplicación.
 
 Teclas en la superposición: rueda del mouse o flechas para el zoom, clic y
 arrastrar para dibujar, Shift/Ctrl/Ctrl+Shift/Tab al empezar a arrastrar para
-línea recta/rectángulo/flecha/elipse, R/G/B/Y/O/P para colores, Ctrl+rueda para
+línea recta/rectángulo/flecha/elipse, R/G/B/Y/O/P para colores, Shift+color para
+marcador translúcido, Ctrl+rueda para
 el grosor, Ctrl+Z para deshacer, E para borrar, W/K para pizarra blanca/negra,
 Ctrl+S para guardar un PNG en la carpeta de capturas del usuario, Esc o clic
 derecho para salir.
