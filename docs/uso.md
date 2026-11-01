@@ -9,6 +9,29 @@ Windows/macOS, outros compositores e a matriz completa permanecem pendentes.
 Consulte o [registro de evidências](plano-e2e-grafico-uv.md). O relatório da F0
 é histórico; esse aceite não altera os limites dos backends descritos abaixo.
 
+## Primeiro uso opcional
+
+Execute `pixelpointer setup` numa sessão gráfica para abrir a janela de
+primeiro uso. É um fluxo explícito: não aparece automaticamente ao iniciar
+o daemon e não substitui os comandos existentes. Abrir, fechar ou pressionar
+Esc não registra o aplicativo, não solicita captura e não inicia o daemon.
+“Fechar” é a ação inicialmente selecionada.
+
+- “Verificar ambiente” executa o diagnóstico existente; a saída fica no terminal.
+- “Registrar aplicativo no desktop” é oferecido somente no Linux e preserva conflitos.
+- “Solicitar captura de tela” é oferecido somente no Linux/Wayland; abre o fluxo
+   `grant` existente, exigindo confirmação na janela e no portal. “Solicitação
+   finalizada” não significa que a permissão foi concedida; confira o resultado
+   do comando e a decisão do desktop.
+- “Iniciar daemon” é oferecido apenas se não houver daemon ativo. A janela
+   fecha e o daemon segue em primeiro plano, como no comando `daemon` atual.
+
+As ações são escolhidas por clique ou navegação Tab/setas e Enter. O fluxo não
+altera PATH, perfis, início automático ou configurações, nem grava um marcador
+de primeiro uso. Registro e permissões só ocorrem após sua escolha explícita.
+Se já há daemon, fechar `setup` não o encerra. Para diagnosticar, prefira
+executar a partir de um terminal; os detalhes e erros ficam nessa saída.
+
 ## Comandos
 
 | Comando | Função |
@@ -24,6 +47,7 @@ Consulte o [registro de evidências](plano-e2e-grafico-uv.md). O relatório da F
 | `pixelpointer install-desktop-file` | Linux: instala a entrada visível do menu e o ícone próprio com o app id `io.github.lzocateli.PixelPointer` |
 | `pixelpointer uninstall-desktop-file` | Linux: remove os recursos por usuário somente se forem idênticos aos esperados; preserva arquivos modificados |
 | `pixelpointer grant` | GNOME/Wayland: pede a permissão de captura com uma janela focada |
+| `pixelpointer setup` | Primeiro uso opcional com ações explícitas de diagnóstico, registro, solicitação de captura e início do daemon |
 | `pixelpointer selftest` | Confere as bibliotecas nativas sem tela (usado pelos testes de pacote) |
 | `pixelpointer --version` / `--help` | Versão e ajuda |
 

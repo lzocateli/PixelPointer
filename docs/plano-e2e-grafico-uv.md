@@ -518,6 +518,34 @@ pwsh -NoProfile -File tools/scripts/Test-WaylandScreenCast.ps1 -Build -Engine po
 caneta/pressão, paridade GPU, multi-monitor ou aceite GNOME/KDE/Windows/macOS.
 Esses recortes e o benchmark de latência continuam pendentes; F2/F3 não estão encerradas.
 
+### Primeiro uso opcional e fechamento sem efeitos
+
+Em 2026-11-01, `feat/first-use-setup` acrescentou o comando explícito `setup`.
+A política habilita registro no Linux, solicitação de captura no Wayland e
+início do daemon somente quando não há instância ativa. A ação inicial é
+Fechar. Os comandos existentes e a inicialização do daemon não mudaram.
+
+14 testes cobrem política e limites dos alvos de clique. O gate passou com
+format, build sem avisos/erros, 178 testes, 23 cenários de governança, AOT e
+`selftest`. O teste opt-in `-CheckSetupWindow` verificou a região da janela
+não vazia e o fechamento por compositor sem criar/alterar arquivos do app
+nem mudar o estado do daemon, com e sem daemon ativo. Evidência:
+`artifacts/wayland/screencast-20261101T182402112-1a823db2`.
+nginx ficou isolado sem portas públicas; nenhum dado gráfico pessoal do host foi usado.
+
+O teste não clicou em solicitar captura nem concedeu permissões automaticamente.
+Consentimento real no GNOME, acionamento físico dos controles e fluxo nativo
+Windows/macOS continuam pendentes. “Solicitação finalizada” não é comprovação
+de permissão concedida. Os detalhes do diagnóstico existente ficam no terminal.
+
+Gerar uma **nova preview após integrar o PR desta entrega na main com CI verde**,
+antes do aceite manual de primeiro uso. Não é necessário esperar toda a F2;
+a preview existente não contém `setup`. Após gerar e aprovar o Environment
+`release`, testar no GNOME/Wayland e Windows: abrir/fechar sem ações, diagnóstico,
+registro explícito quando aplicável, cancelamento/consentimento voluntário e
+início do daemon por escolha. Não desmarcar Pre-release nem promover a estável
+antes de validar os recortes afetados.
+
 ### Resultado local em 2026-10-30
 
 Etapas 1 a 6 implementadas para o primeiro alvo. A etapa 7 permanece expansão

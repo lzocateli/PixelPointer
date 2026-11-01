@@ -12,6 +12,27 @@ Windows/macOS, otros compositores y la matriz completa siguen pendientes.
 Consulte el [registro de evidencias](plano-e2e-grafico-uv.md). El informe F0 es
 histórico; esta aceptación no cambia los límites de los backends descritos abajo.
 
+## Primer uso opcional
+
+Ejecuta `pixelpointer setup` en una sesión gráfica para abrir primer uso.
+Es explícito: no aparece automáticamente con el daemon ni sustituye comandos
+existentes. Abrir, cerrar o pulsar Esc no registra la aplicación, solicita
+captura ni inicia el daemon. “Fechar” está seleccionado inicialmente.
+
+- “Verificar ambiente” ejecuta el diagnóstico existente; detalles en la terminal.
+- “Registrar aplicativo no desktop” solo se ofrece en Linux y conserva conflictos.
+- “Solicitar captura de tela” solo se ofrece en Linux/Wayland y abre `grant`,
+  con confirmación en ventana y portal. “Solicitação finalizada” no significa
+  permiso concedido; consulta salida del comando y decisión del escritorio.
+- “Iniciar daemon” solo se ofrece sin daemon activo. Cierra la ventana y el
+  daemon sigue en primer plano como en el comando existente.
+
+Selecciona por clic o Tab/flechas y Enter. No modifica PATH, perfiles, inicio
+automático ni configuración, ni escribe marcador de primer uso. Registro y
+permisos requieren tu elección explícita. Cerrar setup no detiene el daemon
+existente. Ejecuta desde terminal para ver detalles y errores. Los comandos
+visibles permanecen en portugués como otros mensajes nativos de la aplicación.
+
 ## Comandos
 
 | Comando | Función |
@@ -27,6 +48,7 @@ histórico; esta aceptación no cambia los límites de los backends descritos ab
 | `pixelpointer install-desktop-file` | Linux: instala el `.desktop` con el app id `io.github.lzocateli.PixelPointer` |
 | `pixelpointer uninstall-desktop-file` | Linux: elimina recursos del usuario solo si no se modificaron; conserva los archivos cambiados |
 | `pixelpointer grant` | GNOME/Wayland: pide el permiso de captura desde una ventana enfocada |
+| `pixelpointer setup` | Primer uso opcional con diagnóstico, registro, solicitud de captura e inicio del daemon explícitos |
 | `pixelpointer selftest` | Verifica las bibliotecas nativas sin pantalla (lo usan las pruebas de paquete) |
 | `pixelpointer --version` / `--help` | Versión y ayuda |
 
