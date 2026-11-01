@@ -42,11 +42,17 @@ internal static class DesktopIntegration
 
             """;
         var icon = File.ReadAllText(iconSource);
-        var resources = new[] { (Path: desktopPath, Contents: contents), (Path: iconPath, Contents: icon) };
+        // A entrada desktop de outra extração só difere no Exec e pode ser atualizada.
+        var resources = new[]
+        {
+            (Path: desktopPath, Contents: contents, Relocatable: true),
+            (Path: iconPath, Contents: icon, Relocatable: false),
+        };
         foreach (var resource in resources)
         {
             if (Directory.Exists(resource.Path)
-                || (File.Exists(resource.Path) && File.ReadAllText(resource.Path) != resource.Contents))
+                || (File.Exists(resource.Path) && File.ReadAllText(resource.Path) is var existing && existing != resource.Contents
+                    && !(resource.Relocatable && WithoutExec(existing) == WithoutExec(resource.Contents))))
             {
                 throw new InvalidOperationException($"O arquivo existente será preservado porque difere do recurso do PixelPointer: {resource.Path}");
             }
@@ -70,12 +76,36 @@ internal static class DesktopIntegration
                 writer.Write(resource.Contents);
                 Console.WriteLine($"Instalado: {resource.Path}");
             }
+            else if (File.ReadAllText(resource.Path) != resource.Contents)
+            {
+                var temporary = $"{resource.Path}.{Guid.NewGuid():N}.tmp";
+                try
+                {
+                    using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                    using (var writer = new StreamWriter(stream, new System.Text.UTF8Encoding(false)))
+                    {
+                        writer.Write(resource.Contents);
+                    }
+
+                    File.Move(temporary, resource.Path, overwrite: true);
+                }
+                finally
+                {
+                    File.Delete(temporary);
+                }
+
+                Console.WriteLine($"Atualizado: {resource.Path}");
+            }
             else
             {
                 Console.WriteLine($"Já instalado: {resource.Path}");
             }
         }
     }
+
+    private static string WithoutExec(string contents) =>
+        string.Join('\n', contents.ReplaceLineEndings("\n").Split('\n')
+            .Where(line => !line.StartsWith("Exec=", StringComparison.Ordinal)));
 
     private static string EscapeArgument(string value) =>
         value.Replace("\\", "\\\\", StringComparison.Ordinal)

@@ -31,6 +31,17 @@ public sealed class DesktopIntegrationTests
             Assert.Equal("preserve", File.ReadAllText(desktop));
             Assert.True(File.Exists(icon));
 
+            var moved = Path.Combine(root.FullName, "nova extração", "pixelpointer");
+            File.WriteAllText(desktop, original);
+            DesktopIntegration.Apply(data, moved, source, remove: false);
+            var relocated = File.ReadAllText(desktop);
+            Assert.Contains(moved, relocated);
+            Assert.DoesNotContain(executable, relocated);
+            Assert.Single(Directory.GetFiles(Path.GetDirectoryName(desktop)!));
+
+            File.WriteAllText(desktop, original.Replace("Terminal=false", "Terminal=true", StringComparison.Ordinal));
+            Assert.Throws<InvalidOperationException>(() => DesktopIntegration.Apply(data, moved, source, remove: false));
+
             File.WriteAllText(desktop, original);
             DesktopIntegration.Apply(data, executable, source, remove: true);
             DesktopIntegration.Apply(data, executable, source, remove: true);

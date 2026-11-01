@@ -8,6 +8,7 @@ namespace PixelPointer.App;
 internal static unsafe partial class AppIcon
 {
     internal const int Size = 32;
+    private static bool _warned;
 
     internal static void SetWindowIcon(SDL_Window* window)
     {
@@ -20,8 +21,9 @@ internal static unsafe partial class AppIcon
 
         try
         {
-            if (SetIcon(window, surface) == 0)
+            if (SetIcon(window, surface) == 0 && !_warned)
             {
+                _warned = true;
                 Console.Error.WriteLine($"aviso: ícone de janela indisponível neste backend: {SDL_GetError()}");
             }
         }
