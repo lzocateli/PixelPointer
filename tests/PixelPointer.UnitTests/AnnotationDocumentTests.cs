@@ -182,6 +182,24 @@ public sealed class AnnotationDocumentTests
     }
 
     [Fact]
+    public void SelectBlur_AppliesToNewStrokesUntilAColorIsSelected()
+    {
+        var document = new AnnotationDocument();
+        document.SelectColor(PenColor.Blue, highlighter: true);
+
+        document.SelectBlur(strong: true);
+        document.BeginStroke(0, 0, 1f, 1f);
+        document.EndStroke();
+        document.SelectColor(PenColor.Green);
+        document.BeginStroke(0, 0, 1f, 1f);
+
+        Assert.Equal(StrokeEffect.StrongBlur, document.Strokes[0].Effect);
+        Assert.Equal(StrokeEffect.None, document.Strokes[1].Effect);
+        Assert.False(document.Highlighter);
+        Assert.Equal(StrokeEffect.None, document.Effect);
+    }
+
+    [Fact]
     public void Highlighter_IsTranslucentUntilAnOpaqueColorIsSelected()
     {
         var document = new AnnotationDocument();

@@ -49,6 +49,8 @@ public sealed class AnnotationDocument
 
     public bool Highlighter { get; private set; }
 
+    public StrokeEffect Effect { get; private set; }
+
     public uint ColorArgb => Highlighter
         ? (ToArgb(Color) & 0x00FFFFFFu) | ((uint)HighlighterAlpha << 24)
         : ToArgb(Color);
@@ -76,6 +78,14 @@ public sealed class AnnotationDocument
         _ = ToArgb(color);
         Color = color;
         Highlighter = highlighter;
+        Effect = StrokeEffect.None;
+    }
+
+    /// <summary>Seleciona a caneta de desfoque; a próxima tecla de cor volta a pintar.</summary>
+    public void SelectBlur(bool strong)
+    {
+        Highlighter = false;
+        Effect = strong ? StrokeEffect.StrongBlur : StrokeEffect.Blur;
     }
 
     /// <summary>Aumenta (positivo) ou reduz (negativo) a espessura em um passo, dentro dos limites.</summary>
@@ -101,7 +111,7 @@ public sealed class AnnotationDocument
 
         // Formas geométricas usam espessura uniforme, como no mouse.
         var first = new StrokePoint(x, y, shape == StrokeShape.Freehand ? pressure : 1f);
-        _current = new Stroke(ColorArgb, PenWidth / viewScale, first, shape);
+        _current = new Stroke(ColorArgb, PenWidth / viewScale, first, shape, Effect);
         _strokes.Add(_current);
     }
 

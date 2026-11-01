@@ -100,7 +100,7 @@ static int Help(TextWriter writer)
           --version | --help
 
         Na sobreposição: roda/setas = zoom, clique = desenhar, R G B Y O P = cor,
-        Shift+cor = marca-texto,
+        Shift+cor = marca-texto, X/Shift+X = desfoque/desfoque forte,
         arrastar com Shift = linha, Ctrl = retângulo, Ctrl+Shift = seta, Tab = elipse,
         Ctrl+roda = espessura, Ctrl+Z = desfazer, E = apagar, W/K = quadro branco/preto,
         Ctrl+S = salvar PNG, botão direito/Esc = sair.
