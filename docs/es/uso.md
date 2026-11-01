@@ -159,7 +159,7 @@ Si el escritorio no ofrece el portal GlobalShortcuts (Sway, GNOME anterior a la
 Con el `daemon` en ejecución, `pixelpointer zoom` solo envía el comando por el
 socket local (`$XDG_RUNTIME_DIR/pixelpointer.sock`) y termina en milisegundos.
 
-**Captura por ScreenCast.** Con un solo monitor, cada Ctrl+1/Ctrl+2 abre una
+**Captura por ScreenCast.** Fuera de GNOME, con un solo monitor, cada Ctrl+1/Ctrl+2 abre una
 sesión del portal ScreenCast, lee un cuadro por PipeWire (la `libpipewire-0.3`
 del sistema) y cierra la sesión; el indicador de pantalla compartida aparece
 solo durante esa captura. La primera vez el escritorio pide elegir y autorizar
@@ -171,6 +171,11 @@ de un monitor, sin PipeWire o sin el portal ScreenCast, la captura usa el portal
 Screenshot. En compositores wlroots (Sway, Hyprland), el cuadro solo llega tras
 algún cambio en la pantalla; si no, la captura usa Screenshot tras 2 s. La
 terminal informa el camino usado y el tiempo del portal y del primer cuadro.
+
+En GNOME (`XDG_CURRENT_DESKTOP` con `GNOME`), la captura usa siempre el portal
+Screenshot, autorizado una vez con `pixelpointer grant`: en GNOME 46 el
+indicador de pantalla compartida quedaba fijo tras capturas ScreenCast cortas,
+incluso sin sesión activa. La latencia de Screenshot es mayor.
 
 Con varios monitores no se usa ScreenCast silenciosamente para capturar solo
 uno: se selecciona Screenshot. Sus errores D-Bus se presentan como errores

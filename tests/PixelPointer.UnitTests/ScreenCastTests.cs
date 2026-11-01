@@ -68,7 +68,17 @@ public sealed class ScreenCastTests
     [InlineData(2, false)]
     [InlineData(3, false)]
     public void CapturePolicy_UsesScreenCastOnlyForExactlyOneDisplay(int displayCount, bool expected) =>
-        Assert.Equal(expected, ScreenCaptureFactory.UseScreenCast(displayCount));
+        Assert.Equal(expected, ScreenCaptureFactory.UseScreenCast(displayCount, "sway"));
+
+    [Theory]
+    [InlineData("GNOME", false)]
+    [InlineData("ubuntu:GNOME", false)]
+    [InlineData("gnome", false)]
+    [InlineData("KDE", true)]
+    [InlineData("GNOME-Flashback", true)]
+    [InlineData(null, true)]
+    public void CapturePolicy_UsesScreenshotOnGnome(string? currentDesktop, bool expected) =>
+        Assert.Equal(expected, ScreenCaptureFactory.UseScreenCast(1, currentDesktop));
 
     [Theory]
     [InlineData(true, "sim")]

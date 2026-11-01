@@ -139,9 +139,10 @@ possible errors:
 ./pixelpointer daemon
 ```
 
-Choose and authorize the monitor in the portal prompt. With one monitor,
-ScreenCast/PipeWire reads a frame and closes the session; the sharing indicator
-is transient. Canceling the dialog cancels the operation. On GNOME before 48
+Choose and authorize the monitor in the portal prompt. Outside GNOME, with one
+monitor, ScreenCast/PipeWire reads a frame and closes the session; the sharing
+indicator is transient. On GNOME capture uses the Screenshot portal, with no
+indicator. Canceling the dialog cancels the operation. On GNOME before 48
 and desktops without GlobalShortcuts, configure desktop hotkeys using the
 absolute preview executable path with `zoom` and `draw`. Details:
 [Wayland permissions](usage.md). Wayland drawing stays over a frozen capture,

@@ -139,9 +139,10 @@ observar eventuais erros:
 ./pixelpointer daemon
 ```
 
-Na solicitação do portal, escolha e autorize o monitor. Com um único monitor,
-ScreenCast/PipeWire lê um quadro e encerra a sessão; o indicador de
-compartilhamento é transitório. Cancelar o diálogo cancela a operação.
+Na solicitação do portal, escolha e autorize o monitor. Fora do GNOME, com um
+único monitor, ScreenCast/PipeWire lê um quadro e encerra a sessão; o indicador
+de compartilhamento é transitório. No GNOME a captura usa o portal Screenshot,
+sem indicador. Cancelar o diálogo cancela a operação.
 No GNOME anterior ao 48 e em desktops sem GlobalShortcuts, configure atalhos
 do desktop usando o caminho absoluto desta preview com `zoom` e `draw`.
 Detalhes: [permissões Wayland](uso.md#linux-com-wayland-gnome-kde-hyprland).

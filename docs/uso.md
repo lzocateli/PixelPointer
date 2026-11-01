@@ -155,7 +155,7 @@ crie atalhos do próprio desktop que executem o comando:
 Com o `daemon` em execução, `pixelpointer zoom` só envia o comando pelo socket
 local (`$XDG_RUNTIME_DIR/pixelpointer.sock`) e termina em milissegundos.
 
-**Captura por ScreenCast.** Com um único monitor, cada Ctrl+1/Ctrl+2 abre uma
+**Captura por ScreenCast.** Fora do GNOME, com um único monitor, cada Ctrl+1/Ctrl+2 abre uma
 sessão do portal ScreenCast, lê um quadro pelo PipeWire (`libpipewire-0.3` do
 sistema) e encerra a sessão; o indicador de compartilhamento de tela aparece
 apenas durante essa captura. Na primeira vez o desktop pede para escolher e
@@ -167,6 +167,11 @@ monitor, sem PipeWire ou sem o portal ScreenCast, a captura usa o portal
 Screenshot. Em compositores wlroots (Sway, Hyprland), o quadro só chega após
 alguma mudança na tela; sem ela, a captura usa o Screenshot após 2 s. O terminal
 informa o caminho usado e o tempo do portal e do primeiro quadro.
+
+No GNOME (`XDG_CURRENT_DESKTOP` com `GNOME`), a captura usa sempre o portal
+Screenshot, autorizado uma vez por `pixelpointer grant`: no GNOME 46 o indicador
+de compartilhamento ficava preso após capturas ScreenCast curtas, mesmo sem
+sessão ativa. A latência do Screenshot é maior.
 
 Com vários monitores, ScreenCast não é usado silenciosamente para capturar
 apenas um deles: o caminho selecionado é Screenshot. Erros D-Bus desse portal
