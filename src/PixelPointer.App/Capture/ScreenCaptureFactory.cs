@@ -25,10 +25,17 @@ internal static class ScreenCaptureFactory
         }
 
         var client = portal ?? throw new InvalidOperationException("Wayland exige o portal de captura.");
-        return UseScreenCast(displayCount) ? new ScreenCastCapture(client, TryCreateTokenStore()) : new PortalScreenCapture(client);
+        return UseScreenCast(displayCount, Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP"))
+            ? new ScreenCastCapture(client, TryCreateTokenStore())
+            : new PortalScreenCapture(client);
     }
 
-    internal static bool UseScreenCast(int displayCount) => displayCount == 1;
+    // No GNOME 46 o indicador de compartilhamento fica preso após ScreenCasts curtos; o Screenshot não o aciona.
+    internal static bool UseScreenCast(int displayCount, string? currentDesktop) =>
+        displayCount == 1 && !IsGnome(currentDesktop);
+
+    private static bool IsGnome(string? currentDesktop) =>
+        currentDesktop?.Split(':').Any(name => name.Equals("GNOME", StringComparison.OrdinalIgnoreCase)) == true;
 
     private static RestoreTokenStore? TryCreateTokenStore()
     {
