@@ -97,12 +97,63 @@ public sealed class SceneRendererTests
     }
 
     [Fact]
+    public void Draw_LineIsStraightBetweenEndpoints()
+    {
+        using var bitmap = RenderShape(StrokeShape.Line, 10, 50, 90, 50, ignored: (50, 30));
+
+        Assert.Equal(SKColors.Red, bitmap.GetPixel(50, 50));
+    }
+
+    [Fact]
+    public void Draw_RectangleOutlinesBoundsInAnyDragDirection()
+    {
+        using var bitmap = RenderShape(StrokeShape.Rectangle, 80, 80, 20, 20, ignored: (50, 50));
+
+        Assert.Equal(SKColors.Red, bitmap.GetPixel(20, 50));
+        Assert.Equal(SKColors.Red, bitmap.GetPixel(80, 50));
+        Assert.Equal(SKColors.Red, bitmap.GetPixel(50, 20));
+        Assert.Equal(SKColors.Red, bitmap.GetPixel(50, 80));
+    }
+
+    [Fact]
+    public void Draw_EllipseTouchesBoundsMidpointsButNotCorners()
+    {
+        using var bitmap = RenderShape(StrokeShape.Ellipse, 20, 20, 80, 80, ignored: (22, 22));
+
+        Assert.Equal(SKColors.Red, bitmap.GetPixel(20, 50));
+        Assert.Equal(SKColors.Red, bitmap.GetPixel(50, 80));
+        Assert.Equal(0, bitmap.GetPixel(50, 50).Alpha);
+    }
+
+    [Fact]
+    public void Draw_ArrowAddsHeadAtTheEnd()
+    {
+        using var line = RenderShape(StrokeShape.Line, 10, 50, 90, 50, ignored: (80, 44));
+        using var arrow = RenderShape(StrokeShape.Arrow, 10, 50, 90, 50, ignored: (20, 44));
+
+        // A ponta cobre pixels acima da haste perto do fim, mas não perto do início.
+        Assert.Equal(SKColors.Red, arrow.GetPixel(80, 44));
+        Assert.Equal(SKColors.Red, arrow.GetPixel(50, 50));
+    }
+
+    [Fact]
     public void Draw_RejectsEmptyView()
     {
         using var surface = SKSurface.Create(new SKImageInfo(Size, Size));
 
         Assert.Throws<ArgumentOutOfRangeException>(() => SceneRenderer.Draw(surface.Canvas, new AnnotationDocument(),
             null, Full, SKRect.Empty, Size, transparent: true));
+    }
+
+    private static SKBitmap RenderShape(StrokeShape shape, float x1, float y1, float x2, float y2, (int X, int Y) ignored)
+    {
+        var document = new AnnotationDocument(PenColor.Red, 4f);
+        document.BeginStroke(x1, y1, 1f, 1f, shape);
+        document.ContinueStroke(x2, y2, 1f);
+        document.EndStroke();
+        var bitmap = Render(document, background: null, Full, transparent: true);
+        Assert.Equal(0, bitmap.GetPixel(ignored.X, ignored.Y).Alpha);
+        return bitmap;
     }
 
     private static SKBitmap Render(AnnotationDocument document, SKImage? background, SKRect view, bool transparent)

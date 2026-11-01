@@ -42,6 +42,7 @@ internal sealed unsafe partial class OverlaySession
     private readonly bool _transparentBackground;
     private readonly bool _gpuRequested;
     private bool _penDown;
+    private bool _tabHeld;
     private float _pressure = 1f;
     private int _penEvents;
     private float _maxPressure;
@@ -298,6 +299,10 @@ internal sealed unsafe partial class OverlaySession
             case SDL_EventType.SDL_EVENT_KEY_DOWN:
                 return HandleKey(e.key);
 
+            case SDL_EventType.SDL_EVENT_KEY_UP when e.key.key == SDL_Keycode.SDLK_TAB:
+                _tabHeld = false;
+                break;
+
             case SDL_EventType.SDL_EVENT_MOUSE_MOTION when !IsSynthetic(e.motion.which):
                 _mouseX = e.motion.x * _density;
                 _mouseY = e.motion.y * _density;
@@ -379,6 +384,9 @@ internal sealed unsafe partial class OverlaySession
         {
             case SDL_Keycode.SDLK_ESCAPE:
                 return false;
+            case SDL_Keycode.SDLK_TAB:
+                _tabHeld = true;
+                break;
             case SDL_Keycode.SDLK_UP:
                 _targetZoom = Math.Clamp(_targetZoom * 1.25f, 1f, 16f);
                 break;
@@ -430,7 +438,10 @@ internal sealed unsafe partial class OverlaySession
     {
         // A espessura fica em coordenadas da imagem para o traço acompanhar o zoom.
         var point = ToImage(x, y);
-        _annotations.BeginStroke(point.X, point.Y, pressure, ViewScale);
+        var mod = SDL_GetModState();
+        var shape = StrokeShapes.FromModifiers((mod & SDL_Keymod.SDL_KMOD_CTRL) != 0,
+            (mod & SDL_Keymod.SDL_KMOD_SHIFT) != 0, _tabHeld);
+        _annotations.BeginStroke(point.X, point.Y, pressure, ViewScale, shape);
     }
 
     private void ContinueStroke(float pressure)

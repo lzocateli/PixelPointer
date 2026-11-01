@@ -4,6 +4,39 @@ namespace PixelPointer.UnitTests;
 
 public sealed class AnnotationDocumentTests
 {
+    [Theory]
+    [InlineData(false, false, false, StrokeShape.Freehand)]
+    [InlineData(false, true, false, StrokeShape.Line)]
+    [InlineData(true, false, false, StrokeShape.Rectangle)]
+    [InlineData(true, true, false, StrokeShape.Arrow)]
+    [InlineData(false, false, true, StrokeShape.Ellipse)]
+    [InlineData(true, false, true, StrokeShape.Rectangle)]
+    public void FromModifiers_FollowsZoomItConvention(bool ctrl, bool shift, bool tab, StrokeShape expected) =>
+        Assert.Equal(expected, StrokeShapes.FromModifiers(ctrl, shift, tab));
+
+    [Theory]
+    [InlineData(StrokeShape.Line)]
+    [InlineData(StrokeShape.Arrow)]
+    [InlineData(StrokeShape.Rectangle)]
+    [InlineData(StrokeShape.Ellipse)]
+    public void Shapes_KeepOnlyStartAndLatestEndWithUniformPressure(StrokeShape shape)
+    {
+        var document = new AnnotationDocument();
+
+        document.BeginStroke(1, 2, 0.3f, 1f, shape);
+        document.ContinueStroke(5, 5, 0.4f);
+        document.ContinueStroke(9, 8, 0.5f);
+        document.EndStroke();
+
+        var stroke = Assert.Single(document.Strokes);
+        Assert.Equal(shape, stroke.Shape);
+        Assert.Equal([new StrokePoint(1, 2, 1f), new StrokePoint(9, 8, 1f)], stroke.Points);
+    }
+
+    [Fact]
+    public void BeginStroke_RejectsUnknownShape() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() => new AnnotationDocument().BeginStroke(0, 0, 1f, 1f, (StrokeShape)99));
+
     [Fact]
     public void BeginStroke_UsesCurrentToolAndConvertsWidthToImageScale()
     {

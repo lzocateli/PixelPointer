@@ -57,6 +57,12 @@ public static class SceneRenderer
         };
 
         var points = stroke.Points;
+        if (stroke.Shape != StrokeShape.Freehand)
+        {
+            DrawShape(canvas, stroke.Shape, points[0], points[1], paint);
+            return;
+        }
+
         if (points.Count == 1)
         {
             canvas.DrawPoint(points[0].X, points[0].Y, paint);
@@ -84,6 +90,49 @@ public static class SceneRenderer
             var b = points[i];
             paint.StrokeWidth = stroke.Width * MathF.Max(0.15f, (a.Pressure + b.Pressure) / 2);
             canvas.DrawLine(a.X, a.Y, b.X, b.Y, paint);
+        }
+    }
+
+    private static void DrawShape(SKCanvas canvas, StrokeShape shape, StrokePoint start, StrokePoint end, SKPaint paint)
+    {
+        var bounds = new SKRect(MathF.Min(start.X, end.X), MathF.Min(start.Y, end.Y),
+            MathF.Max(start.X, end.X), MathF.Max(start.Y, end.Y));
+        switch (shape)
+        {
+            case StrokeShape.Line:
+                canvas.DrawLine(start.X, start.Y, end.X, end.Y, paint);
+                break;
+            case StrokeShape.Arrow:
+                canvas.DrawLine(start.X, start.Y, end.X, end.Y, paint);
+                DrawArrowHead(canvas, start, end, paint);
+                break;
+            case StrokeShape.Rectangle:
+                canvas.DrawRect(bounds, paint);
+                break;
+            case StrokeShape.Ellipse:
+                canvas.DrawOval(bounds, paint);
+                break;
+        }
+    }
+
+    private static void DrawArrowHead(SKCanvas canvas, StrokePoint start, StrokePoint end, SKPaint paint)
+    {
+        var dx = end.X - start.X;
+        var dy = end.Y - start.Y;
+        var length = MathF.Sqrt((dx * dx) + (dy * dy));
+        if (length < 0.001f)
+        {
+            return;
+        }
+
+        // Ponta proporcional à espessura, sem passar da metade da haste.
+        var head = MathF.Min(MathF.Max(paint.StrokeWidth * 4, 12f), length / 2);
+        var angle = MathF.Atan2(dy, dx);
+        const float spread = MathF.PI / 6;
+        for (var sign = -1; sign <= 1; sign += 2)
+        {
+            var side = angle + MathF.PI + (sign * spread);
+            canvas.DrawLine(end.X, end.Y, end.X + (head * MathF.Cos(side)), end.Y + (head * MathF.Sin(side)), paint);
         }
     }
 }
