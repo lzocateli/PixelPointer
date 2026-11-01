@@ -81,6 +81,38 @@ def capability_calls(text, sender):
     return found
 
 
+def check_multi_monitor():
+    command(['swaymsg', 'create_output'])
+    command(['swaymsg', 'output', 'HEADLESS-2', 'resolution', '800x600'])
+    command(['swaymsg', 'output', 'HEADLESS-2', 'position', '800', '0'])
+    outputs = wait_for('two active outputs', lambda: [output for output in
+                       json.loads(command(['swaymsg', '-t', 'get_outputs']).stdout) if output.get('active')])
+    if len(outputs) != 2:
+        raise RuntimeError('Expected exactly two active Wayland outputs')
+    probe = command([PACKAGE, 'probe'])
+    (EVIDENCE / 'multi-monitor-probe.txt').write_text(probe.stdout + probe.stderr)
+    screenshot_version = command(['dbus-send', '--session', '--print-reply',
+                                 '--dest=org.freedesktop.portal.Desktop', '/org/freedesktop/portal/desktop',
+                                 'org.freedesktop.DBus.Properties.Get',
+                                 'string:org.freedesktop.portal.Screenshot', 'string:version'], check=False)
+    if screenshot_version.returncode == 0 and 'uint32 0' not in screenshot_version.stdout:
+        raise RuntimeError('Fixture unexpectedly provides Screenshot')
+    target = EVIDENCE / 'multi-monitor.png'
+    result = command([PACKAGE, 'capture', '--out', str(target)], check=False)
+    (EVIDENCE / 'multi-monitor.out').write_text(result.stdout)
+    (EVIDENCE / 'multi-monitor.err').write_text(result.stderr)
+    if result.returncode != 1 or target.exists():
+        raise RuntimeError('Multi-monitor capture did not fail safely without Screenshot')
+    if 'Unhandled exception' in result.stderr or 'ScreenCast:' in result.stderr:
+        raise RuntimeError('Multi-monitor capture crashed or used single-monitor ScreenCast')
+    if 'Nenhum portal de captura disponível' not in result.stderr:
+        raise RuntimeError('Missing controlled Screenshot error')
+    (EVIDENCE / 'multi-monitor-result.json').write_text(json.dumps({
+        'passed': True, 'active_outputs': len(outputs), 'capture_exit': result.returncode,
+        'no_file': not target.exists(), 'controlled_error': True,
+    }))
+
+
 def main():
     baseline = subprocess.run(['sh', '/opt/wayland/run.sh'], check=False, timeout=90)
     if baseline.returncode != 0:
@@ -91,6 +123,9 @@ def main():
     os.environ['WAYLAND_DISPLAY'] = next(runtime.glob('wayland-[0-9]')).name
     os.environ['SWAYSOCK'] = str(next(runtime.glob('sway-ipc.*.sock')))
     os.environ['SDL_VIDEODRIVER'] = 'wayland'
+    if os.environ.get('CHECK_MULTI_MONITOR') == '1':
+        check_multi_monitor()
+        return
     daemon = None
     monitor = None
     try:
@@ -198,5 +233,6 @@ def main():
 try:
     main()
 except Exception as error:
-    (EVIDENCE / 'daemon-result.json').write_text(json.dumps({'passed': False, 'error': str(error)}))
+    result_name = 'multi-monitor-result.json' if os.environ.get('CHECK_MULTI_MONITOR') == '1' else 'daemon-result.json'
+    (EVIDENCE / result_name).write_text(json.dumps({'passed': False, 'error': str(error)}))
     raise

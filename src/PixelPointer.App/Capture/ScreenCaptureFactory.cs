@@ -25,8 +25,10 @@ internal static class ScreenCaptureFactory
         }
 
         var client = portal ?? throw new InvalidOperationException("Wayland exige o portal de captura.");
-        return displayCount == 1 ? new ScreenCastCapture(client, TryCreateTokenStore()) : new PortalScreenCapture(client);
+        return UseScreenCast(displayCount) ? new ScreenCastCapture(client, TryCreateTokenStore()) : new PortalScreenCapture(client);
     }
+
+    internal static bool UseScreenCast(int displayCount) => displayCount == 1;
 
     private static RestoreTokenStore? TryCreateTokenStore()
     {

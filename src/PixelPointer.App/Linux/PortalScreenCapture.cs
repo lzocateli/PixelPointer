@@ -10,7 +10,16 @@ internal sealed class PortalScreenCapture(PortalClient portal) : IScreenCapture
 
     public async Task<SKBitmap> CaptureAsync(CancellationToken cancellationToken)
     {
-        var uri = new Uri(await portal.ScreenshotAsync(cancellationToken).ConfigureAwait(false));
+        Uri uri;
+        try
+        {
+            uri = new Uri(await portal.ScreenshotAsync(cancellationToken).ConfigureAwait(false));
+        }
+        catch (Tmds.DBus.Protocol.DBusErrorReplyException error)
+        {
+            throw new InvalidOperationException($"Nenhum portal de captura disponível ({error.ErrorName}).", error);
+        }
+
         var path = uri.LocalPath;
         try
         {
