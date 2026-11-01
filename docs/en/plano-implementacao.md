@@ -232,7 +232,7 @@ on `perf/f2-wayland-capture`.
 | 2. New preview and real GNOME acceptance | [Preview #16](https://github.com/lzocateli/PixelPointer/actions/runs/41308984865): builds, smokes and attestations passed; awaits `release` Environment approval and human testing. Not complete |
 | 3. Complete lifecycle and physical interaction | [PR #22](https://github.com/lzocateli/PixelPointer/pull/22) merged at `0ad417f`, with `Result` passed; physical hotkeys, Esc, tray and launcher pending |
 | 4. Compatibility matrix | [PR #23](https://github.com/lzocateli/PixelPointer/pull/23) merged at `05b0c40`. On `test/wayland-output-scale`, window correction and scales 1/1.5/2 passed isolated tests; [PR #24](https://github.com/lzocateli/PixelPointer/pull/24) open. Real environments, hardware and architectures pending |
-| 5. Complete F2 | [PR #25](https://github.com/lzocateli/PixelPointer/pull/25) merged. On `feat/first-use-setup`, optional window/action policy implemented; 178 tests/AOT and graphical close without effects passed, PR being prepared. Real GNOME consent, GPU/4K, remaining abstractions and ScreenCaptureKit pending |
+| 5. Complete F2 | [PR #25](https://github.com/lzocateli/PixelPointer/pull/25) merged. On `feat/first-use-setup`, 178 tests/AOT and graphical closing without effects passed; [PR #26](https://github.com/lzocateli/PixelPointer/pull/26) open. Generate a new preview after merge/green CI for human acceptance. Real GNOME consent, GPU/4K, remaining abstractions and ScreenCaptureKit pending |
 | 6. Advanced F3 tools | Not implemented yet |
 | 7. F4–F7 | Timer, snipping, Live Zoom, recording and DemoType not implemented yet |
 | 8. F8–F9 | Additional distribution and legacy translations remain pending |
