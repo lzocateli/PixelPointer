@@ -114,6 +114,60 @@ def check_multi_monitor():
     }))
 
 
+def check_setup():
+    def app_files():
+        found = {}
+        for variable in ('XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_STATE_HOME'):
+            for path in Path(os.environ[variable]).rglob('*'):
+                if path.is_file() and ('pixelpointer' in str(path).lower()):
+                    metadata = path.stat()
+                    found[str(path)] = (metadata.st_size, metadata.st_mtime_ns)
+        return found
+
+    setup = None
+    daemon = None
+    results = []
+    try:
+        for running in (False, True):
+            if running:
+                daemon = subprocess.Popen([PACKAGE, 'daemon'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                wait_for('existing daemon', lambda: command([PACKAGE, 'status'], check=False).returncode == 0)
+            before = app_files()
+            setup = subprocess.Popen([PACKAGE, 'setup'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            def setup_window():
+                return [window for window in windows() if window.get('name') == 'PixelPointer - primeiro uso'
+                        and window.get('rect', {}).get('width', 0) > 100]
+            window = wait_for('setup window', setup_window)
+            screenshot = EVIDENCE / f'setup-{int(running)}.png'
+            bounds = window[0]['rect']
+            crop = f'{bounds["width"]}x{bounds["height"]}+{bounds["x"]}+{bounds["y"]}'
+            def setup_presented():
+                if setup.poll() is not None:
+                    raise RuntimeError('Setup exited before presenting')
+                command(['grim', '-o', 'HEADLESS-1', str(screenshot)])
+                deviation = float(command(['magick', str(screenshot), '-crop', crop, '+repage', '-format', '%[standard-deviation]', 'info:']).stdout)
+                return deviation > 0
+            wait_for('nonblank setup window', setup_presented)
+            command(['swaymsg', f'[con_id={window[0]["id"]}]', 'kill'])
+            if setup.wait(timeout=10) != 0:
+                raise RuntimeError('Setup did not close cleanly')
+            if app_files() != before:
+                raise RuntimeError('Closing setup changed application files')
+            status = command([PACKAGE, 'status'], check=False).returncode
+            if status != (0 if running else 1):
+                raise RuntimeError('Setup unexpectedly changed daemon state')
+            results.append({'existing_daemon': running, 'nonblank': True, 'no_file_changes': True,
+                            'closed': True, 'daemon_state_preserved': True})
+        (EVIDENCE / 'setup-result.json').write_text(json.dumps({'passed': True, 'scenarios': results}))
+    finally:
+        if setup is not None and setup.poll() is None:
+            setup.kill()
+            setup.wait(timeout=5)
+        if daemon is not None and daemon.poll() is None:
+            command([PACKAGE, 'quit'], check=False)
+            daemon.wait(timeout=10)
+
+
 def main():
     baseline = subprocess.run(['sh', '/opt/wayland/run.sh'], check=False, timeout=90)
     if baseline.returncode != 0:
@@ -124,6 +178,9 @@ def main():
     os.environ['WAYLAND_DISPLAY'] = next(runtime.glob('wayland-[0-9]')).name
     os.environ['SWAYSOCK'] = str(next(runtime.glob('sway-ipc.*.sock')))
     os.environ['SDL_VIDEODRIVER'] = 'wayland'
+    if os.environ.get('CHECK_SETUP') == '1':
+        check_setup()
+        return
     if os.environ.get('CHECK_MULTI_MONITOR') == '1':
         check_multi_monitor()
         return
@@ -269,6 +326,6 @@ def main():
 try:
     main()
 except Exception as error:
-    result_name = 'multi-monitor-result.json' if os.environ.get('CHECK_MULTI_MONITOR') == '1' else 'daemon-result.json'
+    result_name = 'setup-result.json' if os.environ.get('CHECK_SETUP') == '1' else 'multi-monitor-result.json' if os.environ.get('CHECK_MULTI_MONITOR') == '1' else 'daemon-result.json'
     (EVIDENCE / result_name).write_text(json.dumps({'passed': False, 'error': str(error)}))
     raise

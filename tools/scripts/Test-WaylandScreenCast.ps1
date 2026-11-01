@@ -37,6 +37,9 @@ apenas um monitor nem criar arquivo. Nao comprova suporte multi-monitor completo
 .PARAMETER OutputScale
 1, 1.5 ou 2; padrao 1. Escalas diferentes de 1 exigem RepeatDaemonCaptures.
 Valida escala do compositor, janela logica, pixels e densidade; nao testa caneta ou GPU fisica.
+.PARAMETER CheckSetupWindow
+Exige RenderNode. Abre/fecha setup em Wayland descartavel sem solicitar permissoes
+e verifica tela nao vazia, ausencia de gravacoes e estado do daemon preservado.
 .PARAMETER RemainingArguments
 Somente --help. Ajuda nao produz efeitos colaterais.
 .EXAMPLE
@@ -69,6 +72,7 @@ param(
     [switch] $CheckMultiMonitorPolicy,
     [ValidateSet('1', '1.5', '2')]
     [string] $OutputScale = '1',
+    [switch] $CheckSetupWindow,
     [ValidateSet('docker', 'podman')] [string] $Engine,
     [Parameter(ValueFromRemainingArguments)] [string[]] $RemainingArguments
 )
@@ -95,6 +99,9 @@ if ($Engine -notin @('docker', 'podman') -or -not (Get-Command $Engine -ErrorAct
 }
 
 try {
+    if ($CheckSetupWindow -and ($RepeatDaemonCaptures -or $CheckMultiMonitorPolicy)) {
+        throw 'CheckSetupWindow nao combina com os outros cenarios de janela. Use --help.'
+    }
     if ($OutputScale -ne '1' -and -not $RepeatDaemonCaptures) {
         throw 'OutputScale diferente de 1 exige RepeatDaemonCaptures. Use --help.'
     }
@@ -104,7 +111,7 @@ try {
     if ($CheckDaemonLifecycle -and -not $RepeatDaemonCaptures) {
         throw 'CheckDaemonLifecycle exige RepeatDaemonCaptures. Use --help.'
     }
-    if (($DenyScreenCastGetAll -or $RepeatDaemonCaptures -or $CheckMultiMonitorPolicy) -and [string]::IsNullOrWhiteSpace($RenderNode)) {
+    if (($DenyScreenCastGetAll -or $RepeatDaemonCaptures -or $CheckMultiMonitorPolicy -or $CheckSetupWindow) -and [string]::IsNullOrWhiteSpace($RenderNode)) {
         throw 'Os modos de captura real exigem RenderNode. Use --help.'
     }
     $artifactRoot = [IO.Path]::GetFullPath((Join-Path $root 'artifacts'))
@@ -171,7 +178,7 @@ try {
         $modeArguments += @('--volume', "${configPath}:/usr/share/dbus-1/session.conf:ro,Z")
     }
     $container = "pixelpointer-$runId"
-    if ($RepeatDaemonCaptures -or $CheckMultiMonitorPolicy) {
+    if ($RepeatDaemonCaptures -or $CheckMultiMonitorPolicy -or $CheckSetupWindow) {
         $driver = Join-Path $root 'tests/wayland/daemon.py'
         $driverFile = Get-Item -LiteralPath $driver -Force
         if ($driverFile.PSIsContainer -or ($driverFile.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
@@ -180,10 +187,12 @@ try {
         $deny = if ($DenyScreenCastGetAll) { '1' } else { '0' }
         $lifecycle = if ($CheckDaemonLifecycle) { '1' } else { '0' }
         $multiMonitor = if ($CheckMultiMonitorPolicy) { '1' } else { '0' }
+        $setup = if ($CheckSetupWindow) { '1' } else { '0' }
         $modeArguments += @('--volume', "${driver}:/opt/wayland/daemon.py:ro,Z", '--env', "DENY_GETALL=$deny",
             '--env', "CHECK_LIFECYCLE=$lifecycle",
             '--env', "CHECK_MULTI_MONITOR=$multiMonitor",
             '--env', "OUTPUT_SCALE=$OutputScale",
+            '--env', "CHECK_SETUP=$setup",
             '--entrypoint', 'python')
     }
     $volume = "$container-evidence"
@@ -193,7 +202,7 @@ try {
         & $Engine volume create $volume | Out-Null
         if ($LASTEXITCODE -ne 0) { throw 'Falha ao criar volume de evidencias.' }
         $volumeCreated = $true
-        [string[]] $entryArguments = if ($RepeatDaemonCaptures -or $CheckMultiMonitorPolicy) { @('/opt/wayland/daemon.py') } else { @() }
+        [string[]] $entryArguments = if ($RepeatDaemonCaptures -or $CheckMultiMonitorPolicy -or $CheckSetupWindow) { @('/opt/wayland/daemon.py') } else { @() }
         & $Engine run --detach --name $container --network none --read-only --cap-drop ALL `
             --security-opt no-new-privileges --pids-limit 256 --memory 2g --cpus 2 `
             --tmpfs '/tmp:rw,nosuid,nodev,size=512m' --volume "${volume}:/evidence" `
@@ -224,7 +233,7 @@ try {
 
     Write-Output "Evidencias: $output"
     if ($exitCode -ne 0) {
-        if ($RepeatDaemonCaptures -or $CheckMultiMonitorPolicy) {
+        if ($RepeatDaemonCaptures -or $CheckMultiMonitorPolicy -or $CheckSetupWindow) {
             @{ passed = $false; mode = 'daemon-screencast'; error = 'container failed' } |
                 ConvertTo-Json | Set-Content -LiteralPath (Join-Path $output 'result.json') -Encoding utf8NoBOM
         }
@@ -297,6 +306,20 @@ try {
             throw
         }
         Write-Output 'Politica multi-monitor aprovada: duas saidas, erro controlado sem Screenshot e nenhum arquivo.'
+    }
+    if ($CheckSetupWindow) {
+        try {
+            $result = Get-Content -LiteralPath (Join-Path $output 'setup-result.json') -Raw | ConvertFrom-Json
+            if ($result.passed -ne $true -or $result.scenarios.Count -ne 2) { throw 'Resultado setup incompleto.' }
+            @{ passed = $true; mode = 'setup'; setup = $result } |
+                ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $output 'result.json') -Encoding utf8NoBOM
+        }
+        catch {
+            @{ passed = $false; mode = 'setup'; error = $_.Exception.Message } |
+                ConvertTo-Json | Set-Content -LiteralPath (Join-Path $output 'result.json') -Encoding utf8NoBOM
+            throw
+        }
+        Write-Output 'Setup aprovado: janela nao vazia, fechamento sem efeitos e daemon preservado.'
     }
     Write-Output 'Validacao Wayland ScreenCast aprovada.'
     exit 0

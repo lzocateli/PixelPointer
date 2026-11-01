@@ -496,6 +496,33 @@ Compositor captures do not prove physical hotkeys, pen/pressure, GPU parity,
 multi-monitor or native GNOME/KDE/Windows/macOS acceptance. Those slices and
 latency benchmarking remain pending; F2/F3 are not complete.
 
+### Optional first use and closing without effects
+
+On 2026-11-01, `feat/first-use-setup` added explicit `setup`. Policy enables
+Linux registration, Wayland capture requests and daemon startup only without
+an active instance. Close is initially selected; existing commands and daemon
+startup are unchanged.
+
+14 tests cover policy and click-target bounds. The gate passed format,
+warning/error-free build, 178 tests, 23 governance cases, AOT and `selftest`.
+Opt-in `-CheckSetupWindow` verified a nonblank window region and compositor
+closing without app-file changes or daemon-state changes, with and without
+an existing daemon. Evidence:
+`artifacts/wayland/screencast-20261101T182402112-1a823db2`.
+nginx stayed isolated without public ports; no personal host graphical data was used.
+
+The test did not request capture or grant permissions automatically. Real
+GNOME consent, physical control activation and native Windows/macOS flow remain
+pending. “Solicitação finalizada” is not proof of granted permission. Existing
+diagnostic details remain in the terminal.
+
+Generate a **new preview after merging this delivery PR into main with green CI**,
+before manual first-use acceptance. Do not wait for all F2; the current preview
+does not contain `setup`. After generation and `release` Environment approval,
+test GNOME/Wayland and Windows: open/close without actions, diagnostics, explicit
+registration where applicable, voluntary cancel/consent and selected daemon
+startup. Do not unmark Pre-release or promote stable before affected-scope validation.
+
 ### Local Results on 2026-10-30
 
 Steps 1–6 implemented for the first target; step 7 remains conditional expansion,

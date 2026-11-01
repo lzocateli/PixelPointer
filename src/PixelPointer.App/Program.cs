@@ -33,6 +33,7 @@ try
         "install-desktop-file" => InstallDesktopFile(),
         "uninstall-desktop-file" => InstallDesktopFile(remove: true),
         "grant" => Grant(args.Contains("--auto")),
+        "setup" => Setup(),
         "selftest" => SelfTest(),
         "--version" => PrintVersion(),
         "help" or "--help" or "-h" => Help(Console.Out),
@@ -94,6 +95,7 @@ static int Help(TextWriter writer)
           install-desktop-file     instala a entrada de menu e o ícone do app (Linux)
           uninstall-desktop-file   remove entrada e ícone idênticos aos instalados (Linux)
           grant                    pede permissão via portal (Wayland); não é necessário no X11
+          setup                    primeiro uso com ações explícitas, sem autorização automática
           selftest                 valida as bibliotecas nativas sem tela (Skia e SDL com driver dummy)
           --version | --help
 
@@ -434,6 +436,45 @@ static void InitSdl()
     if (!SDL_Init(SDL_InitFlags.SDL_INIT_VIDEO))
     {
         throw new InvalidOperationException($"SDL_Init: {SDL_GetError()}");
+    }
+}
+
+static int Setup()
+{
+    var status = "Não iniciado";
+    while (true)
+    {
+        var running = IpcChannel.SendControlCommandAsync("status").GetAwaiter().GetResult() == "running";
+        var policy = new SetupPolicy(OperatingSystem.IsLinux(), SessionInfo.IsWayland, running);
+        SetupAction action;
+        InitSdl();
+        try { action = SetupWindow.Run(policy, SessionInfo.Describe(), status); }
+        finally { SDL_Quit(); }
+        if (!policy.IsAvailable(action)) { continue; }
+        try
+        {
+            switch (action)
+            {
+                case SetupAction.Close: return 0;
+                case SetupAction.Diagnose:
+                    status = ProbeAsync().GetAwaiter().GetResult() == 0 ? "Diagnóstico concluído" : "Falha de diagnóstico";
+                    break;
+                case SetupAction.RegisterDesktop:
+                    status = InstallDesktopFile() == 0 ? "Registro concluído" : "Registro não concluído";
+                    break;
+                case SetupAction.RequestCapture:
+                    status = Grant(false) == 0 ? "Solicitação finalizada" : "Solicitação indisponível";
+                    break;
+                case SetupAction.StartDaemon:
+                    return Daemon();
+            }
+        }
+        catch (Exception error) when (error is InvalidOperationException or NotSupportedException or OperationCanceledException
+            or IOException or UnauthorizedAccessException)
+        {
+            Console.Error.WriteLine($"erro: {error.Message}");
+            status = "Ação não concluída";
+        }
     }
 }
 

@@ -12,6 +12,28 @@ Windows/macOS, other compositors and the complete matrix remain pending.
 See the [evidence record](plano-e2e-grafico-uv.md). The F0 report is historical;
 this acceptance does not change backend limitations described below.
 
+## Optional first use
+
+Run `pixelpointer setup` in a graphical session for the first-use window.
+This is explicit: it does not appear automatically with the daemon or replace
+existing commands. Opening, closing or pressing Esc does not register the app,
+request capture or start a daemon. “Fechar” is initially selected.
+
+- “Verificar ambiente” runs the existing diagnostic; details remain in the terminal.
+- “Registrar aplicativo no desktop” is offered only on Linux and preserves conflicts.
+- “Solicitar captura de tela” is offered only on Linux/Wayland and opens the
+  existing `grant` flow, requiring window and portal confirmation. “Solicitação
+  finalizada” does not mean permission was granted; check command output and
+  the desktop decision.
+- “Iniciar daemon” is offered only without an active daemon. The window closes
+  and the daemon stays in the foreground, like the existing `daemon` command.
+
+Choose by click or Tab/arrows and Enter. It does not change PATH, profiles,
+autostart or settings or write a first-use marker. Registration and permission
+requests happen only after your explicit choice. Closing setup does not stop
+an existing daemon. Run from a terminal to see diagnostic details and errors.
+On-screen command labels remain Portuguese, like other native app messages.
+
 ## Commands
 
 | Command | Purpose |
@@ -27,6 +49,7 @@ this acceptance does not change backend limitations described below.
 | `pixelpointer install-desktop-file` | Linux: installs the `.desktop` file with the app id `io.github.lzocateli.PixelPointer` |
 | `pixelpointer uninstall-desktop-file` | Linux: removes per-user resources only when unchanged; preserves modified files |
 | `pixelpointer grant` | GNOME/Wayland: requests the capture permission from a focused window |
+| `pixelpointer setup` | Optional first use with explicit diagnostics, desktop registration, capture request and daemon start actions |
 | `pixelpointer selftest` | Checks the native libraries without a display (used by package tests) |
 | `pixelpointer --version` / `--help` | Version and help |
 

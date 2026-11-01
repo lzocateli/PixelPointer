@@ -501,6 +501,32 @@ Capturas del compositor no comprueban atajos físicos, lápiz/presión, paridad
 GPU, multi-monitor ni aceptación nativa GNOME/KDE/Windows/macOS. Esos recortes
 y benchmark de latencia siguen pendientes; F2/F3 no concluidas.
 
+### Primer uso opcional y cierre sin efectos
+
+El 2026-11-01, `feat/first-use-setup` añadió `setup` explícito. La política
+habilita registro Linux, solicitud de captura Wayland e inicio del daemon solo
+sin instancia activa. Fechar es la selección inicial; no cambiaron comandos
+existentes ni inicio del daemon.
+
+14 pruebas cubren política y límites de clic. El gate pasó format, build sin
+avisos/errores, 178 pruebas, 23 casos de gobernanza, AOT y `selftest`.
+`-CheckSetupWindow` verificó región de ventana no vacía y cierre por compositor
+sin modificar archivos del app ni estado del daemon, con y sin daemon activo.
+Evidencia: `artifacts/wayland/screencast-20261101T182402112-1a823db2`.
+nginx aislado sin puertos públicos; no se usaron datos gráficos personales del host.
+
+No se solicitó captura ni concedieron permisos automáticamente. Consentimiento
+GNOME real, controles físicos y flujo nativo Windows/macOS pendientes.
+“Solicitação finalizada” no comprueba permiso concedido; los detalles del
+diagnóstico existente quedan en la terminal.
+
+Generar **preview nueva tras integrar este PR en main con CI verde**, antes del
+aceite manual de primer uso. No esperar toda la F2; la preview actual no tiene
+`setup`. Tras generar y aprobar el Environment `release`, probar GNOME/Wayland
+y Windows: abrir/cerrar sin acciones, diagnóstico, registro explícito cuando
+corresponda, cancelación/consentimiento voluntario e inicio elegido del daemon.
+No quitar Pre-release ni promover estable antes de validar el alcance afectado.
+
 ### Resultado local del 2026-10-30
 
 Etapas 1–6 implementadas para primer objetivo; etapa 7 es expansión condicionada,
