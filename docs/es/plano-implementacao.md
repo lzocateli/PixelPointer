@@ -234,7 +234,7 @@ incrementos locales en `perf/f2-wayland-capture`.
 | 1. Consolidar diagnóstico, capacidades y pruebas Wayland | [PR #21](https://github.com/lzocateli/PixelPointer/pull/21) integrado en `df252e6`, con `Result` aprobado |
 | 2. Nueva preview y aceptación GNOME real | [Preview #16](https://github.com/lzocateli/PixelPointer/actions/runs/41308984865): builds, smokes y atestaciones aprobados; espera aprobación del Environment `release` y prueba humana. No concluida |
 | 3. Ciclo de vida completo e interacción física | [PR #22](https://github.com/lzocateli/PixelPointer/pull/22) integrado en `0ad417f`, con `Result` aprobado; atajos físicos, Esc, bandeja y lanzador pendientes |
-| 4. Matriz de compatibilidad | [PR #23](https://github.com/lzocateli/PixelPointer/pull/23) integrado en `05b0c40`. En `test/wayland-output-scale` se separó el bloqueo del fixture; corrección Wayland y escalas 1/1,5/2 aprobadas en prueba aislada; PR en preparación. Entornos reales, hardware y arquitecturas pendientes |
+| 4. Matriz de compatibilidad | [PR #23](https://github.com/lzocateli/PixelPointer/pull/23) integrado en `05b0c40`. En `test/wayland-output-scale`, corrección de ventana y escalas 1/1,5/2 aprobadas en prueba aislada; [PR #24](https://github.com/lzocateli/PixelPointer/pull/24) abierto. Entornos reales, hardware y arquitecturas pendientes |
 | 5. Completar F2 | GPU/4K, abstracciones, ScreenCaptureKit y bienvenida pendientes; no concluida |
 | 6. Herramientas avanzadas F3 | Aún no implementadas |
 | 7. F4–F7 | Temporizador, recorte, Live Zoom, grabación y DemoType aún no implementados |
