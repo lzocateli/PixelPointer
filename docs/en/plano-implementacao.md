@@ -230,7 +230,7 @@ on `perf/f2-wayland-capture`.
 | --- | --- |
 | 1. Consolidate Wayland diagnostics, capabilities and tests | [PR #21](https://github.com/lzocateli/PixelPointer/pull/21) merged at `df252e6`, with `Result` passed |
 | 2. New preview and real GNOME acceptance | [Preview #16](https://github.com/lzocateli/PixelPointer/actions/runs/41308984865) started from the merged commit; gates, `release` Environment approval and human testing pending. Not complete |
-| 3. Complete lifecycle and physical interaction | `test/wayland-daemon-lifecycle` branch: quit with open window and restart passed isolated tests. PR being prepared; physical hotkeys, Esc, tray and launcher pending |
+| 3. Complete lifecycle and physical interaction | `test/wayland-daemon-lifecycle` branch: quit with open window and restart passed isolated tests. [PR #22](https://github.com/lzocateli/PixelPointer/pull/22) open; physical hotkeys, Esc, tray and launcher pending |
 | 4. Compatibility matrix | Requires real environments/compositors, suitable hardware and architectures |
 | 5. Complete F2 | GPU/4K, abstractions, ScreenCaptureKit and welcome window remain pending; not complete |
 | 6. Advanced F3 tools | Not implemented yet |
