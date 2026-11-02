@@ -12,7 +12,7 @@ internal static class IpcChannel
     internal static string SocketPath => Path.Combine(GetRuntimeDirectory(), "pixelpointer.sock");
 
     internal static bool IsKnownCommand(string command) =>
-        command is "zoom" or "draw" or "timer" or "snip" or "record" or "status" or "quit";
+        command is "zoom" or "draw" or "timer" or "snip" or "record" or "livezoom" or "status" or "quit";
 
     internal static async Task ServeAsync(
         Action<HotkeyCommand> onCommand,
@@ -60,7 +60,7 @@ internal static class IpcChannel
                     var shouldQuit = command == "quit";
                     var response = command switch
                     {
-                        "zoom" or "draw" or "timer" or "snip" or "record" => QueueCommand(command, onCommand),
+                        "zoom" or "draw" or "timer" or "snip" or "record" or "livezoom" => QueueCommand(command, onCommand),
                         "status" => getStatus(),
                         "quit" => "quitting",
                         _ => "unknown",
