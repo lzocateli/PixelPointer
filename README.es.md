@@ -120,7 +120,7 @@ para ver detalles y límites de cada método.
 ```bash
 pixelpointer install-desktop-file   # Linux: registra el app id que usan los portales
 pixelpointer grant                  # GNOME/Wayland: permiso de captura (una vez)
-pixelpointer daemon                 # Ctrl+1 zoom, Ctrl+2 dibujo, Ctrl+3 temporizador, Ctrl+5 grabación, Ctrl+6 recorte
+pixelpointer daemon                 # Ctrl+1 zoom, Ctrl+2 dibujo, Ctrl+3 temporizador, Ctrl+4 Live Zoom, Ctrl+5 grabación, Ctrl+6 recorte
 ```
 
 El comando `daemon` se ejecuta en **primer plano**: mantiene activos los atajos y
@@ -155,6 +155,7 @@ de atajos, ejecuta `pixelpointer daemon` en primer plano.
 | **Ctrl+1** | Zoom: congela la pantalla ampliada; el mouse recorre la imagen |
 | **Ctrl+2** | Dibujo sin zoom |
 | **Ctrl+3** | Temporizador de pausa (10 min; flechas o rueda ajustan y reinician) |
+| **Ctrl+4** | Live Zoom: amplía la pantalla en vivo siguiendo el cursor, sin congelar; repite para salir (Windows) |
 | **Ctrl+5** | Inicia o guarda una grabación GIF de la pantalla (Linux y Windows; hasta 5 min) |
 | **Ctrl+6** | Recorte: arrastra un área para copiarla; con Shift al soltar, guarda PNG |
 | `pixelpointer status` | Consulta si el daemon está en ejecución |

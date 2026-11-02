@@ -18,6 +18,7 @@ internal static class HotkeyDefaults
         ("zoom", "Zoom", "CTRL+1", '1'),
         ("draw", "Desenhar", "CTRL+2", '2'),
         ("timer", "Timer", "CTRL+3", '3'),
+        ("livezoom", "Live Zoom", "CTRL+4", '4'),
         ("record", "Gravar", "CTRL+5", '5'),
         ("snip", "Recorte", "CTRL+6", '6'),
     ];

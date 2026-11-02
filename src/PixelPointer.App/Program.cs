@@ -29,7 +29,7 @@ try
         "overlay" => Overlay(Option("--image"), OverlayModes.FromCommand(Option("--mode"))),
         "daemon" => Daemon(),
         "zoom" or "draw" or "timer" or "snip" => SendOrRun(command),
-        "record" => SendToDaemon(command),
+        "record" or "livezoom" => SendToDaemon(command),
         "status" => Status(),
         "quit" => Quit(),
         "install-desktop-file" => InstallDesktopFile(),
@@ -90,10 +90,11 @@ static int Help(TextWriter writer)
           capture [--out arq.png]  captura a tela e mede a latência
           overlay [--image arq] [--mode zoom|draw|timer|snip]
                                    captura (ou usa a imagem) e abre a sobreposição
-          daemon                   registra Ctrl+1/2/3/5/6; Esc fecha só a janela e Ctrl+C encerra
+          daemon                   registra Ctrl+1/2/3/4/5/6; Esc fecha só a janela e Ctrl+C encerra
           zoom | draw | timer | snip
                                    envia o comando ao daemon (ou executa direto)
           record                   inicia ou encerra a gravação GIF no daemon (Linux e Windows)
+          livezoom                 liga ou desliga o Live Zoom no daemon (Windows)
           status                   informa se o daemon está em execução
           quit                     encerra o daemon e a sobreposição ativa
           install-desktop-file     instala a entrada de menu e o ícone do app (Linux)
@@ -289,9 +290,23 @@ static int Daemon()
         using var tray = TrayController.TryCreate(Enqueue, cancellation.Cancel, out var trayUnavailableReason);
         Console.WriteLine(tray is null
             ? $"Tray ............. indisponível ({trayUnavailableReason}); use 'pixelpointer status' e 'pixelpointer quit'."
-            : "Tray ............. registrada (Zoom, Desenhar, Timer, Recorte, Gravar, Sair); a visibilidade depende do desktop.");
+            : "Tray ............. registrada (Zoom, Desenhar, Timer, Live Zoom, Recorte, Gravar, Sair); a visibilidade depende do desktop.");
 
         ScreenRecorder? recorder = null;
+        LiveZoom? liveZoom = null;
+        void ToggleLiveZoom()
+        {
+            if (liveZoom is not null)
+            {
+                liveZoom.Dispose();
+                liveZoom = null;
+                Console.WriteLine("Live Zoom encerrado.");
+                return;
+            }
+
+            liveZoom = LiveZoom.Start(LoadSettings().InitialZoom);
+            Console.WriteLine($"Live Zoom ativo em {liveZoom.Level:0.##}x; repita Ctrl+4 para encerrar.");
+        }
         void ToggleRecording()
         {
             if (recorder is not null)
@@ -329,6 +344,12 @@ static int Daemon()
                     continue;
                 }
 
+                if (item.Command.Id == "livezoom")
+                {
+                    ToggleLiveZoom();
+                    continue;
+                }
+
                 RunOverlay(portal, item.Command, null, item.Received, cancellation.Token);
             }
             catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
@@ -352,6 +373,8 @@ static int Daemon()
         {
             ToggleRecording();
         }
+
+        liveZoom?.Dispose();
     }
     finally
     {

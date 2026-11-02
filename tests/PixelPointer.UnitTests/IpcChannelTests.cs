@@ -70,6 +70,7 @@ public sealed class IpcChannelTests
     [InlineData("timer", true)]
     [InlineData("snip", true)]
     [InlineData("record", true)]
+    [InlineData("livezoom", true)]
     [InlineData("status", true)]
     [InlineData("quit", true)]
     [InlineData("ZOOM", false)]
