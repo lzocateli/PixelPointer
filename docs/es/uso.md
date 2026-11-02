@@ -37,10 +37,11 @@ visibles permanecen en portugués como otros mensajes nativos de la aplicación.
 
 | Comando | Función |
 | --- | --- |
-| `pixelpointer daemon` | Se mantiene en ejecución, registra los atajos globales (Ctrl+1 zoom, Ctrl+2 dibujo, Ctrl+3 temporizador, Ctrl+6 recorte) y el canal local de comandos; Ctrl+C o SIGTERM lo detienen |
+| `pixelpointer daemon` | Se mantiene en ejecución, registra los atajos globales (Ctrl+1 zoom, Ctrl+2 dibujo, Ctrl+3 temporizador, Ctrl+5 grabación, Ctrl+6 recorte) y el canal local de comandos; Ctrl+C o SIGTERM lo detienen |
 | `pixelpointer zoom` | Abre el zoom ahora; con el `daemon` en ejecución, le envía el comando |
 | `pixelpointer draw` | Abre el dibujo sin zoom; misma regla que `zoom` |
 | `pixelpointer timer` | Abre el temporizador de pausa (10 min) sobre la pantalla oscurecida; flechas o rueda ajustan los minutos y reinician, R/G/B/Y/O/P cambian el color, Esc o clic derecho salen; misma regla que `zoom` |
+| `pixelpointer record` | Con el `daemon` en ejecución, inicia o guarda una grabación GIF de toda la pantalla (8 cuadros/s, hasta 1280 px de ancho, límite de 5 min, paleta fija de 252 colores) en la carpeta de capturas; también con Ctrl+5 o la bandeja. Disponible en X11 y Windows; las anotaciones abiertas durante la grabación se incluyen |
 | `pixelpointer snip` | Recorte: arrastra un área de la captura para copiarla como PNG (sin anotaciones); mantén Shift al soltar para guardarla en la carpeta de capturas; Esc o clic derecho cancelan; misma regla que `zoom` |
 | `pixelpointer status` | Informa si el daemon está en ejecución, sin abrir una superposición |
 | `pixelpointer quit` | Detiene el daemon y una superposición activa |
