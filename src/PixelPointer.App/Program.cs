@@ -94,7 +94,7 @@ static int Help(TextWriter writer)
           zoom | draw | timer | snip
                                    envia o comando ao daemon (ou executa direto)
           record                   inicia ou encerra a gravação GIF no daemon (Linux e Windows)
-          livezoom                 liga ou desliga o Live Zoom no daemon (Windows)
+          livezoom                 liga ou desliga o Live Zoom no daemon (Windows e X11)
           status                   informa se o daemon está em execução
           quit                     encerra o daemon e a sobreposição ativa
           install-desktop-file     instala a entrada de menu e o ícone do app (Linux)
@@ -294,17 +294,28 @@ static int Daemon()
 
         ScreenRecorder? recorder = null;
         LiveZoom? liveZoom = null;
+        X11LiveLens? lens = null;
         void ToggleLiveZoom()
         {
-            if (liveZoom is not null)
+            if (liveZoom is not null || lens is not null)
             {
-                liveZoom.Dispose();
+                liveZoom?.Dispose();
+                lens?.Dispose();
                 liveZoom = null;
+                lens = null;
                 Console.WriteLine("Live Zoom encerrado.");
                 return;
             }
 
-            liveZoom = LiveZoom.Start(LoadSettings().InitialZoom);
+            var level = LoadSettings().InitialZoom;
+            if (OperatingSystem.IsLinux() && SessionInfo.IsX11)
+            {
+                lens = X11LiveLens.Start(level);
+                Console.WriteLine($"Live Zoom (lupa em janela) ativo em {lens.Level:0.##}x; repita Ctrl+4 para encerrar.");
+                return;
+            }
+
+            liveZoom = LiveZoom.Start(level);
             Console.WriteLine($"Live Zoom ativo em {liveZoom.Level:0.##}x; repita Ctrl+4 para encerrar.");
         }
         void ToggleRecording()
@@ -332,7 +343,15 @@ static int Daemon()
 
             if (!queue.TryTake(out var item))
             {
-                PumpSdlEvents();
+                if (lens is not null)
+                {
+                    lens.Tick();
+                }
+                else
+                {
+                    PumpSdlEvents();
+                }
+
                 continue;
             }
 
@@ -350,7 +369,15 @@ static int Daemon()
                     continue;
                 }
 
-                RunOverlay(portal, item.Command, null, item.Received, cancellation.Token);
+                lens?.Suspend();
+                try
+                {
+                    RunOverlay(portal, item.Command, null, item.Received, cancellation.Token);
+                }
+                finally
+                {
+                    lens?.Resume();
+                }
             }
             catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
             {
@@ -375,6 +402,7 @@ static int Daemon()
         }
 
         liveZoom?.Dispose();
+        lens?.Dispose();
     }
     finally
     {
