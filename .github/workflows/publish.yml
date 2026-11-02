@@ -6,7 +6,10 @@
 #   Environment `release` (gw-github-assets.yml, com atestacao de proveniencia). Homebrew e
 #   winget rodam em post-release.yml, com a release ja publica.
 # - pull_request que altera a cadeia de release: build, smoke e testes sem publicar.
-# - workflow_dispatch preview em main: GitHub Pre-release apos aprovacao no Environment release.
+# - workflow_call de gw-preview.yml com a candidata vX.Y.Z-rc.N: mesma publicacao, versao da tag,
+#   publicada como prerelease sem Latest e validada no Environment quality.
+# - workflow_dispatch preview em main: GitHub Pre-release preview.N apos aprovacao no Environment
+#   release; nunca promovivel nem implantavel.
 name: Publish
 
 on:
@@ -130,8 +133,14 @@ jobs:
           }
           if ($env:TAG) {
             if ($env:PREVIEW -eq 'true') { throw 'Uma release estavel nao pode usar o canal preview.' }
+            if ($env:TAG -cmatch '^v((?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*))-rc\.(0|[1-9]\d*)$') {
+              # Candidata do gw-preview.yml (docs/estrategia-de-release.md): a tag fica no commit-base do
+              # Release PR, antes do bump; a versao vem da tag, e o build sobrescreve o VersionPrefix.
+              $prefix = $Matches[1]
+              $suffix = "rc.$($Matches[2])"
+            }
             # gw-release.yml ja validou tag, versoes e ancestralidade; aqui confirma o checkout da tag.
-            if ($env:TAG -cne "v$prefix") {
+            elseif ($env:TAG -cne "v$prefix") {
               Write-Output "::error::Tag '$($env:TAG)' difere de VersionPrefix $prefix em Directory.Build.props."
               exit 1
             }

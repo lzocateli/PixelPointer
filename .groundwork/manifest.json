@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
-  "toolVersion": "0.5.1",
-  "catalogVersion": "0.5.1",
+  "toolVersion": "0.6.3",
+  "catalogVersion": "0.6.3",
   "parameters": {
-    "auto_deploy_environment": "",
+    "auto_deploy_environment": "quality",
     "commit_scopes": "app,core,rendering,capture,hotkeys,overlay,ipc,platform,linux,windows,macos,packaging,tests,docs,tooling,deps,actions,repo",
     "default_branch": "main",
     "dependabot_ecosystems": "github-actions,nuget,docker:/tools/build",
-    "deploy_environments": "",
+    "deploy_environments": "quality,production",
     "deploy_reviewers": "lzocateli",
     "dotnet_sdk_image": "lzocateli/dotnet-sdk:10.0.402-noble-v1",
     "dotnet_solution": "",
@@ -17,6 +17,11 @@
     "issue_areas": "Zoom e desenho,Captura de tela,Atalhos globais,Sobreposi\u00E7\u00E3o,Linux,Windows,macOS,Seguran\u00E7a,Empacotamento,CI/CD,Documenta\u00E7\u00E3o,Testes",
     "legacy_rulesets": "",
     "license": "MIT",
+    "nuget_auth": "trusted",
+    "nuget_feed": "github",
+    "nuget_rc_feed": "",
+    "nuget_user": "",
+    "preview_acceptance": "approval",
     "project_description": "O PixelPointer \u00E9 uma ferramenta Native AOT de zoom, anota\u00E7\u00E3o e grava\u00E7\u00E3o de tela para apresenta\u00E7\u00F5es, com atalhos globais no Linux (X11 e Wayland), Windows e macOS.",
     "project_name": "PixelPointer",
     "project_slug": "pixelpointer",
@@ -34,7 +39,9 @@
     "secret-scanning",
     "ci",
     "release",
+    "release-preview",
     "publish-github-assets",
+    "deploy",
     "dependency-updates",
     "repository-policy"
   ],
@@ -53,7 +60,7 @@
     },
     ".github/CI-CD.md": {
       "component": "ci",
-      "sha256": "06bd0f8546ab9616f5e29962dc2cf57f48ecfd21d6ac01bae6c26147fbcb0ad5"
+      "sha256": "a5f216fa0305b9acc7ae614eb6bc4d0fab3f53c4a1d1f93174623204d41fabfa"
     },
     ".github/CODEOWNERS": {
       "component": "core",
@@ -93,7 +100,7 @@
     },
     ".github/REPOSITORY-POLICY.md": {
       "component": "repository-policy",
-      "sha256": "6c0e6e50fbccd3b21ed9a1e67e34ed4f9a1e816b551f243a2d2124ca23b75c6b"
+      "sha256": "8ab832110b42764de3c95c294b62d1aeed86d5b69093cf0a7e2afa09c196ad0d"
     },
     ".github/SECRET-SCANNING.md": {
       "component": "secret-scanning",
@@ -121,7 +128,11 @@
     },
     ".github/repository-policy.json": {
       "component": "repository-policy",
-      "sha256": "147460728b2b03239e0fe4077d9aab68d3fc6475e66d31c3730207c65ae17df0"
+      "sha256": "8c2fdcde4c16ac9d9646bcb639cb195d792b67c048abb36a7536377bcca88733"
+    },
+    ".github/workflows/gw-deploy.yml": {
+      "component": "deploy",
+      "sha256": "5de195cd8701d2290a5c392e8cee0bee3f6f65a0138118c3494c556ec4b4349d"
     },
     ".github/workflows/gw-dotnet.yml": {
       "component": "ci",
@@ -133,7 +144,7 @@
     },
     ".github/workflows/gw-gitleaks.yml": {
       "component": "ci",
-      "sha256": "4a1cf6b0ca1225468c58ec1f555eb2d3a60ab1d62a081b305a33331d44418047"
+      "sha256": "d0645fd4fe0b3733a976276f55e9e4418fd54c0d240b2091b828baefa6edb2bb"
     },
     ".github/workflows/gw-node.yml": {
       "component": "ci",
@@ -141,35 +152,75 @@
     },
     ".github/workflows/gw-pr-hygiene.yml": {
       "component": "ci",
-      "sha256": "b884f9ddac4a9ea19006c06269c76e3032572c30a4b17e630543fe13cbb88ca9"
+      "sha256": "cf3346f5dd1123ec5abc1228cccb385ba9e0c4fc47beae16d30002bca74cf472"
+    },
+    ".github/workflows/gw-preview.yml": {
+      "component": "release-preview",
+      "sha256": "ea4209285e0393eeb1bebee4437c6f5abc105bb16461ac5ed13e1645b51baa21"
     },
     ".github/workflows/gw-release.yml": {
       "component": "release",
-      "sha256": "cd884359cc0eafea8bd7c75ab96606c7fd88c3a2095d77ed8dafea66826a097c"
+      "sha256": "7a7a67779ceeaf68d0306ad326e66dc61c857d4cecc0ed26ae26bd1ba15b3d04"
     },
     ".gitleaks.toml": {
       "component": "secret-scanning",
       "sha256": "de9544e772d44eec8cdbd1163e428c07d160821967075916034ff339d18e0285"
     },
+    "docs/estrategia-de-release.md": {
+      "component": "release-preview",
+      "sha256": "8f9d8f45aa50719c949fb4604c1b671a088aad1b9f20dc760ce8e68df4f87f22"
+    },
+    "docs/runbooks/deploy-e-rollback.md": {
+      "component": "deploy",
+      "sha256": "363f641c72bf259f4359c29c699a463cec9fc7416d6e32b84382d03750363f00"
+    },
+    "docs/runbooks/release-preview.md": {
+      "component": "release-preview",
+      "sha256": "688bee1433c55dc910a444dfe701c13058d32be6db8059aaa8c76fe6e62cef76"
+    },
     "docs/runbooks/release.md": {
       "component": "release",
-      "sha256": "62a989f20f40c9d8d3bd594cce5c8f49a7848f2cdf9acf1a63dac4227c2e7678"
+      "sha256": "c6cd8e8b99db785b289782f78790311b39df752029649969f9e9f68546d8fd9c"
+    },
+    "tools/scripts/ci/Add-PreviewAcceptance.ps1": {
+      "component": "release-preview",
+      "sha256": "d2ed1665d1d67f902fb33a3b685f49ae4aa998f19f51edc38dd0a69dee46fac6"
     },
     "tools/scripts/ci/Assert-ArtifactVersion.ps1": {
       "component": "release",
       "sha256": "0fca851b62cfaab991da7367bb94dd5aef3d2d8775f85d37a1442ff0bf40374f"
     },
+    "tools/scripts/ci/Assert-DeployableRelease.ps1": {
+      "component": "deploy",
+      "sha256": "4ee2535ed407b24684c78f18d4c97578f97e85103e2575d5caf93249a391cab0"
+    },
+    "tools/scripts/ci/Assert-PreviewGate.ps1": {
+      "component": "release-preview",
+      "sha256": "ea2697ce8d98e69d45da8c115111347ea991356231ac24d0d71108557d213e18"
+    },
     "tools/scripts/ci/Assert-ReleaseTag.ps1": {
       "component": "release",
-      "sha256": "5a28cce85718d55573e2c935503bfc672a216a478e5058e8b4b17641003bb458"
+      "sha256": "eec7d21f227207c0cd88e39148e96961d7d39dd7032858075e4bdb399cd3ccba"
     },
     "tools/scripts/ci/Get-BuildVersion.ps1": {
       "component": "release",
-      "sha256": "9f00894b538b2f833db672ee23f310e1ded32c2127db0e7eaed798742614f9ca"
+      "sha256": "4e258f724f5a909ee8db45a6c0763856316c3b5f5f3b12c15f8b40350bd2ba4f"
+    },
+    "tools/scripts/ci/Get-DeployedRelease.ps1": {
+      "component": "deploy",
+      "sha256": "39fe14057ba3c8cde9c85025a31e21a4084311997da119e856c2b702e5c089c2"
+    },
+    "tools/scripts/ci/Get-PreviewVersion.ps1": {
+      "component": "release-preview",
+      "sha256": "2e0b26fd8d5db2aee8f5fe6cd0ece01f17f02225fd046de4bf97bb46468f96c7"
+    },
+    "tools/scripts/ci/Get-ReleaseManifest.ps1": {
+      "component": "deploy",
+      "sha256": "7310533b249076d3b1d80389124bf432fa0b8f84a7cf7ef9ccda66a78395113c"
     },
     "tools/scripts/ci/GroundworkRelease.psm1": {
       "component": "release",
-      "sha256": "64108e3406d38dd2de8c5c51faec0cd09b17b077f2b8bbf5ceb96fda830d1e18"
+      "sha256": "e932e7a3a9853d82ddc26c6a0c47267eef02e453ee2d464e1940858f33d6a043"
     },
     "tools/scripts/ci/New-ReleaseManifest.ps1": {
       "component": "release",
@@ -185,7 +236,7 @@
     },
     "tools/scripts/ci/Test-PublishedRelease.ps1": {
       "component": "release",
-      "sha256": "6794e5f375e7f17ad5c8f1b871e71f9f5bc833cdf6be9472ea2ee930eedd288a"
+      "sha256": "0b62c567f8d280afb5ecfd11252bad5319d286a8fd4c9810b4d38fefa7bbc57e"
     },
     "tools/scripts/ci/Test-PullRequestTitle.ps1": {
       "component": "ci",

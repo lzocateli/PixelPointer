@@ -38,6 +38,9 @@ a human decides **when** the release happens by merging the Release PR.
    ```
 
 2. Review `CHANGELOG.md` and the version; wait for the `Result` check.
+   `Result` includes `Preview gate`: before the merge, create and validate the `vX.Y.Z-rc.N`
+   candidate as described in the [release preview runbook](release-preview.md) and the
+   [release strategy](../estrategia-de-release.md).
 3. Merge (squash). The `gw-release.yml` workflow:
    - creates tag `vX.Y.Z` and a draft GitHub Release;
    - calls `publish.yml` in the `release` Environment (approve when requested);
@@ -98,6 +101,7 @@ published version.
 | `Require release GitHub App` fails | `vars.RELEASE_APP_ID` or `RELEASE_APP_PRIVATE_KEY` is missing | Configure them manually; never use a personal PAT |
 | `Release` run has `startup_failure` and no jobs | Repository (or organization) Actions policy blocks `googleapis/release-please-action` | Run `groundwork github --sync` to allow the SHA in `allowedActions`; if the organization restricts it, allow it there |
 | Release PR has no checks | PR was created with `GITHUB_TOKEN` | Confirm the App is installed; the App token triggers checks |
+| `Preview gate` fails on the Release PR | candidate missing, not accepted or on another base commit | Follow the [release preview runbook](release-preview.md); in an emergency, `Preview-Waiver:` |
 | Tag is rejected | `gw-release-tags` ruleset does not include the App in bypass | Run `groundwork github` and review `release_app_id` |
 | `Assert-ReleaseTag.ps1` fails | Version differs between the tag and version files | Fix it in the Release PR; do not create tags manually |
 | Release remains a draft | Publish or manifest failed | Fix the cause and use `republish` |
