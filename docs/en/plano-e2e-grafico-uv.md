@@ -523,6 +523,19 @@ test GNOME/Wayland and Windows: open/close without actions, diagnostics, explici
 registration where applicable, voluntary cancel/consent and selected daemon
 startup. Do not unmark Pre-release or promote stable before affected-scope validation.
 
+### Continuous recording on Wayland
+
+On 2026-11-02, `feat/f6-wayland-recording` added `-CheckRecording` to
+`Test-WaylandScreenCast.ps1`. The daemon records over IPC through a ScreenCast
+session kept open until saving while the Sway background changes; the test
+requires a 0600 GIF in the screenshots folder, a consistent frame count and both
+displayed colors. The first run failed because frames delivered without a pending
+request were dropped; after keeping the latest frame it passed with 7 frames. The
+`-RepeatDaemonCaptures -CheckDaemonLifecycle` regression passed with the same AOT
+package. Evidence: `artifacts/wayland/screencast-20261102T134209250-12849f06` and
+`artifacts/wayland/screencast-20261102T134216782-71ab8427`. It does not prove
+real GNOME, human consent or the indicator after saving.
+
 ### Local Results on 2026-10-30
 
 Steps 1–6 implemented for the first target; step 7 remains conditional expansion,

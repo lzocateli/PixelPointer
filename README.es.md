@@ -155,7 +155,7 @@ de atajos, ejecuta `pixelpointer daemon` en primer plano.
 | **Ctrl+1** | Zoom: congela la pantalla ampliada; el mouse recorre la imagen |
 | **Ctrl+2** | Dibujo sin zoom |
 | **Ctrl+3** | Temporizador de pausa (10 min; flechas o rueda ajustan y reinician) |
-| **Ctrl+5** | Inicia o guarda una grabación GIF de la pantalla (X11 y Windows; hasta 5 min) |
+| **Ctrl+5** | Inicia o guarda una grabación GIF de la pantalla (Linux y Windows; hasta 5 min) |
 | **Ctrl+6** | Recorte: arrastra un área para copiarla; con Shift al soltar, guarda PNG |
 | `pixelpointer status` | Consulta si el daemon está en ejecución |
 | `pixelpointer quit` | Detiene el daemon y la sobreposición activa |
