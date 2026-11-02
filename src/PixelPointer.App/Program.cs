@@ -27,7 +27,7 @@ try
         "capture" => CaptureAsync(Option("--out") ?? "pixelpointer-capture.png").GetAwaiter().GetResult(),
         "overlay" => Overlay(Option("--image"), OverlayModes.FromCommand(Option("--mode"))),
         "daemon" => Daemon(),
-        "zoom" or "draw" or "timer" => SendOrRun(command),
+        "zoom" or "draw" or "timer" or "snip" => SendOrRun(command),
         "status" => Status(),
         "quit" => Quit(),
         "install-desktop-file" => InstallDesktopFile(),
@@ -86,10 +86,11 @@ static int Help(TextWriter writer)
         pixelpointer <comando>
           probe                    ambiente: SO, sessão, SDL, monitores, portais, AOT
           capture [--out arq.png]  captura a tela e mede a latência
-          overlay [--image arq] [--mode zoom|draw|timer]
+          overlay [--image arq] [--mode zoom|draw|timer|snip]
                                    captura (ou usa a imagem) e abre a sobreposição
-          daemon                   registra Ctrl+1/Ctrl+2/Ctrl+3; Esc fecha só a janela e Ctrl+C encerra
-          zoom | draw | timer      envia o comando ao daemon (ou executa direto)
+          daemon                   registra Ctrl+1/Ctrl+2/Ctrl+3/Ctrl+6; Esc fecha só a janela e Ctrl+C encerra
+          zoom | draw | timer | snip
+                                   envia o comando ao daemon (ou executa direto)
           status                   informa se o daemon está em execução
           quit                     encerra o daemon e a sobreposição ativa
           install-desktop-file     instala a entrada de menu e o ícone do app (Linux)
@@ -214,7 +215,7 @@ static int Overlay(string? image, OverlayMode mode)
     InitSdl();
     try
     {
-        RunOverlay(portal, new HotkeyCommand(mode switch { OverlayMode.Draw => "draw", OverlayMode.Timer => "timer", _ => "zoom" }), image,
+        RunOverlay(portal, new HotkeyCommand(mode switch { OverlayMode.Draw => "draw", OverlayMode.Timer => "timer", OverlayMode.Snip => "snip", _ => "zoom" }), image,
             Stopwatch.StartNew(), CancellationToken.None);
         return 0;
     }
@@ -285,7 +286,7 @@ static int Daemon()
         using var tray = TrayController.TryCreate(Enqueue, cancellation.Cancel, out var trayUnavailableReason);
         Console.WriteLine(tray is null
             ? $"Tray ............. indisponível ({trayUnavailableReason}); use 'pixelpointer status' e 'pixelpointer quit'."
-            : "Tray ............. registrada (Zoom, Desenhar, Timer, Sair); a visibilidade depende do desktop.");
+            : "Tray ............. registrada (Zoom, Desenhar, Timer, Recorte, Sair); a visibilidade depende do desktop.");
 
         while (!cancellation.IsCancellationRequested)
         {

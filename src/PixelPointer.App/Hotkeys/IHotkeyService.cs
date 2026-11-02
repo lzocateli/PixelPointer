@@ -7,7 +7,7 @@ internal interface IHotkeyService : IDisposable
 {
     string Name { get; }
 
-    /// <summary>Registra Ctrl+1 (zoom), Ctrl+2 (draw) e Ctrl+3 (timer) e devolve uma descrição do que ficou vinculado.</summary>
+    /// <summary>Registra Ctrl+1 (zoom), Ctrl+2 (draw), Ctrl+3 (timer) e Ctrl+6 (snip) e devolve o que ficou vinculado.</summary>
     Task<string> StartAsync(Action<HotkeyCommand> onActivated, CancellationToken cancellationToken);
 }
 
@@ -18,6 +18,7 @@ internal static class HotkeyDefaults
         ("zoom", "Zoom", "CTRL+1", '1'),
         ("draw", "Desenhar", "CTRL+2", '2'),
         ("timer", "Timer", "CTRL+3", '3'),
+        ("snip", "Recorte", "CTRL+6", '6'),
     ];
 }
 
