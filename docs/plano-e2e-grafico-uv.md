@@ -112,7 +112,8 @@ Esperar condições com deadlines; evitar sequências baseadas apenas em `sleep`
 | Configurações | `settings.json` com cor, espessura e zoom inicial; depois arquivo inválido | `probe` carrega o arquivo; zoom 4x, traço azul espesso; arquivo inválido gera aviso, usa padrões e permanece intacto |
 | Falha de salvamento | Configuração inválida ou destino sem acesso | Feedback de erro visível, ausência de destino alternativo e processo utilizável |
 | Saída da sobreposição | Esc e botão direito nos modos aplicáveis | Transições conforme contrato, possibilidade de reabrir e daemon preservado |
-| Tray gráfica | Clicar no ícone e nas opções Zoom, Desenhar e Sair | Ícone visível, menu correto, ação correspondente e encerramento limpo |
+| Tray gráfica | Clicar no ícone, conferir as sete entradas do menu e acionar Zoom, Desenhar e Sair | Ícone visível, menu correto, ação correspondente e encerramento limpo |
+| Live Zoom X11 | `livezoom` com o cursor em dois pontos da tela | Lupa em janela amplia a região do cursor, não a sobrepõe, acompanha o movimento e fecha no segundo comando |
 | Tray indisponível | Iniciar sem host StatusNotifier | Limitação explícita; controle por status/quit preservado |
 | Ciclo de vida | Quit com sobreposição aberta, reinício e abertura pelo menu desktop | Recursos liberados; nova execução funcional; início sem terminal |
 | CLI e desktop | Help, version, probe, capture e instalação/remoção por usuário | Saída/arquivo coerentes, identidade própria e preservação de conflitos |
