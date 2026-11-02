@@ -356,9 +356,11 @@ nem sockets de outras aplicações. Reinicie o daemon pelo pacote corrigido.
 
 ## Limitações atuais
 
-- Timer (Ctrl+3), Live Zoom (Ctrl+4), gravação (Ctrl+5), recorte (Ctrl+6) e
-  DemoType (Ctrl+7) ainda não existem; veja o [plano](plano-implementacao.md).
-- Em várias telas no Wayland, o compositor escolhe o monitor da janela.
+- Live Zoom (Ctrl+4), gravação (Ctrl+5) e DemoType (Ctrl+7) ainda não existem;
+  veja o [plano](plano-implementacao.md).
+- Com vários monitores, no X11 e no Windows a sobreposição abre no monitor do
+  cursor; no Wayland o compositor escolhe o monitor da janela; no macOS ela abre
+  no monitor principal, o único coberto pela captura atual.
 - macOS sem atalhos globais nativos e sem assinatura na versão 1.
 
 ## Roteiro manual de aceite no X11
