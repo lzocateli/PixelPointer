@@ -25,9 +25,9 @@ try
     {
         "probe" => ProbeAsync().GetAwaiter().GetResult(),
         "capture" => CaptureAsync(Option("--out") ?? "pixelpointer-capture.png").GetAwaiter().GetResult(),
-        "overlay" => Overlay(Option("--image"), Option("--mode") == "draw" ? OverlayMode.Draw : OverlayMode.Zoom),
+        "overlay" => Overlay(Option("--image"), OverlayModes.FromCommand(Option("--mode"))),
         "daemon" => Daemon(),
-        "zoom" or "draw" => SendOrRun(command),
+        "zoom" or "draw" or "timer" => SendOrRun(command),
         "status" => Status(),
         "quit" => Quit(),
         "install-desktop-file" => InstallDesktopFile(),
@@ -86,10 +86,10 @@ static int Help(TextWriter writer)
         pixelpointer <comando>
           probe                    ambiente: SO, sessão, SDL, monitores, portais, AOT
           capture [--out arq.png]  captura a tela e mede a latência
-          overlay [--image arq] [--mode zoom|draw]
+          overlay [--image arq] [--mode zoom|draw|timer]
                                    captura (ou usa a imagem) e abre a sobreposição
-          daemon                   registra Ctrl+1/Ctrl+2; Esc fecha só a janela e Ctrl+C encerra
-          zoom | draw              envia o comando ao daemon (ou executa direto)
+          daemon                   registra Ctrl+1/Ctrl+2/Ctrl+3; Esc fecha só a janela e Ctrl+C encerra
+          zoom | draw | timer      envia o comando ao daemon (ou executa direto)
           status                   informa se o daemon está em execução
           quit                     encerra o daemon e a sobreposição ativa
           install-desktop-file     instala a entrada de menu e o ícone do app (Linux)
@@ -214,7 +214,7 @@ static int Overlay(string? image, OverlayMode mode)
     InitSdl();
     try
     {
-        RunOverlay(portal, new HotkeyCommand(mode == OverlayMode.Draw ? "draw" : "zoom"), image,
+        RunOverlay(portal, new HotkeyCommand(mode switch { OverlayMode.Draw => "draw", OverlayMode.Timer => "timer", _ => "zoom" }), image,
             Stopwatch.StartNew(), CancellationToken.None);
         return 0;
     }
@@ -285,7 +285,7 @@ static int Daemon()
         using var tray = TrayController.TryCreate(Enqueue, cancellation.Cancel, out var trayUnavailableReason);
         Console.WriteLine(tray is null
             ? $"Tray ............. indisponível ({trayUnavailableReason}); use 'pixelpointer status' e 'pixelpointer quit'."
-            : "Tray ............. registrada (Zoom, Desenhar, Sair); a visibilidade depende do desktop.");
+            : "Tray ............. registrada (Zoom, Desenhar, Timer, Sair); a visibilidade depende do desktop.");
 
         while (!cancellation.IsCancellationRequested)
         {
@@ -333,7 +333,7 @@ static int Daemon()
 static int SendOrRun(string command) =>
     IpcChannel.TrySendAsync(command).GetAwaiter().GetResult()
         ? 0
-        : Overlay(null, command == "draw" ? OverlayMode.Draw : OverlayMode.Zoom);
+        : Overlay(null, OverlayModes.FromCommand(command));
 
 static int Status()
 {
@@ -368,7 +368,7 @@ static void RunOverlay(
     Stopwatch received,
     CancellationToken cancellationToken)
 {
-    var mode = command.Id == "draw" ? OverlayMode.Draw : OverlayMode.Zoom;
+    var mode = OverlayModes.FromCommand(command.Id);
     var hasX11Compositor = SessionInfo.IsX11 && X11Capabilities.HasCompositingManager();
     var transparentDraw = image is null && mode == OverlayMode.Draw && hasX11Compositor;
     if (image is null && mode == OverlayMode.Draw && SessionInfo.IsX11 && !hasX11Compositor)

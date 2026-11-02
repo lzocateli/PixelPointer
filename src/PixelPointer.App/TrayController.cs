@@ -64,6 +64,7 @@ internal sealed unsafe partial class TrayController : IDisposable
 
             controller.AddEntry(menu, "Zoom", () => onCommand(new HotkeyCommand("zoom")));
             controller.AddEntry(menu, "Desenhar", () => onCommand(new HotkeyCommand("draw")));
+            controller.AddEntry(menu, "Timer", () => onCommand(new HotkeyCommand("timer")));
             controller.AddEntry(menu, "Sair", onQuit);
             unavailableReason = null;
             return controller;
