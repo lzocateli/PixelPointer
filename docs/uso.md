@@ -40,7 +40,7 @@ executar a partir de um terminal; os detalhes e erros ficam nessa saída.
 | `pixelpointer zoom` | Abre o zoom agora; com o `daemon` em execução, envia o comando a ele |
 | `pixelpointer draw` | Abre o desenho sem zoom; mesma regra do `zoom` |
 | `pixelpointer timer` | Abre o timer de intervalo (10 min) sobre a tela escurecida; setas ou roda ajustam os minutos e reiniciam, R/G/B/Y/O/P mudam a cor, Esc ou botão direito saem; mesma regra do `zoom` |
-| `pixelpointer livezoom` | Com o `daemon` em execução, liga ou desliga o Live Zoom (também Ctrl+4 ou tray): a lupa de tela cheia do Windows amplia a tela ao vivo no nível `zoom.initial` das configurações (padrão 2x), acompanhando o cursor; mouse e teclado continuam funcionando. Encerrar o daemon restaura a tela. No X11, que não permite tirar a própria janela da captura, o Live Zoom é uma lupa em janela (um terço da tela) sempre visível, posicionada fora da região ampliada ao redor do cursor e marcada com uma cruz; ela some durante zoom, desenho, timer e recorte. Ainda não existe no Wayland nem no macOS |
+| `pixelpointer livezoom` | Com o `daemon` em execução, liga ou desliga o Live Zoom (também Ctrl+4 ou tray): no Windows, a lupa de tela cheia acompanha o cursor; mouse e teclado continuam funcionando. Encerrar o daemon restaura a tela. No X11 e macOS, é uma lupa em janela (um terço da tela), marcada com uma cruz e com a região ampliada seguindo o cursor; ela some durante zoom, desenho, timer e recorte. No macOS, ScreenCaptureKit exclui as janelas do PixelPointer e captura apenas o monitor principal; exige permissão de Gravação de Tela. Ainda não existe no Wayland |
 | `pixelpointer record` | Com o `daemon` em execução, inicia ou salva uma gravação GIF da tela inteira (8 quadros/s, até 1280 px de largura, limite de 5 min, paleta fixa de 252 cores) na pasta de capturas; também por Ctrl+5 ou pela tray. Disponível no Linux e no Windows; anotações abertas durante a gravação entram no GIF. No Wayland a gravação usa uma sessão ScreenCast aberta até salvar, inclui o cursor quando o portal permite e pede o monitor (ou reaproveita a autorização salva); o indicador de compartilhamento fica ativo durante a gravação |
 | `pixelpointer snip` | Recorte: arraste uma área da captura para copiá-la como PNG (sem anotações); segure Shift ao soltar para salvar na pasta de capturas; Esc ou botão direito cancelam; mesma regra do `zoom` |
 | `pixelpointer status` | Informa se o daemon está em execução, sem abrir uma sobreposição |
@@ -272,12 +272,13 @@ efetiva no painel. O daemon deve permanecer em execução após essa mensagem.
 
 ### macOS
 
-Na primeira captura, o macOS pede a permissão de **Gravação de Tela** em
-Ajustes do Sistema → Privacidade e Segurança. A versão 1 não é assinada com
+Na primeira captura ou ao iniciar o Live Zoom, o macOS pede a permissão de
+**Gravação de Tela** em Ajustes do Sistema → Privacidade e Segurança. A versão 1 não é assinada com
 Developer ID: o macOS pode pedir a permissão de novo após cada atualização.
 Os atalhos globais nativos chegam numa próxima versão; até lá, use
-`pixelpointer zoom` num atalho do sistema (Atalhos/Automator) ou num utilitário
-como Raycast.
+`pixelpointer zoom`, `pixelpointer draw` ou `pixelpointer livezoom` num atalho do
+sistema (Atalhos/Automator) ou num utilitário como Raycast. O Live Zoom também
+fica disponível pela tray.
 
 ### Windows
 
@@ -358,12 +359,12 @@ nem sockets de outras aplicações. Reinicie o daemon pelo pacote corrigido.
 
 ## Limitações atuais
 
-- O Live Zoom (Ctrl+4) existe no Windows e no X11 (lupa em janela), DemoType (Ctrl+7) ainda não existe e
+- O Live Zoom (Ctrl+4) existe no Windows, macOS (monitor principal) e X11 (lupa em janela); ainda não existe no Wayland. DemoType (Ctrl+7) ainda não existe e
   a gravação (Ctrl+5) é só em GIF e ainda não existe no macOS. Veja o
   [plano](plano-implementacao.md).
 - Com vários monitores, no X11 e no Windows a sobreposição abre no monitor do
-  cursor; no Wayland o compositor escolhe o monitor da janela; no macOS ela abre
-  no monitor principal, o único coberto pela captura atual.
+   cursor; no Wayland o compositor escolhe o monitor da janela. A lupa macOS e a
+   captura usada por ela cobrem somente o monitor principal.
 - macOS sem atalhos globais nativos e sem assinatura na versão 1.
 
 ## Roteiro manual de aceite no X11

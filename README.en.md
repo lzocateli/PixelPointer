@@ -25,8 +25,8 @@ code, name or icons.
 > The product remains pre-1.0; Windows and macOS pass CI but await manual
 > acceptance. Other compositors/configurations are not covered by this acceptance.
 > Evidence and limits: [E2E plan](docs/en/plano-e2e-grafico-uv.md).
-> Break timer, Live Zoom, snipping, recording and DemoType remain in the
-> [implementation plan](docs/en/plano-implementacao.md); the
+> Break timer, Live Zoom, snipping and recording are partially implemented by
+> platform; DemoType remains in the [implementation plan](docs/en/plano-implementacao.md); the
 > [F0 report](docs/f0-relatorio.md) (Portuguese) preserves historical spike results.
 
 ## Installation
@@ -152,7 +152,7 @@ mode the daemon's messages are not shown; to diagnose hotkey conflicts, run
 | **Ctrl+1** | Zoom: freezes the magnified screen; the mouse pans the image |
 | **Ctrl+2** | Draw without zoom |
 | **Ctrl+3** | Break timer (10 min; arrows or wheel adjust and restart) |
-| **Ctrl+4** | Live Zoom: magnifies the live screen following the cursor, without freezing; press again to exit (full screen on Windows; window magnifier on X11) |
+| **Ctrl+4** | Live Zoom: magnifies the live screen following the cursor, without freezing; press again to exit (full screen on Windows; window magnifier on macOS and X11; on macOS, use the tray or `pixelpointer livezoom`) |
 | **Ctrl+5** | Start or save a GIF screen recording (Linux and Windows; up to 5 min) |
 | **Ctrl+6** | Snip: drag an area to copy it; hold Shift on release to save a PNG |
 | `pixelpointer status` | Check whether the daemon is running |

@@ -35,6 +35,33 @@ public sealed class LiveZoomViewTests
     [Fact]
     public void Origin_HandlesEmptyScreen() => Assert.Equal(0, LiveZoomView.Origin(10, 0, 2f));
 
+    [Theory]
+    [InlineData(960, 540, 640, 360, 640, 360)]
+    [InlineData(0, 0, 640, 360, 0, 0)]
+    [InlineData(1919, 1079, 640, 360, 1280, 720)]
+    public void CropAroundCursor_StaysInsideDisplay(int cursorX, int cursorY, int cropWidth, int cropHeight,
+        int expectedX, int expectedY)
+    {
+        var crop = LiveZoomView.CropAroundCursor(cursorX, cursorY, 1920, 1080, cropWidth, cropHeight);
+
+        Assert.Equal(new ScreenRect(expectedX, expectedY, cropWidth, cropHeight), crop);
+    }
+
+    [Fact]
+    public void CropAroundCursor_ClampsOversizedCropToDisplay() =>
+        Assert.Equal(new ScreenRect(0, 0, 1920, 1080),
+            LiveZoomView.CropAroundCursor(960, 540, 1920, 1080, 2000, 1200));
+
+    [Fact]
+    public void CropAroundCursor_RejectsEmptyDisplay() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() => LiveZoomView.CropAroundCursor(0, 0, 0, 1080, 1, 1));
+
+    [Theory]
+    [InlineData(1280, 2f, 640)]
+    [InlineData(1280, 1f, 1024)]
+    public void CropExtent_DividesPixelViewportByClampedZoom(int viewportPixels, float level, int expected) =>
+        Assert.Equal(expected, LiveZoomView.CropExtent(viewportPixels, level));
+
     [Fact]
     public void Start_IsRejectedOutsideWindows()
     {

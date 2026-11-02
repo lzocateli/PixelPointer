@@ -5,6 +5,7 @@ using PixelPointer.App;
 using PixelPointer.App.Capture;
 using PixelPointer.App.Hotkeys;
 using PixelPointer.App.Linux;
+using PixelPointer.App.MacOS;
 using PixelPointer.App.Overlay;
 using PixelPointer.App.Recording;
 using PixelPointer.App.Windows;
@@ -94,7 +95,7 @@ static int Help(TextWriter writer)
           zoom | draw | timer | snip
                                    envia o comando ao daemon (ou executa direto)
           record                   inicia ou encerra a gravação GIF no daemon (Linux e Windows)
-          livezoom                 liga ou desliga o Live Zoom no daemon (Windows e X11)
+          livezoom                 liga ou desliga o Live Zoom no daemon (Windows, macOS e X11)
           status                   informa se o daemon está em execução
           quit                     encerra o daemon e a sobreposição ativa
           install-desktop-file     instala a entrada de menu e o ícone do app (Linux)
@@ -294,7 +295,7 @@ static int Daemon()
 
         ScreenRecorder? recorder = null;
         LiveZoom? liveZoom = null;
-        X11LiveLens? lens = null;
+        ILiveLens? lens = null;
         void ToggleLiveZoom()
         {
             if (liveZoom is not null || lens is not null)
@@ -311,6 +312,13 @@ static int Daemon()
             if (OperatingSystem.IsLinux() && SessionInfo.IsX11)
             {
                 lens = X11LiveLens.Start(level);
+                Console.WriteLine($"Live Zoom (lupa em janela) ativo em {lens.Level:0.##}x; repita Ctrl+4 para encerrar.");
+                return;
+            }
+
+            if (OperatingSystem.IsMacOS())
+            {
+                lens = MacOSLiveLens.Start(level);
                 Console.WriteLine($"Live Zoom (lupa em janela) ativo em {lens.Level:0.##}x; repita Ctrl+4 para encerrar.");
                 return;
             }
@@ -345,7 +353,17 @@ static int Daemon()
             {
                 if (lens is not null)
                 {
-                    lens.Tick();
+                    try
+                    {
+                        lens.Tick();
+                    }
+                    catch (Exception ex) when (ex is InvalidOperationException or IOException
+                        or UnauthorizedAccessException or DllNotFoundException or TimeoutException)
+                    {
+                        Console.Error.WriteLine($"Live Zoom encerrado: {ex.Message}");
+                        lens.Dispose();
+                        lens = null;
+                    }
                 }
                 else
                 {

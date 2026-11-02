@@ -30,4 +30,8 @@
     <InternalsVisibleTo Include="PixelPointer.UnitTests" />
   </ItemGroup>
 
+  <Target Name="BuildScreenCaptureKitBridge" AfterTargets="Publish" Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+    <Exec Command="swiftc -O -emit-library -framework ScreenCaptureKit -framework CoreGraphics -framework CoreMedia -framework CoreVideo -Xlinker -install_name -Xlinker @rpath/libPixelPointerScreenCaptureKit.dylib -o &quot;$(PublishDir)libPixelPointerScreenCaptureKit.dylib&quot; &quot;$(MSBuildProjectDirectory)/MacOS/ScreenCaptureKitBridge.swift&quot;" />
+  </Target>
+
 </Project>

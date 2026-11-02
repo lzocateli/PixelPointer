@@ -25,8 +25,8 @@ usa o código, a marca ou os ícones do ZoomIt.
 > O produto continua pré-1.0; Windows e macOS passam no CI, mas aguardam aceite
 > manual. Outros compositores e configurações não estão abrangidos por esse aceite.
 > Evidências e limites: [plano de E2E](docs/plano-e2e-grafico-uv.md).
-> Timer, Live Zoom, recorte, gravação e DemoType permanecem no
-> [plano de implementação](docs/plano-implementacao.md); o
+> Timer, Live Zoom, recorte e gravação têm implementação parcial por plataforma;
+> DemoType permanece no [plano de implementação](docs/plano-implementacao.md); o
 > [relatório da F0](docs/f0-relatorio.md) preserva os resultados históricos do spike.
 
 ## Instalação
@@ -153,7 +153,7 @@ execute `pixelpointer daemon` em primeiro plano.
 | **Ctrl+1** | Zoom: congela a tela ampliada; o mouse percorre a imagem |
 | **Ctrl+2** | Desenho sem zoom |
 | **Ctrl+3** | Timer de intervalo (10 min; setas ou roda ajustam e reiniciam) |
-| **Ctrl+4** | Live Zoom: amplia a tela ao vivo seguindo o cursor, sem congelar; repita para sair (Windows em tela cheia; X11 como lupa em janela) |
+| **Ctrl+4** | Live Zoom: amplia a tela ao vivo seguindo o cursor, sem congelar; repita para sair (Windows em tela cheia; macOS e X11 como lupa em janela; no macOS, use a tray ou `pixelpointer livezoom`) |
 | **Ctrl+5** | Inicia ou salva uma gravação GIF da tela (Linux e Windows; até 5 min) |
 | **Ctrl+6** | Recorte: arraste uma área para copiá-la; com Shift ao soltar, salva PNG |
 | `pixelpointer status` | Consulta se o daemon está em execução |
