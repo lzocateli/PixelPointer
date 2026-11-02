@@ -111,7 +111,8 @@ deadlines; avoid sequences relying only on `sleep`.
 | Settings | `settings.json` with color, width and initial zoom; then an invalid file | `probe` loads the file; 4x zoom, thick blue stroke; the invalid file produces a warning, uses defaults and stays untouched |
 | Save failure | Invalid configuration or inaccessible destination | Visible error, no alternative destination, usable process |
 | Overlay exit | Esc and right click where applicable | Contractual transitions, reopening possible, daemon preserved |
-| Graphical tray | Click icon and Zoom/Desenhar/Sair entries | Visible icon, correct menu/action, clean shutdown |
+| Graphical tray | Click icon, check the seven menu entries and trigger Zoom/Desenhar/Sair | Visible icon, correct menu/action, clean shutdown |
+| X11 Live Zoom | `livezoom` with the cursor at two screen points | Window lens magnifies the cursor region without covering it, follows movement and closes on the second command |
 | Unavailable tray | Start without StatusNotifier host | Explicit limitation; status/quit still work |
 | Lifecycle | Quit with overlay open, restart, desktop menu launch | Resources released, working restart, no-terminal launch |
 | CLI and desktop | Help, version, probe, capture, per-user install/removal | Consistent output/file, product identity, conflicts preserved |

@@ -112,7 +112,8 @@ basadas únicamente en `sleep`.
 | Configuración | `settings.json` con color, grosor y zoom inicial; después un archivo inválido | `probe` carga el archivo; zoom 4x, trazo azul grueso; el archivo inválido genera un aviso, usa los valores predeterminados y queda intacto |
 | Fallo de guardado | Configuración inválida o destino inaccesible | Error visible, sin destino alternativo, proceso utilizable |
 | Salir de superposición | Esc y botón derecho donde corresponda | Transiciones del contrato, reapertura posible, daemon conservado |
-| Bandeja gráfica | Pulsar icono y Zoom/Desenhar/Sair | Icono visible, menú/acción correctos, cierre limpio |
+| Bandeja gráfica | Pulsar icono, verificar las siete entradas del menú y activar Zoom/Desenhar/Sair | Icono visible, menú/acción correctos, cierre limpio |
+| Live Zoom X11 | `livezoom` con el cursor en dos puntos de la pantalla | La lupa en ventana amplía la región del cursor sin cubrirla, sigue el movimiento y se cierra con el segundo comando |
 | Bandeja no disponible | Iniciar sin host StatusNotifier | Limitación explícita; status/quit funcionales |
 | Ciclo de vida | Quit con superposición, reiniciar, iniciar por menú | Recursos liberados, reinicio funcional, inicio sin terminal |
 | CLI y escritorio | Help, version, probe, capture, instalación/eliminación por usuario | Salida/archivo coherentes, identidad propia, conflictos conservados |
