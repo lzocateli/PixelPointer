@@ -165,6 +165,7 @@ de atajos, ejecuta `pixelpointer daemon` en primer plano.
 | R G B Y O P | Rojo, verde, azul, amarillo, naranja, rosa |
 | Shift + R G B Y O P | Marcador translúcido en ese color |
 | X / Shift+X | Desenfoque / desenfoque fuerte (rectángulo y elipse rellenos) |
+| T | Texto en el puntero (Enter añade una línea, Esc o clic termina) |
 | Ctrl+rueda | Grosor del lápiz |
 | Ctrl+Z / E | Deshacer / borrar todo |
 | W / K | Pizarra blanca / pizarra negra |

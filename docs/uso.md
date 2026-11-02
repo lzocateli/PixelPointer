@@ -54,7 +54,7 @@ executar a partir de um terminal; os detalhes e erros ficam nessa saída.
 Teclas na sobreposição: roda do mouse ou setas para o zoom, clique e arraste
 para desenhar, Shift/Ctrl/Ctrl+Shift/Tab ao começar a arrastar para linha
 reta/retângulo/seta/elipse, R/G/B/Y/O/P para cores, Shift+cor para marca-texto
-translúcido, X/Shift+X para desfoque/desfoque forte, Ctrl+roda para a espessura,
+translúcido, X/Shift+X para desfoque/desfoque forte, T para texto, Ctrl+roda para a espessura,
 Ctrl+Z para desfazer, E para apagar, W/K para quadro branco/preto, Ctrl+S para
 salvar PNG na pasta de capturas do usuário, Ctrl+C para copiar a imagem para a
 área de transferência, Esc ou botão direito para sair.
@@ -68,6 +68,11 @@ acompanha o mouse até soltar o botão e usa a cor e a espessura atuais.
 O desfoque age sobre a captura e as anotações já feitas; retângulo e elipse com
 desfoque são preenchidos, úteis para ocultar dados. No desenho transparente não
 há captura para desfocar. Uma tecla de cor volta à caneta normal.
+
+O texto começa na posição do ponteiro com a cor atual; o tamanho acompanha a
+espessura (Ctrl+roda antes de pressionar T). Enquanto digita, as teclas viram
+texto: Enter quebra a linha, Backspace apaga, Esc ou um clique termina. Ctrl+Z
+depois de terminar remove o texto inteiro.
 
 ## Onde o Ctrl+S salva
 
