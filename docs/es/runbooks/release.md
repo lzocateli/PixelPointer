@@ -39,6 +39,9 @@ una persona decide **cuándo** se publica, al integrar el Release PR.
    ```
 
 2. Revisa `CHANGELOG.md` y la versión; espera el check `Result`.
+   `Result` incluye el `Preview gate`: antes del merge, genera y valida la candidata
+   `vX.Y.Z-rc.N` según el [runbook de release preview](release-preview.md) y la
+   [estrategia de release](../estrategia-de-release.md).
 3. Integra (squash). El workflow `gw-release.yml`:
    - crea la etiqueta `vX.Y.Z` y una GitHub Release en borrador;
    - llama a `publish.yml` en el Environment `release` (aprueba cuando se solicite);
@@ -101,6 +104,7 @@ recompiles artefactos de una versión publicada.
 | Falla `Require release GitHub App` | Falta `vars.RELEASE_APP_ID` o `RELEASE_APP_PRIVATE_KEY` | Configúralos manualmente; nunca uses un PAT personal |
 | La ejecución `Release` tiene `startup_failure` y ningún job | La política de Actions del repositorio (o la organización) bloquea `googleapis/release-please-action` | Ejecuta `groundwork github --sync` para permitir el SHA en `allowedActions`; si la organización lo restringe, habilítalo allí |
 | El Release PR no tiene checks | Se creó con `GITHUB_TOKEN` | Confirma que la App esté instalada; el token de la App activa los checks |
+| Falla el `Preview gate` en el Release PR | candidata ausente, no aceptada o de otro commit base | Sigue el [runbook de release preview](release-preview.md); en una emergencia, `Preview-Waiver:` |
 | Se rechaza la etiqueta | El ruleset `gw-release-tags` no incluye la App en bypass | Ejecuta `groundwork github` y revisa `release_app_id` |
 | Falla `Assert-ReleaseTag.ps1` | La versión difiere entre la etiqueta y los archivos de versión | Corrígelo en el Release PR; no crees etiquetas manualmente |
 | La release sigue en borrador | Falló la publicación o el manifiesto | Corrige la causa y usa `republish` |

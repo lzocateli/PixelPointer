@@ -11,52 +11,73 @@ publica paquetes Native AOT para todos los RIDs compatibles y
 [`post-release.yml`](../../.github/workflows/post-release.yml) distribuye por
 Homebrew y winget. Cada etapa tiene un equivalente local en `tools/scripts/`.
 
-## Preview obligatorio
+## Candidata obligatoria (release preview)
 
-Cada Release PR `release-please--branches--main` ejecuta `release-preview` dentro
-del check obligatorio `Result`. El job crea paquetes `preview.<run_number>` para
-los seis RIDs, SBOM, archivos `.deb` Linux y `SHA256SUMS`, ejecuta los smokes de
-paquetes y las pruebas de instaladores, y sube artifacts
-`pixelpointer-preview-<run_id>-<run_attempt>` durante siete días. El artifact no
-incluye `install.sh`/`install.ps1`, no crea etiqueta ni GitHub Release y no ejecuta
-`post-release.yml`. Los rulesets impiden integrar el Release PR si la preview
-obligatoria falla o sigue pendiente.
+Toda versión estable `vX.Y.Z` va precedida de una candidata `vX.Y.Z-rc.N`, validada en
+el Environment `quality` (estrategia completa en
+[estrategia-de-release](estrategia-de-release.md) y paso a paso en
+[runbooks/release-preview](runbooks/release-preview.md)). El check `Preview gate`,
+dentro de `Result`, impide integrar el Release PR `release-please--branches--main`
+hasta que la candidata de su commit base esté aceptada.
 
-Cuando pase el check, abre en Actions la ejecución `CI` del Release PR y descarga
-el artifact `pixelpointer-preview-<run_id>-<run_attempt>`; contiene
-`pixelpointer-linux-x64.tar.gz`, `.deb`, SBOM y checksums. La retención es de siete días.
+1. Con el Release PR abierto, inicie la candidata en `main`:
 
-También se puede iniciar manualmente una preview de `main`, sin Release PR:
+   ```bash
+   gh workflow run gw-preview.yml --repo lzocateli/PixelPointer --ref main
+   ```
+
+2. Apruebe el Environment `release`. `gw-preview.yml` crea la etiqueta `vX.Y.Z-rc.N`
+   con la GitHub App `Altivy Release` y llama al mismo `publish.yml` de la versión
+   estable: build Native AOT de los seis RIDs con la versión de la etiqueta, smoke,
+   pruebas de instaladores, SBOM y assets. La candidata se publica como
+   **Pre-release**, sin `Latest`, con el `release-manifest.json` atestado; Homebrew y
+   winget no se actualizan.
+3. Descargue y pruebe la candidata en las máquinas de prueba (sección
+   [Usar un paquete preview](#usar-un-paquete-preview)). `pixelpointer --version`
+   muestra `X.Y.Z-rc.N`.
+4. Apruebe el Environment `quality` en el deploy iniciado por `gw-preview.yml` solo
+   después de probar. [`deploy.yml`](../../.github/workflows/deploy.yml) comprueba que
+   los assets publicados son los del manifiesto y ejecuta el smoke del paquete
+   `linux-x64`; si todo sale bien, la aceptación se adjunta a la prerelease
+   (`preview-acceptance.json`) y el CI del Release PR se vuelve a ejecutar.
+5. Con `Preview gate` en verde, integre el Release PR. La versión estable es el mismo
+   código de la candidata, y sus notas incluyen "Validada na `vX.Y.Z-rc.N`" (validada en
+   esa candidata).
+
+Una corrección después de la candidata genera `rc.N+1` en la siguiente ejecución. En
+una emergencia, un commit con el pie `Preview-Waiver: <motivo>` omite la candidata; el
+motivo aparece en las notas de la release.
+
+## Preview manual (`preview.N`)
+
+La preview manual de `main` sigue disponible para probar un cambio antes del Release
+PR. **No** es una candidata: nunca libera el `Preview gate`, nunca se puede desplegar y
+nunca se promueve.
 
 ```bash
 gh workflow run publish.yml --repo lzocateli/PixelPointer --ref main -f preview=true
 gh run list --repo lzocateli/PixelPointer --workflow publish.yml
 ```
 
-Después del build, smokes de paquetes, pruebas de instaladores y atestaciones
-de SBOM, `Publish GitHub Pre-release` espera tu aprobación en el Environment
-`release`. El GitHub App `Altivy Release` crea `vX.Y.Z-preview.N` en el commit
-validado, prepara una release en borrador, atesta la procedencia y adjunta los
-14 assets más `SHA256SUMS`. Luego publica con `prerelease=true` y
-`make_latest=false`. La versión aparece en
-[Releases](https://github.com/lzocateli/PixelPointer/releases) como **Pre-release**,
-con descargas públicas sin login; no caduca tras siete días como los artifacts
-de Actions. La estable sigue siendo `Latest`.
+Cuando el build, el smoke, las pruebas de instaladores y las atestaciones de SBOM
+terminan bien, el job `Publish GitHub Pre-release` espera su aprobación en el
+Environment `release`. La GitHub App `Altivy Release` crea la etiqueta
+`vX.Y.Z-preview.N` en el commit validado, prepara una release en borrador, atesta la
+procedencia y adjunta los 14 assets y `SHA256SUMS`. Solo entonces publica con
+`prerelease=true` y `make_latest=false`. La versión aparece en
+[Releases](https://github.com/lzocateli/PixelPointer/releases) con la marca
+**Pre-release** y descargas públicas sin iniciar sesión. La versión estable sigue
+siendo `Latest`.
 
-Esta excepción del canal preview fue autorizada por el mantenedor el 2026-10-31.
-No cambia el flujo estable de Groundwork, no ejecuta `post-release.yml` ni
-actualiza Homebrew/winget. La preview obligatoria de PR sigue siendo solo un
-artifact, sin secrets ni publicación. La preview manual usa el siguiente patch
-de la versión registrada y `preview.<run_number>`; el prefijo se aplica solo
-en los checkouts de build y smoke, sin editar la versión en Git. Esto no implica
-que release-please elija esa versión como próxima release estable.
+Es una excepción autorizada por el mantenedor el 2026-10-31 para el canal preview: no
+cambia el flujo estable del Groundwork, no ejecuta `post-release.yml` y no actualiza
+Homebrew/winget. La preview manual usa el siguiente patch de la versión registrada y el
+sufijo `preview.<run_number>`; el prefijo se aplica solo en los checkouts de build y
+smoke, sin editar la versión en Git. Eso no significa que sea la próxima versión
+estable calculada por release-please.
 
-En la otra máquina, descarga el paquete del RID y `SHA256SUMS`, verifica SHA-256
-y extrae el `.zip`/`.tar.gz` manteniendo las bibliotecas nativas junto al ejecutable,
-o instala el `.deb` Linux. Ejecuta `pixelpointer --version` para verificar el
-sufijo. Las previews no incluyen `install.sh`/`install.ps1`, no se sirven mediante
-`releases/latest` y no son aceptadas por el deploy de Groundwork. Su aprobación
-no reemplaza la integración humana del Release PR ni la aprobación de producción.
+Las previews y las candidatas no actualizan Homebrew/winget y no se sirven por
+`releases/latest`.
 
 ### Usar un paquete preview
 

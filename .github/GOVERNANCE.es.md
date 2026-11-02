@@ -46,7 +46,7 @@ mediante el mismo App, tras build, pruebas y aprobación del Environment
 Pre-release, sin `Latest`, Homebrew, winget ni deploy. Los PR siguen sin secrets
 y no publican previews. La excepción no permite crear, modificar o eliminar
 etiquetas manualmente; `gw-release-tags` permanece sin cambios.
-Detalles y recuperación: [proceso de release](../docs/es/release.md#preview-obligatorio).
+Detalles y recuperación: [proceso de release](../docs/es/release.md#candidata-obligatoria-release-preview).
 
 El Environment `release` exige aprobación de `@lzocateli` para adjuntar assets
 al borrador y, nuevamente, para actualizar el tap Homebrew en `post-release.yml`
