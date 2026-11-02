@@ -37,10 +37,11 @@ visibles permanecen en portugués como otros mensajes nativos de la aplicación.
 
 | Comando | Función |
 | --- | --- |
-| `pixelpointer daemon` | Se mantiene en ejecución, registra los atajos globales (Ctrl+1 zoom, Ctrl+2 dibujo, Ctrl+3 temporizador, Ctrl+5 grabación, Ctrl+6 recorte) y el canal local de comandos; Ctrl+C o SIGTERM lo detienen |
+| `pixelpointer daemon` | Se mantiene en ejecución, registra los atajos globales (Ctrl+1 zoom, Ctrl+2 dibujo, Ctrl+3 temporizador, Ctrl+4 Live Zoom, Ctrl+5 grabación, Ctrl+6 recorte) y el canal local de comandos; Ctrl+C o SIGTERM lo detienen |
 | `pixelpointer zoom` | Abre el zoom ahora; con el `daemon` en ejecución, le envía el comando |
 | `pixelpointer draw` | Abre el dibujo sin zoom; misma regla que `zoom` |
 | `pixelpointer timer` | Abre el temporizador de pausa (10 min) sobre la pantalla oscurecida; flechas o rueda ajustan los minutos y reinician, R/G/B/Y/O/P cambian el color, Esc o clic derecho salen; misma regla que `zoom` |
+| `pixelpointer livezoom` | Con el `daemon` en ejecución, activa o desactiva Live Zoom (también Ctrl+4 o la bandeja): la lupa de pantalla completa de Windows amplía la pantalla en vivo al nivel `zoom.initial` de la configuración (2x por defecto), siguiendo el cursor; el mouse y el teclado siguen funcionando. Detener el daemon restaura la pantalla. Solo en Windows por ahora |
 | `pixelpointer record` | Con el `daemon` en ejecución, inicia o guarda una grabación GIF de toda la pantalla (8 cuadros/s, hasta 1280 px de ancho, límite de 5 min, paleta fija de 252 colores) en la carpeta de capturas; también con Ctrl+5 o la bandeja. Disponible en Linux y Windows; las anotaciones abiertas durante la grabación se incluyen. En Wayland la grabación usa una sesión ScreenCast abierta hasta guardar, incluye el cursor cuando el portal lo permite y pide el monitor (o reutiliza la autorización guardada); el indicador de pantalla compartida queda activo durante la grabación |
 | `pixelpointer snip` | Recorte: arrastra un área de la captura para copiarla como PNG (sin anotaciones); mantén Shift al soltar para guardarla en la carpeta de capturas; Esc o clic derecho cancelan; misma regla que `zoom` |
 | `pixelpointer status` | Informa si el daemon está en ejecución, sin abrir una superposición |
@@ -379,8 +380,9 @@ directorios ni sockets de otras aplicaciones. Reinicia con el paquete corregido.
 
 ## Limitaciones actuales
 
-- Live Zoom (Ctrl+4) y DemoType (Ctrl+7) aún no existen; la grabación (Ctrl+5)
-  es solo GIF y aún no existe en macOS. Consulta el [plan](../plano-implementacao.md).
+- Live Zoom (Ctrl+4) existe solo en Windows, DemoType (Ctrl+7) aún no existe y
+  la grabación (Ctrl+5) es solo GIF y aún no existe en macOS. Consulta el
+  [plan](../plano-implementacao.md).
 - Con varios monitores, en X11 y Windows la superposición se abre en el monitor
   del cursor; en Wayland el compositor elige el monitor de la ventana; en macOS
   se abre en el monitor principal, el único que cubre la captura actual.
