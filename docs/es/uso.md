@@ -57,8 +57,12 @@ arrastrar para dibujar, Shift/Ctrl/Ctrl+Shift/Tab al empezar a arrastrar para
 línea recta/rectángulo/flecha/elipse, R/G/B/Y/O/P para colores, Shift+color para
 marcador translúcido, X/Shift+X para desenfoque/desenfoque fuerte, Ctrl+rueda para
 el grosor, Ctrl+Z para deshacer, E para borrar, W/K para pizarra blanca/negra,
-Ctrl+S para guardar un PNG en la carpeta de capturas del usuario, Esc o clic
-derecho para salir.
+Ctrl+S para guardar un PNG en la carpeta de capturas del usuario, Ctrl+C para
+copiar la imagen al portapapeles, Esc o clic derecho para salir.
+
+Ctrl+C copia la imagen visible, con anotaciones, como PNG. La copia sigue
+disponible mientras el `daemon` esté en ejecución; en una superposición abierta
+sin daemon, se pierde al salir de PixelPointer.
 
 Las formas siguen a ZoomIt: mantén la tecla al empezar a arrastrar; la forma
 sigue al mouse hasta soltar el botón y usa el color y el grosor actuales.
