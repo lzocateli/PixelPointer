@@ -46,7 +46,7 @@ O job verifica commit, checksums e digests remotos; publica como Pre-release,
 sem `Latest`, Homebrew, winget ou deploy. PRs continuam sem secrets e não
 publicam previews. A exceção não libera criação manual, alteração ou exclusão
 de tags; o ruleset `gw-release-tags` permanece inalterado.
-Detalhes e recuperação: [processo de release](../docs/release.md#preview-obrigatória).
+Detalhes e recuperação: [processo de release](../docs/release.md#candidata-obrigatória-release-preview).
 
 O Environment `release` exige aprovação de `@lzocateli` para anexar os assets à
 release em rascunho e, de novo, para atualizar o tap Homebrew no

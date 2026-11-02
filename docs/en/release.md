@@ -12,50 +12,74 @@ builds Native AOT packages for all supported RIDs, and
 through Homebrew and winget. Every step has a local equivalent under
 `tools/scripts/`.
 
-## Required Preview
+## Required Candidate (release preview)
 
-Every `release-please--branches--main` Release PR runs `release-preview` as part
-of the required `Result` check. The job builds `preview.<run_number>` packages for
-all six RIDs, SBOMs, Linux `.deb` files and `SHA256SUMS`, runs package smoke tests
-and installer tests, then uploads `pixelpointer-preview-<run_id>-<run_attempt>`
-artifacts for seven days. The artifact has no `install.sh`/`install.ps1`, creates
-no tag or GitHub Release and does not run `post-release.yml`. Rulesets block
-merging the Release PR while its required preview is failing or pending.
+Every stable `vX.Y.Z` is preceded by a candidate `vX.Y.Z-rc.N`, validated in the
+`quality` Environment (full strategy in
+[estrategia-de-release](estrategia-de-release.md) and the
+step-by-step guide in [runbooks/release-preview](runbooks/release-preview.md)). The
+`Preview gate` check, part of `Result`, blocks the merge of the
+`release-please--branches--main` Release PR until the candidate of its base commit
+has been accepted.
 
-After the check passes, open the Release PR's `CI` run in Actions and download
-the `pixelpointer-preview-<run_id>-<run_attempt>` artifact; it contains
-`pixelpointer-linux-x64.tar.gz`, `.deb`, SBOM and checksums. Retention is seven days.
+1. With the Release PR open, start the candidate on `main`:
 
-A manual preview of `main`, without a Release PR, can also be started:
+   ```bash
+   gh workflow run gw-preview.yml --repo lzocateli/PixelPointer --ref main
+   ```
+
+2. Approve the `release` Environment. `gw-preview.yml` creates the `vX.Y.Z-rc.N` tag
+   through the `Altivy Release` GitHub App and calls the same `publish.yml` used for
+   stable releases: Native AOT builds for the six RIDs with the tag version, smoke
+   tests, installer tests, SBOMs and assets. The candidate is published as a
+   **Pre-release**, without `Latest`, with an attested `release-manifest.json`;
+   Homebrew and winget are not updated.
+3. Download and test the candidate on the test machines (see
+   [Using a preview package](#using-a-preview-package)). `pixelpointer --version`
+   shows `X.Y.Z-rc.N`.
+4. Approve the `quality` Environment in the deployment started by `gw-preview.yml`
+   only after testing. [`deploy.yml`](../../.github/workflows/deploy.yml) checks that
+   the published assets match the manifest and runs the `linux-x64` package smoke
+   test; on success, the acceptance is attached to the prerelease
+   (`preview-acceptance.json`) and the Release PR CI runs again.
+5. Once `Preview gate` is green, merge the Release PR. The stable release is the same
+   code as the candidate, and its notes include "Validada na `vX.Y.Z-rc.N`"
+   (validated in that candidate).
+
+A fix after the candidate produces `rc.N+1` on the next run. In an emergency, a commit
+with the `Preview-Waiver: <reason>` footer skips the candidate; the reason appears in
+the release notes.
+
+## Manual Preview (`preview.N`)
+
+The manual preview of `main` is still available to test a change before the Release
+PR. It is **not** a candidate: it never clears `Preview gate`, is never deployable and
+is never promoted.
 
 ```bash
 gh workflow run publish.yml --repo lzocateli/PixelPointer --ref main -f preview=true
 gh run list --repo lzocateli/PixelPointer --workflow publish.yml
 ```
 
-After build, package smoke tests, installer tests and SBOM attestations pass,
-`Publish GitHub Pre-release` waits for your approval in the `release` Environment.
-The `Altivy Release` GitHub App creates `vX.Y.Z-preview.N` at the validated commit,
-prepares a draft release, attests provenance and uploads the 14 assets plus
-`SHA256SUMS`. It then publishes with `prerelease=true` and `make_latest=false`.
-The version appears in [Releases](https://github.com/lzocateli/PixelPointer/releases)
-as **Pre-release**, with public downloads requiring no login; unlike Actions
-artifacts, it does not expire after seven days. Stable remains `Latest`.
+After build, smoke, installer tests and SBOM attestations pass, the
+`Publish GitHub Pre-release` job waits for your approval in the `release`
+Environment. The `Altivy Release` GitHub App creates the `vX.Y.Z-preview.N` tag on the
+validated commit, prepares a draft release, attests provenance and attaches the 14
+assets plus `SHA256SUMS`. Only then does it publish with `prerelease=true` and
+`make_latest=false`. The version appears in
+[Releases](https://github.com/lzocateli/PixelPointer/releases) with the
+**Pre-release** label and public downloads without sign-in. The stable release stays
+`Latest`.
 
-This preview-channel exception was authorized by the maintainer on 2026-10-31.
-It does not change Groundwork's stable flow, run `post-release.yml` or update
-Homebrew/winget. The required PR preview remains an artifact-only operation,
-without secrets or publication. Manual previews use the next patch of the
-recorded version and `preview.<run_number>`; the prefix is applied only to build
-and smoke checkouts without editing the version in Git. This does not imply
-that release-please will choose that version for the next stable release.
+This is an exception the maintainer authorized on 2026-10-31 for the preview channel:
+it does not change the Groundwork stable flow, does not run `post-release.yml` and does
+not update Homebrew/winget. The manual preview uses the next patch of the recorded
+version and the `preview.<run_number>` suffix; the prefix is applied only to the build
+and smoke checkouts, without editing the version in Git. This does not mean it will be
+the next stable version calculated by release-please.
 
-On the other machine, download the RID package and `SHA256SUMS`, verify SHA-256
-and extract the `.zip`/`.tar.gz` keeping native libraries beside the executable,
-or install the Linux `.deb`. Run `pixelpointer --version` to check the suffix.
-Previews do not include `install.sh`/`install.ps1`, are not served by
-`releases/latest` and are not accepted by Groundwork deploy. Preview approval
-does not replace the human Release PR merge or production approval.
+Previews and candidates do not update Homebrew/winget and are not served by
+`releases/latest`.
 
 ### Using a preview package
 

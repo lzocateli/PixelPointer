@@ -12,21 +12,46 @@ Native AOT para todos os RIDs suportados e o
 Homebrew e pelo winget. Cada etapa tem um comando local equivalente em
 `tools/scripts/`.
 
-## Preview obrigatória
+## Candidata obrigatória (release preview)
 
-Cada Release PR `release-please--branches--main` executa `release-preview` dentro
-do check obrigatório `Result`. O job gera `preview.<run_number>` para os seis RIDs,
-SBOMs, `.deb` Linux e `SHA256SUMS`, roda os smokes de pacote e os testes dos
-instaladores, e publica artifacts `pixelpointer-preview-<run_id>-<run_attempt>`
-por sete dias. O artifact não contém `install.sh`/`install.ps1`, não cria tag nem
-GitHub Release e não executa `post-release.yml`. O Release PR não pode ser
-integrado pelos rulesets enquanto a preview obrigatória falhar ou estiver pendente.
+Toda estável `vX.Y.Z` é precedida por uma candidata `vX.Y.Z-rc.N`, validada no
+Environment `quality` (estratégia completa em
+[estrategia-de-release](estrategia-de-release.md) e passo a passo em
+[runbooks/release-preview](runbooks/release-preview.md)). O check `Preview gate`, dentro
+do `Result`, impede o merge do Release PR `release-please--branches--main` até que a
+candidata do commit-base dele esteja aceita.
 
-Após o check passar, abra a execução `CI` do Release PR em Actions e baixe o
-artifact `pixelpointer-preview-<run_id>-<run_attempt>`; ele contém
-`pixelpointer-linux-x64.tar.gz`, `.deb`, SBOM e checksums. A retenção é de sete dias.
+1. Com o Release PR aberto, dispare a candidata na `main`:
 
-Também é possível iniciar uma preview manual da `main`, sem Release PR:
+   ```bash
+   gh workflow run gw-preview.yml --repo lzocateli/PixelPointer --ref main
+   ```
+
+2. Aprove o Environment `release`. O `gw-preview.yml` cria a tag `vX.Y.Z-rc.N` pelo
+   GitHub App `Altivy Release` e chama o mesmo `publish.yml` da estável: build Native
+   AOT dos seis RIDs com a versão da tag, smoke, testes dos instaladores, SBOMs e
+   assets. A candidata é publicada como **Pre-release**, sem `Latest`, com o
+   `release-manifest.json` atestado; Homebrew e winget não são atualizados.
+3. Baixe e teste a candidata nas máquinas de teste (seção
+   [Usar um pacote preview](#usar-um-pacote-preview)). `pixelpointer --version`
+   mostra `X.Y.Z-rc.N`.
+4. Aprove o Environment `quality` no deploy disparado pelo `gw-preview.yml` somente
+   depois de testar. O [`deploy.yml`](../.github/workflows/deploy.yml) confere que os
+   assets publicados são os do manifesto e roda o smoke do pacote `linux-x64`; com
+   sucesso, o aceite é anexado à prerelease (`preview-acceptance.json`) e o CI do
+   Release PR é reexecutado.
+5. Com o `Preview gate` verde, faça o merge do Release PR. A estável é o mesmo código
+   da candidata, e as notas dela trazem "Validada na `vX.Y.Z-rc.N`".
+
+Uma correção depois da candidata gera `rc.N+1` no próximo disparo. Em emergência, um
+commit com o rodapé `Preview-Waiver: <motivo>` dispensa a candidata; o motivo aparece
+nas notas da release.
+
+## Preview manual (`preview.N`)
+
+A preview manual da `main` continua disponível para testar uma mudança antes do
+Release PR. Ela **não** é candidata: nunca libera o `Preview gate`, nunca é implantável
+e nunca é promovida.
 
 ```bash
 gh workflow run publish.yml --repo lzocateli/PixelPointer --ref main -f preview=true
@@ -39,23 +64,18 @@ O GitHub App `Altivy Release` cria a tag `vX.Y.Z-preview.N` no commit validado,
 prepara uma release em rascunho, atesta a proveniência e anexa os 14 assets mais
 `SHA256SUMS`. Só então publica com `prerelease=true` e `make_latest=false`.
 A versão aparece em [Releases](https://github.com/lzocateli/PixelPointer/releases)
-com a marca **Pre-release** e downloads públicos sem login; não expira após
-sete dias como o artifact do Actions. A estável continua sendo `Latest`.
+com a marca **Pre-release** e downloads públicos sem login. A estável continua sendo
+`Latest`.
 
 Essa é uma exceção autorizada pelo mantenedor em 2026-10-31 para o canal preview:
 não altera o fluxo estável do Groundwork, não executa `post-release.yml` e não
-atualiza Homebrew/winget. A preview obrigatória de PR continua sendo apenas um
-artifact, sem secrets ou publicação. A preview manual usa o próximo patch da
-versão registrada e o sufixo `preview.<run_number>`; o prefixo é aplicado somente
-nos checkouts de build e smoke, sem editar a versão no Git. Isso não significa
-que essa será a próxima versão estável calculada pelo release-please.
+atualiza Homebrew/winget. A preview manual usa o próximo patch da versão registrada e
+o sufixo `preview.<run_number>`; o prefixo é aplicado somente nos checkouts de build e
+smoke, sem editar a versão no Git. Isso não significa que essa será a próxima versão
+estável calculada pelo release-please.
 
-Na outra máquina, baixe o pacote do RID e `SHA256SUMS`, confira o SHA-256 e
-extraia o `.zip`/`.tar.gz` mantendo as bibliotecas nativas junto ao executável,
-ou instale o `.deb` Linux. Execute `pixelpointer --version` para conferir o
-sufixo. Previews não incluem `install.sh`/`install.ps1`, não são servidas por
-`releases/latest` e não são aceitas pelo deploy do Groundwork. A aprovação da
-preview não substitui o merge humano do Release PR nem a aprovação da produção.
+Previews e candidatas não incluem atualização de Homebrew/winget e não são servidas por
+`releases/latest`.
 
 ### Usar um pacote preview
 

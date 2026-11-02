@@ -46,7 +46,7 @@ The job checks the commit, checksums and remote digests and publishes as
 Pre-release, without `Latest`, Homebrew, winget or deploy. PRs still receive
 no secrets and do not publish previews. This exception does not permit manual
 tag creation, update or deletion; `gw-release-tags` remains unchanged.
-Details and recovery: [release process](../docs/en/release.md#required-preview).
+Details and recovery: [release process](../docs/en/release.md#required-candidate-release-preview).
 
 The `release` Environment requires approval by `@lzocateli` to upload assets
 to the draft release and again to update the Homebrew tap in `post-release.yml`
