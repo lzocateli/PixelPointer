@@ -8,7 +8,7 @@ namespace PixelPointer.App.Linux;
 /// Live Zoom no X11 como lupa em janela: o X11 não permite excluir a própria janela da captura, então a lupa fica
 /// fora da região ampliada (<see cref="LensLayout"/>). Atualizada pelo laço principal do daemon, que é dono do SDL.
 /// </summary>
-internal sealed unsafe class X11LiveLens : IDisposable
+internal sealed unsafe class X11LiveLens : ILiveLens
 {
     private const int WaitMilliseconds = 16;
 
@@ -41,7 +41,7 @@ internal sealed unsafe class X11LiveLens : IDisposable
         }
     }
 
-    internal float Level { get; }
+    public float Level { get; }
 
     internal static X11LiveLens Start(float level)
     {
@@ -57,17 +57,17 @@ internal sealed unsafe class X11LiveLens : IDisposable
     }
 
     /// <summary>Esconde a lupa enquanto uma sobreposição captura e ocupa a tela.</summary>
-    internal void Suspend()
+    public void Suspend()
     {
         _suspended = true;
         SDL_HideWindow(_window);
         _shown = false;
     }
 
-    internal void Resume() => _suspended = false;
+    public void Resume() => _suspended = false;
 
     /// <summary>Atende os eventos do SDL (inclusive a tray) e redesenha a lupa onde o cursor estiver.</summary>
-    internal void Tick()
+    public void Tick()
     {
         SDL_Event e;
         if (SDL_WaitEventTimeout(&e, WaitMilliseconds))

@@ -22,4 +22,23 @@ public static class LiveZoomView
         var origin = cursor * (1 - (1 / level));
         return (int)Math.Round(Math.Clamp(origin, 0, extent - visible));
     }
+
+    public static ScreenRect CropAroundCursor(int cursorX, int cursorY, int displayWidth, int displayHeight,
+        int cropWidth, int cropHeight)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(displayWidth);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(displayHeight);
+        cropWidth = Math.Clamp(cropWidth, 1, displayWidth);
+        cropHeight = Math.Clamp(cropHeight, 1, displayHeight);
+        var x = Math.Clamp(cursorX - cropWidth / 2, 0, displayWidth - cropWidth);
+        var y = Math.Clamp(cursorY - cropHeight / 2, 0, displayHeight - cropHeight);
+        return new ScreenRect(x, y, cropWidth, cropHeight);
+    }
+
+    public static int CropExtent(int viewportPixels, float level)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(viewportPixels);
+        level = Math.Clamp(level, MinLevel, MaxLevel);
+        return Math.Max(1, (int)Math.Ceiling(viewportPixels / level));
+    }
 }

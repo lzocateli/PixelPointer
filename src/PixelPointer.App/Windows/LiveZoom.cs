@@ -31,7 +31,7 @@ internal sealed partial class LiveZoom : IDisposable
     {
         if (!OperatingSystem.IsWindows())
         {
-            throw new NotSupportedException("O Live Zoom ainda não está disponível neste sistema (disponível no Windows e no X11).");
+            throw new NotSupportedException("O Live Zoom ainda não está disponível neste sistema (disponível no Windows, macOS e X11).");
         }
 
         var zoom = new LiveZoom(level);

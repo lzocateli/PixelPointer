@@ -226,7 +226,7 @@ case "$os_name" in
             arch="arm64"
         fi
         rid="osx-$arch"
-        libraries="libSDL3.dylib libSkiaSharp.dylib"
+        libraries="libSDL3.dylib libSkiaSharp.dylib libPixelPointerScreenCaptureKit.dylib"
         ;;
     *)
         die "sistema operacional nao suportado: $os_name (no Windows, use install.ps1)"

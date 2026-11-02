@@ -198,7 +198,7 @@ $appId = 'io.github.lzocateli.PixelPointer'
 function Get-NativeLibraryNames {
     param([string] $TargetRid)
     if ($TargetRid -like 'win-*') { return @('SDL3.dll', 'libSkiaSharp.dll') }
-    if ($TargetRid -like 'osx-*') { return @('libSDL3.dylib', 'libSkiaSharp.dylib') }
+    if ($TargetRid -like 'osx-*') { return @('libSDL3.dylib', 'libSkiaSharp.dylib', 'libPixelPointerScreenCaptureKit.dylib') }
     return @('libSDL3.so', 'libSkiaSharp.so')
 }
 $debianImage = 'docker.io/library/debian:12'

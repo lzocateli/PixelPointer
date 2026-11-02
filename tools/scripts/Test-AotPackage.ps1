@@ -146,7 +146,7 @@ try {
     }
 
     $binaryName = if ($isWindowsRid) { 'pixelpointer.exe' } else { 'pixelpointer' }
-    $libraries = if ($isWindowsRid) { @('SDL3.dll', 'libSkiaSharp.dll') } elseif ($Rid -like 'osx-*') { @('libSDL3.dylib', 'libSkiaSharp.dylib') } else { @('libSDL3.so', 'libSkiaSharp.so') }
+    $libraries = if ($isWindowsRid) { @('SDL3.dll', 'libSkiaSharp.dll') } elseif ($Rid -like 'osx-*') { @('libSDL3.dylib', 'libSkiaSharp.dylib', 'libPixelPointerScreenCaptureKit.dylib') } else { @('libSDL3.so', 'libSkiaSharp.so') }
     $expectedEntries = @($binaryName) + $libraries + @('pixelpointer.svg', 'LICENSE', 'THIRD-PARTY-NOTICES.md')
     $entries = @(Get-ChildItem -LiteralPath $extractDirectory -Force | ForEach-Object Name)
     $unexpected = @(Compare-Object -ReferenceObject $expectedEntries -DifferenceObject $entries -CaseSensitive)
