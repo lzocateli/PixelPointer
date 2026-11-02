@@ -38,16 +38,24 @@ internal sealed class ScreenRecorder
 
     internal static ScreenRecorder Start(IScreenCapture capture, string directory)
     {
-        using var first = capture.CaptureAsync(CancellationToken.None).GetAwaiter().GetResult();
-        var (path, stream) = SnapshotStorage.Create(directory, "gif");
         try
         {
-            return new ScreenRecorder(capture, path, stream, first);
+            using var first = capture.CaptureAsync(CancellationToken.None).GetAwaiter().GetResult();
+            var (path, stream) = SnapshotStorage.Create(directory, "gif");
+            try
+            {
+                return new ScreenRecorder(capture, path, stream, first);
+            }
+            catch
+            {
+                stream.Dispose();
+                File.Delete(path);
+                throw;
+            }
         }
         catch
         {
-            stream.Dispose();
-            File.Delete(path);
+            (capture as IDisposable)?.Dispose();
             throw;
         }
     }
@@ -126,6 +134,15 @@ internal sealed class ScreenRecorder
             }
 
             _stream.Dispose();
+            // A sessão ScreenCast do Wayland só é encerrada aqui, ao fim da gravação.
+            try
+            {
+                (_capture as IDisposable)?.Dispose();
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or Tmds.DBus.Protocol.DBusErrorReplyException)
+            {
+                Console.Error.WriteLine($"aviso: não foi possível encerrar a captura ({ex.Message}).");
+            }
         }
     }
 

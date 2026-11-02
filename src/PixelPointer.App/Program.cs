@@ -93,7 +93,7 @@ static int Help(TextWriter writer)
           daemon                   registra Ctrl+1/2/3/5/6; Esc fecha só a janela e Ctrl+C encerra
           zoom | draw | timer | snip
                                    envia o comando ao daemon (ou executa direto)
-          record                   inicia ou encerra a gravação GIF no daemon (X11 e Windows)
+          record                   inicia ou encerra a gravação GIF no daemon (Linux e Windows)
           status                   informa se o daemon está em execução
           quit                     encerra o daemon e a sobreposição ativa
           install-desktop-file     instala a entrada de menu e o ícone do app (Linux)
@@ -300,13 +300,9 @@ static int Daemon()
                 recorder = null;
                 Console.WriteLine($"Gravação salva: {path} ({frames} quadros, {duration.TotalSeconds:0} s)");
             }
-            else if (!OperatingSystem.IsWindows() && !SessionInfo.IsX11)
-            {
-                Console.Error.WriteLine("informação: a gravação ainda não está disponível nesta sessão (disponível no X11 e no Windows).");
-            }
             else
             {
-                recorder = ScreenRecorder.Start(ScreenCaptureFactory.Create(null), SnapshotStorage.GetDirectory());
+                recorder = ScreenRecorder.Start(ScreenCaptureFactory.CreateRecordingSource(portal), SnapshotStorage.GetDirectory());
                 Console.WriteLine($"Gravando em {recorder.Path}; repita Ctrl+5 para salvar (limite {ScreenRecorder.MaxDuration.TotalMinutes:0} min).");
             }
         }
@@ -340,7 +336,8 @@ static int Daemon()
                 break;
             }
             catch (Exception ex) when (ex is InvalidOperationException or OperationCanceledException
-                or IOException or UnauthorizedAccessException or NotSupportedException)
+                or IOException or UnauthorizedAccessException or NotSupportedException or TimeoutException
+                or DllNotFoundException or Tmds.DBus.Protocol.DBusErrorReplyException)
             {
                 Console.Error.WriteLine($"erro: {ex.Message}");
             }

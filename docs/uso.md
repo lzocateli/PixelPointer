@@ -40,7 +40,7 @@ executar a partir de um terminal; os detalhes e erros ficam nessa saída.
 | `pixelpointer zoom` | Abre o zoom agora; com o `daemon` em execução, envia o comando a ele |
 | `pixelpointer draw` | Abre o desenho sem zoom; mesma regra do `zoom` |
 | `pixelpointer timer` | Abre o timer de intervalo (10 min) sobre a tela escurecida; setas ou roda ajustam os minutos e reiniciam, R/G/B/Y/O/P mudam a cor, Esc ou botão direito saem; mesma regra do `zoom` |
-| `pixelpointer record` | Com o `daemon` em execução, inicia ou salva uma gravação GIF da tela inteira (8 quadros/s, até 1280 px de largura, limite de 5 min, paleta fixa de 252 cores) na pasta de capturas; também por Ctrl+5 ou pela tray. Disponível no X11 e no Windows; anotações abertas durante a gravação entram no GIF |
+| `pixelpointer record` | Com o `daemon` em execução, inicia ou salva uma gravação GIF da tela inteira (8 quadros/s, até 1280 px de largura, limite de 5 min, paleta fixa de 252 cores) na pasta de capturas; também por Ctrl+5 ou pela tray. Disponível no Linux e no Windows; anotações abertas durante a gravação entram no GIF. No Wayland a gravação usa uma sessão ScreenCast aberta até salvar, inclui o cursor quando o portal permite e pede o monitor (ou reaproveita a autorização salva); o indicador de compartilhamento fica ativo durante a gravação |
 | `pixelpointer snip` | Recorte: arraste uma área da captura para copiá-la como PNG (sem anotações); segure Shift ao soltar para salvar na pasta de capturas; Esc ou botão direito cancelam; mesma regra do `zoom` |
 | `pixelpointer status` | Informa se o daemon está em execução, sem abrir uma sobreposição |
 | `pixelpointer quit` | Encerra o daemon e uma sobreposição ativa |
@@ -357,8 +357,8 @@ nem sockets de outras aplicações. Reinicie o daemon pelo pacote corrigido.
 
 ## Limitações atuais
 
-- Live Zoom (Ctrl+4), gravação (Ctrl+5) e DemoType (Ctrl+7) ainda não existem;
-  veja o [plano](plano-implementacao.md).
+- Live Zoom (Ctrl+4) e DemoType (Ctrl+7) ainda não existem; a gravação (Ctrl+5)
+  é só em GIF e ainda não existe no macOS. Veja o [plano](plano-implementacao.md).
 - Com vários monitores, no X11 e no Windows a sobreposição abre no monitor do
   cursor; no Wayland o compositor escolhe o monitor da janela; no macOS ela abre
   no monitor principal, o único coberto pela captura atual.

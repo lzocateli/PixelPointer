@@ -42,7 +42,7 @@ On-screen command labels remain Portuguese, like other native app messages.
 | `pixelpointer zoom` | Opens zoom now; with the `daemon` running, sends the command to it |
 | `pixelpointer draw` | Opens draw mode without zoom; same rule as `zoom` |
 | `pixelpointer timer` | Opens the break timer (10 min) over the dimmed screen; arrows or wheel adjust the minutes and restart, R/G/B/Y/O/P change the color, Esc or right click exit; same rule as `zoom` |
-| `pixelpointer record` | With the `daemon` running, starts or saves a GIF recording of the whole screen (8 frames/s, up to 1280 px wide, 5 min limit, fixed 252-color palette) in the screenshots folder; also through Ctrl+5 or the tray. Available on X11 and Windows; annotations opened during the recording are included |
+| `pixelpointer record` | With the `daemon` running, starts or saves a GIF recording of the whole screen (8 frames/s, up to 1280 px wide, 5 min limit, fixed 252-color palette) in the screenshots folder; also through Ctrl+5 or the tray. Available on Linux and Windows; annotations opened during the recording are included. On Wayland, recording uses a ScreenCast session kept open until saving, includes the cursor when the portal allows it and asks for the monitor (or reuses the saved authorization); the sharing indicator stays on while recording |
 | `pixelpointer snip` | Snip: drag an area of the capture to copy it as PNG (without annotations); hold Shift on release to save it to the screenshots folder; Esc or right click cancel; same rule as `zoom` |
 | `pixelpointer status` | Reports whether the daemon is running, without opening an overlay |
 | `pixelpointer quit` | Stops the daemon and any active overlay |
@@ -370,8 +370,8 @@ package.
 
 ## Current limitations
 
-- Live Zoom (Ctrl+4), recording (Ctrl+5) and DemoType (Ctrl+7) do not exist
-  yet; see the [plan](../plano-implementacao.md).
+- Live Zoom (Ctrl+4) and DemoType (Ctrl+7) do not exist yet; recording (Ctrl+5)
+  is GIF only and not yet available on macOS. See the [plan](../plano-implementacao.md).
 - With several monitors, on X11 and Windows the overlay opens on the cursor's
   monitor; on Wayland the compositor picks the window's monitor; on macOS it
   opens on the main monitor, the only one covered by the current capture.

@@ -527,6 +527,20 @@ y Windows: abrir/cerrar sin acciones, diagnóstico, registro explícito cuando
 corresponda, cancelación/consentimiento voluntario e inicio elegido del daemon.
 No quitar Pre-release ni promover estable antes de validar el alcance afectado.
 
+### Grabación continua en Wayland
+
+El 2026-11-02, `feat/f6-wayland-recording` añadió `-CheckRecording` a
+`Test-WaylandScreenCast.ps1`. El daemon graba por IPC con una sesión ScreenCast
+abierta hasta guardar mientras cambia el fondo de Sway; la prueba exige GIF 0600
+en la carpeta de capturas, conteo de cuadros coherente y los dos colores
+mostrados. La primera ejecución falló porque los cuadros entregados sin pedido
+pendiente se descartaban; tras guardar el cuadro más reciente, pasó con 7
+cuadros. La regresión `-RepeatDaemonCaptures -CheckDaemonLifecycle` pasó con el
+mismo paquete AOT. Evidencias:
+`artifacts/wayland/screencast-20261102T134209250-12849f06` y
+`artifacts/wayland/screencast-20261102T134216782-71ab8427`. No comprueba GNOME
+real, consentimiento humano ni el indicador tras guardar.
+
 ### Resultado local del 2026-10-30
 
 Etapas 1–6 implementadas para primer objetivo; etapa 7 es expansión condicionada,
