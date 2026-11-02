@@ -409,6 +409,9 @@ internal sealed unsafe partial class OverlaySession
             case SDL_Keycode.SDLK_S when ctrl:
                 SaveSnapshot();
                 break;
+            case SDL_Keycode.SDLK_C when ctrl:
+                CopySnapshot();
+                break;
             case SDL_Keycode.SDLK_R:
                 _annotations.SelectColor(PenColor.Red, shift);
                 break;
@@ -531,16 +534,39 @@ internal sealed unsafe partial class OverlaySession
     private void DrawScene(SKCanvas canvas, SKRect view, int outputWidth) =>
         SceneRenderer.Draw(canvas, _annotations, _image, _crop, view, outputWidth, _transparentBackground);
 
+    private SKData EncodeSnapshot()
+    {
+        using var surface = SKSurface.Create(new SKImageInfo(_width, _height, SKColorType.Bgra8888, SKAlphaType.Premul))
+            ?? throw new InvalidOperationException("Não foi possível preparar a imagem da captura.");
+        DrawScene(surface.Canvas, _view, _width);
+        return surface.Snapshot().Encode(SKEncodedImageFormat.Png, 100)
+            ?? throw new InvalidOperationException("Não foi possível codificar a captura como PNG.");
+    }
+
+    private void CopySnapshot()
+    {
+        try
+        {
+            using var data = EncodeSnapshot();
+            ClipboardImage.SetPng(data.AsSpan());
+            _saveMessage = "Copiado para a área de transferência.";
+            _saveFailed = false;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _saveMessage = $"Não foi possível copiar a captura: {ex.Message}";
+            _saveFailed = true;
+        }
+
+        Console.Error.WriteLine(_saveMessage);
+    }
+
     private void SaveSnapshot()
     {
         try
         {
             var directory = SnapshotStorage.GetDirectory();
-            using var surface = SKSurface.Create(new SKImageInfo(_width, _height, SKColorType.Bgra8888, SKAlphaType.Premul))
-                ?? throw new InvalidOperationException("Não foi possível preparar a imagem da captura.");
-            DrawScene(surface.Canvas, _view, _width);
-            using var data = surface.Snapshot().Encode(SKEncodedImageFormat.Png, 100)
-                ?? throw new InvalidOperationException("Não foi possível codificar a captura como PNG.");
+            using var data = EncodeSnapshot();
             var path = SnapshotStorage.Save(directory, data.SaveTo);
             _saveMessage = $"Salvo: {path}";
             _saveFailed = false;

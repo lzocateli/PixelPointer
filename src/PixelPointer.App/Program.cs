@@ -103,7 +103,7 @@ static int Help(TextWriter writer)
         Shift+cor = marca-texto, X/Shift+X = desfoque/desfoque forte,
         arrastar com Shift = linha, Ctrl = retângulo, Ctrl+Shift = seta, Tab = elipse,
         Ctrl+roda = espessura, Ctrl+Z = desfazer, E = apagar, W/K = quadro branco/preto,
-        Ctrl+S = salvar PNG, botão direito/Esc = sair.
+        Ctrl+S = salvar PNG, Ctrl+C = copiar imagem, botão direito/Esc = sair.
         Destino do Ctrl+S: Imagens/Screenshots no Windows, preferência de capturas ou
         Área de Trabalho no macOS, PICTURES/Screenshots conforme XDG no Linux.
         O caminho final é informado na janela; arquivos existentes são preservados.
