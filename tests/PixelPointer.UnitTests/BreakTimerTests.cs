@@ -51,6 +51,7 @@ public sealed class BreakTimerTests
     [InlineData("zoom", "Zoom")]
     [InlineData("draw", "Draw")]
     [InlineData("timer", "Timer")]
+    [InlineData("snip", "Snip")]
     [InlineData(null, "Zoom")]
     [InlineData("other", "Zoom")]
     public void OverlayModes_MapCommands(string? command, string expected) =>

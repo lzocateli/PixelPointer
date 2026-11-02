@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using PixelPointer.Core.Annotations;
 using PixelPointer.Core.Settings;
+using PixelPointer.Core.Snip;
 using PixelPointer.Core.Timer;
 using PixelPointer.Rendering;
 using SDL;
@@ -15,6 +16,7 @@ internal enum OverlayMode
     Zoom,
     Draw,
     Timer,
+    Snip,
 }
 
 internal static class OverlayModes
@@ -23,6 +25,7 @@ internal static class OverlayModes
     {
         "draw" => OverlayMode.Draw,
         "timer" => OverlayMode.Timer,
+        "snip" => OverlayMode.Snip,
         _ => OverlayMode.Zoom,
     };
 }
@@ -64,6 +67,7 @@ internal sealed unsafe partial class OverlaySession
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private readonly BreakTimer? _timer;
     private string? _timerText;
+    private SKPoint? _snipStart;
 
     internal OverlaySession(SKBitmap? screenshot, OverlayMode mode, bool transparentBackground = false,
         AppSettings? settings = null)
@@ -341,6 +345,22 @@ internal sealed unsafe partial class OverlaySession
                 ContinueStroke(1f);
                 break;
 
+            case SDL_EventType.SDL_EVENT_MOUSE_WHEEL when _mode == OverlayMode.Snip:
+                break;
+
+            case SDL_EventType.SDL_EVENT_MOUSE_BUTTON_DOWN when _mode == OverlayMode.Snip && !IsSynthetic(e.button.which):
+                if (e.button.button == SDL_BUTTON_RIGHT)
+                {
+                    return false;
+                }
+
+                _snipStart = new SKPoint(e.button.x * _density, e.button.y * _density);
+                break;
+
+            case SDL_EventType.SDL_EVENT_MOUSE_BUTTON_UP when _mode == OverlayMode.Snip && _snipStart is not null
+                && !IsSynthetic(e.button.which) && e.button.button == SDL_BUTTON_LEFT:
+                return !FinishSnip((SDL_GetModState() & SDL_Keymod.SDL_KMOD_SHIFT) != 0);
+
             case SDL_EventType.SDL_EVENT_MOUSE_WHEEL when _timer is not null:
                 _timer.Adjust(e.wheel.y > 0 ? 1 : -1, _clock.Elapsed);
                 break;
@@ -390,7 +410,7 @@ internal sealed unsafe partial class OverlaySession
                 _penEvents++;
                 break;
 
-            case SDL_EventType.SDL_EVENT_PEN_DOWN when !e.ptouch.eraser && _timer is null:
+            case SDL_EventType.SDL_EVENT_PEN_DOWN when !e.ptouch.eraser && _timer is null && _mode != OverlayMode.Snip:
                 _penDown = true;
                 _mode = OverlayMode.Draw;
                 _penEvents++;
@@ -491,6 +511,11 @@ internal sealed unsafe partial class OverlaySession
         if (_timer is not null)
         {
             return HandleTimerKey(key, _timer);
+        }
+
+        if (_mode == OverlayMode.Snip)
+        {
+            return key.key != SDL_Keycode.SDLK_ESCAPE;
         }
 
         var ctrl = (key.mod & SDL_Keymod.SDL_KMOD_CTRL) != 0;
@@ -610,6 +635,12 @@ internal sealed unsafe partial class OverlaySession
             return;
         }
 
+        if (_mode == OverlayMode.Snip)
+        {
+            DrawSnipSelection(canvas, width, height);
+            return;
+        }
+
         if (_annotations.IsTyping)
         {
             var caret = SceneRenderer.TextCaret(_annotations.Strokes[^1]);
@@ -628,6 +659,79 @@ internal sealed unsafe partial class OverlaySession
         if (_saveMessage is not null)
         {
             DrawSaveMessage(canvas, width);
+        }
+    }
+
+    private void DrawSnipSelection(SKCanvas canvas, int width, int height)
+    {
+        var selection = _snipStart is { } start
+            ? new SKRect(MathF.Min(start.X, _mouseX), MathF.Min(start.Y, _mouseY), MathF.Max(start.X, _mouseX), MathF.Max(start.Y, _mouseY))
+            : SKRect.Empty;
+        using var dim = new SKPaint { Color = new SKColor(0, 0, 0, 0x90) };
+        canvas.Save();
+        if (!selection.IsEmpty)
+        {
+            canvas.ClipRect(selection, SKClipOperation.Difference);
+        }
+
+        canvas.DrawRect(0, 0, width, height, dim);
+        canvas.Restore();
+        using var border = new SKPaint { Color = SKColors.White, IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 2 };
+        if (!selection.IsEmpty)
+        {
+            canvas.DrawRect(selection, border);
+        }
+
+        using var font = new SKFont(SKTypeface.Default, 18 * _density);
+        using var hint = new SKPaint { Color = SKColors.White, IsAntialias = true };
+        canvas.DrawText(_saveMessage ?? "Arraste para recortar e copiar; segure Shift ao soltar para salvar em PNG; Esc cancela",
+            width / 2f, 40 * _density, SKTextAlign.Center, font, hint);
+    }
+
+    /// <summary>Copia (ou salva, com Shift) a região selecionada da captura; devolve true quando concluído.</summary>
+    private bool FinishSnip(bool save)
+    {
+        var start = _snipStart!.Value;
+        _snipStart = null;
+        var a = ToImage(start.X, start.Y);
+        var b = ToImage(_mouseX, _mouseY);
+        var screenshot = _screenshot ?? throw new InvalidOperationException("O recorte exige uma captura.");
+        if (SnipRegion.FromCorners(a.X, a.Y, b.X, b.Y, screenshot.Width, screenshot.Height) is not { } region)
+        {
+            return false;
+        }
+
+        try
+        {
+            using var subset = new SKBitmap();
+            if (!screenshot.ExtractSubset(subset, SKRectI.Create(region.X, region.Y, region.Width, region.Height)))
+            {
+                throw new InvalidOperationException("Não foi possível recortar a captura.");
+            }
+
+            using var image = SKImage.FromBitmap(subset);
+            using var data = image.Encode(SKEncodedImageFormat.Png, 100)
+                ?? throw new InvalidOperationException("Não foi possível codificar o recorte como PNG.");
+            if (save)
+            {
+                var path = SnapshotStorage.Save(SnapshotStorage.GetDirectory(), data.SaveTo);
+                Console.Error.WriteLine($"Recorte salvo: {path}");
+            }
+            else
+            {
+                ClipboardImage.SetPng(data.AsSpan());
+                Console.Error.WriteLine($"Recorte {region.Width}x{region.Height} copiado para a área de transferência.");
+            }
+
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException
+            or NotSupportedException or ArgumentException)
+        {
+            _saveMessage = $"Não foi possível concluir o recorte: {ex.Message}";
+            _saveFailed = true;
+            Console.Error.WriteLine(_saveMessage);
+            return false;
         }
     }
 
