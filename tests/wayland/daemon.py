@@ -168,6 +168,56 @@ def check_setup():
             daemon.wait(timeout=10)
 
 
+def check_recording():
+    pictures = Path(os.environ['HOME']) / 'Pictures'
+    config = Path(os.environ['XDG_CONFIG_HOME'])
+    config.mkdir(parents=True, exist_ok=True)
+    (config / 'user-dirs.dirs').write_text('XDG_PICTURES_DIR="$HOME/Pictures"\n')
+    daemon = None
+    try:
+        with (EVIDENCE / 'recording-daemon.out').open('w') as output, \
+                (EVIDENCE / 'recording-daemon.err').open('w') as errors:
+            daemon = subprocess.Popen([PACKAGE, 'daemon'], stdout=output, stderr=errors)
+            wait_for('daemon IPC', lambda: command([PACKAGE, 'status'], check=False).returncode == 0)
+            log = lambda: (EVIDENCE / 'recording-daemon.out').read_text()
+            command(['swaymsg', 'output', 'HEADLESS-1', 'bg', '#00aacc', 'solid_color'])
+            command([PACKAGE, 'record'])
+            wait_for('recording started', lambda: 'Gravando em' in log())
+            for color in ('#cc5500', '#00aacc', '#cc5500'):
+                time.sleep(0.6)
+                command(['swaymsg', 'output', 'HEADLESS-1', 'bg', color, 'solid_color'])
+            time.sleep(0.6)
+            command([PACKAGE, 'record'])
+            saved = wait_for('recording saved',
+                             lambda: re.search(r'Gravação salva: (\S+\.gif) \(([0-9]+) quadros', log()))
+            path = Path(saved.group(1))
+            if path.parent != pictures / 'Screenshots' or not path.is_file():
+                raise RuntimeError('Recording was not saved in the screenshots folder')
+            if path.stat().st_mode & 0o777 != 0o600:
+                raise RuntimeError('Recording file is not private to the user')
+            frames = int(saved.group(2))
+            identified = command(['magick', 'identify', str(path)]).stdout.splitlines()
+            colors = set(command(['magick', str(path), '-format', '%[pixel:p{400,300}]\n', 'info:']).stdout.split())
+            (EVIDENCE / 'recording-colors.txt').write_text('\n'.join(sorted(colors)))
+            if frames < 2 or len(identified) != frames:
+                raise RuntimeError('Recording frame count is inconsistent')
+            if not {'srgb(0,170,204)', 'srgb(204,85,0)'} <= colors:
+                raise RuntimeError('Recording did not follow the screen changes')
+            diagnostic = (EVIDENCE / 'recording-daemon.err').read_text()
+            if 'Unhandled exception' in diagnostic or 'erro:' in diagnostic:
+                raise RuntimeError('Daemon reported an error while recording')
+            command([PACKAGE, 'quit'])
+            if daemon.wait(timeout=10) != 0:
+                raise RuntimeError('Daemon did not exit cleanly after recording')
+            (EVIDENCE / 'recording-result.json').write_text(json.dumps({
+                'passed': True, 'frames': frames, 'colors': sorted(colors), 'private_file': True,
+            }))
+    finally:
+        if daemon is not None and daemon.poll() is None:
+            command([PACKAGE, 'quit'], check=False)
+            daemon.wait(timeout=10)
+
+
 def main():
     baseline = subprocess.run(['sh', '/opt/wayland/run.sh'], check=False, timeout=90)
     if baseline.returncode != 0:
@@ -183,6 +233,9 @@ def main():
         return
     if os.environ.get('CHECK_MULTI_MONITOR') == '1':
         check_multi_monitor()
+        return
+    if os.environ.get('CHECK_RECORDING') == '1':
+        check_recording()
         return
     output_scale = float(os.environ.get('OUTPUT_SCALE', '1'))
     if output_scale not in (1, 1.5, 2):
@@ -326,6 +379,6 @@ def main():
 try:
     main()
 except Exception as error:
-    result_name = 'setup-result.json' if os.environ.get('CHECK_SETUP') == '1' else 'multi-monitor-result.json' if os.environ.get('CHECK_MULTI_MONITOR') == '1' else 'daemon-result.json'
+    result_name = 'setup-result.json' if os.environ.get('CHECK_SETUP') == '1' else 'multi-monitor-result.json' if os.environ.get('CHECK_MULTI_MONITOR') == '1' else 'recording-result.json' if os.environ.get('CHECK_RECORDING') == '1' else 'daemon-result.json'
     (EVIDENCE / result_name).write_text(json.dumps({'passed': False, 'error': str(error)}))
     raise
