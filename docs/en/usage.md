@@ -38,12 +38,13 @@ On-screen command labels remain Portuguese, like other native app messages.
 
 | Command | Purpose |
 | --- | --- |
-| `pixelpointer daemon` | Keeps running, registers the global hotkeys (Ctrl+1 zoom, Ctrl+2 draw) and the local command channel; Ctrl+C or SIGTERM stops it |
+| `pixelpointer daemon` | Keeps running, registers the global hotkeys (Ctrl+1 zoom, Ctrl+2 draw, Ctrl+3 timer) and the local command channel; Ctrl+C or SIGTERM stops it |
 | `pixelpointer zoom` | Opens zoom now; with the `daemon` running, sends the command to it |
 | `pixelpointer draw` | Opens draw mode without zoom; same rule as `zoom` |
+| `pixelpointer timer` | Opens the break timer (10 min) over the dimmed screen; arrows or wheel adjust the minutes and restart, R/G/B/Y/O/P change the color, Esc or right click exit; same rule as `zoom` |
 | `pixelpointer status` | Reports whether the daemon is running, without opening an overlay |
 | `pixelpointer quit` | Stops the daemon and any active overlay |
-| `pixelpointer overlay [--image file.png] [--mode zoom\|draw]` | Opens the overlay on a new capture or on an image |
+| `pixelpointer overlay [--image file.png] [--mode zoom\|draw\|timer]` | Opens the overlay on a new capture or on an image |
 | `pixelpointer capture [--out file.png]` | Captures the screen and reports the latency |
 | `pixelpointer probe` | Diagnostics: OS, session, monitors, portal versions |
 | `pixelpointer install-desktop-file` | Linux: installs the `.desktop` file with the app id `io.github.lzocateli.PixelPointer` |

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using PixelPointer.Core.Annotations;
 using PixelPointer.Core.Settings;
+using PixelPointer.Core.Timer;
 using PixelPointer.Rendering;
 using SDL;
 using SkiaSharp;
@@ -13,6 +14,17 @@ internal enum OverlayMode
 {
     Zoom,
     Draw,
+    Timer,
+}
+
+internal static class OverlayModes
+{
+    internal static OverlayMode FromCommand(string? id) => id switch
+    {
+        "draw" => OverlayMode.Draw,
+        "timer" => OverlayMode.Timer,
+        _ => OverlayMode.Zoom,
+    };
 }
 
 /// <summary>Métricas de uma sessão de sobreposição, impressas ao final para o relatório da F0.</summary>
@@ -49,6 +61,9 @@ internal sealed unsafe partial class OverlaySession
     private float _maxPressure;
     private string? _saveMessage;
     private bool _saveFailed;
+    private readonly Stopwatch _clock = Stopwatch.StartNew();
+    private readonly BreakTimer? _timer;
+    private string? _timerText;
 
     internal OverlaySession(SKBitmap? screenshot, OverlayMode mode, bool transparentBackground = false,
         AppSettings? settings = null)
@@ -65,6 +80,7 @@ internal sealed unsafe partial class OverlaySession
         _transparentBackground = transparentBackground;
         _annotations = new AnnotationDocument(settings.PenColor, settings.PenWidth);
         _targetZoom = mode == OverlayMode.Zoom ? settings.InitialZoom : 1f;
+        _timer = mode == OverlayMode.Timer ? new BreakTimer(_clock.Elapsed) : null;
         // A janela transparente X11 depende do visual de 32 bits do caminho em CPU.
         _gpuRequested = settings.Gpu && !transparentBackground
             && !string.Equals(SDL_GetHint(SDL_HINT_RENDER_DRIVER), "software", StringComparison.OrdinalIgnoreCase);
@@ -189,6 +205,12 @@ internal sealed unsafe partial class OverlaySession
                     running &= Handle(e);
                     dirty = true;
                     hasEvent = SDL_PollEvent(&e);
+                }
+
+                if (_timer is not null
+                    && (_timer.IsExpired(_clock.Elapsed) || BreakTimer.Format(_timer.Remaining(_clock.Elapsed)) != _timerText))
+                {
+                    dirty = true;
                 }
 
                 if (Animating)
@@ -319,6 +341,13 @@ internal sealed unsafe partial class OverlaySession
                 ContinueStroke(1f);
                 break;
 
+            case SDL_EventType.SDL_EVENT_MOUSE_WHEEL when _timer is not null:
+                _timer.Adjust(e.wheel.y > 0 ? 1 : -1, _clock.Elapsed);
+                break;
+
+            case SDL_EventType.SDL_EVENT_MOUSE_BUTTON_DOWN when _timer is not null:
+                return e.button.button != SDL_BUTTON_RIGHT;
+
             case SDL_EventType.SDL_EVENT_MOUSE_WHEEL:
                 if ((SDL_GetModState() & SDL_Keymod.SDL_KMOD_CTRL) != 0 || _mode == OverlayMode.Draw)
                 {
@@ -361,7 +390,7 @@ internal sealed unsafe partial class OverlaySession
                 _penEvents++;
                 break;
 
-            case SDL_EventType.SDL_EVENT_PEN_DOWN when !e.ptouch.eraser:
+            case SDL_EventType.SDL_EVENT_PEN_DOWN when !e.ptouch.eraser && _timer is null:
                 _penDown = true;
                 _mode = OverlayMode.Draw;
                 _penEvents++;
@@ -421,8 +450,49 @@ internal sealed unsafe partial class OverlaySession
         }
     }
 
+    /// <summary>No timer só ajuste, cor e saída valem: o intervalo não é uma sessão de desenho.</summary>
+    private bool HandleTimerKey(SDL_KeyboardEvent key, BreakTimer timer)
+    {
+        switch (key.key)
+        {
+            case SDL_Keycode.SDLK_ESCAPE:
+                return false;
+            case SDL_Keycode.SDLK_UP or SDL_Keycode.SDLK_RIGHT:
+                timer.Adjust(1, _clock.Elapsed);
+                break;
+            case SDL_Keycode.SDLK_DOWN or SDL_Keycode.SDLK_LEFT:
+                timer.Adjust(-1, _clock.Elapsed);
+                break;
+            case SDL_Keycode.SDLK_R:
+                _annotations.SelectColor(PenColor.Red);
+                break;
+            case SDL_Keycode.SDLK_G:
+                _annotations.SelectColor(PenColor.Green);
+                break;
+            case SDL_Keycode.SDLK_B:
+                _annotations.SelectColor(PenColor.Blue);
+                break;
+            case SDL_Keycode.SDLK_Y:
+                _annotations.SelectColor(PenColor.Yellow);
+                break;
+            case SDL_Keycode.SDLK_O:
+                _annotations.SelectColor(PenColor.Orange);
+                break;
+            case SDL_Keycode.SDLK_P:
+                _annotations.SelectColor(PenColor.Pink);
+                break;
+        }
+
+        return true;
+    }
+
     private bool HandleKey(SDL_KeyboardEvent key)
     {
+        if (_timer is not null)
+        {
+            return HandleTimerKey(key, _timer);
+        }
+
         var ctrl = (key.mod & SDL_Keymod.SDL_KMOD_CTRL) != 0;
         var shift = (key.mod & SDL_Keymod.SDL_KMOD_SHIFT) != 0;
         switch (key.key)
@@ -534,6 +604,12 @@ internal sealed unsafe partial class OverlaySession
     {
         UpdateView(width, height);
         DrawScene(canvas, _view, width);
+        if (_timer is not null)
+        {
+            DrawTimer(canvas, _timer, width, height);
+            return;
+        }
+
         if (_annotations.IsTyping)
         {
             var caret = SceneRenderer.TextCaret(_annotations.Strokes[^1]);
@@ -553,6 +629,27 @@ internal sealed unsafe partial class OverlaySession
         {
             DrawSaveMessage(canvas, width);
         }
+    }
+
+    private void DrawTimer(SKCanvas canvas, BreakTimer timer, int width, int height)
+    {
+        var remaining = timer.Remaining(_clock.Elapsed);
+        _timerText = BreakTimer.Format(remaining);
+        using var dim = new SKPaint { Color = new SKColor(0, 0, 0, 0xB0) };
+        canvas.DrawRect(0, 0, width, height, dim);
+        // Ao terminar, o tempo pisca a cada meio segundo.
+        var visible = remaining > TimeSpan.Zero || _clock.Elapsed.Milliseconds < 500;
+        using var paint = new SKPaint { Color = new SKColor(AnnotationDocument.ToArgb(_annotations.Color)), IsAntialias = true };
+        using var font = new SKFont(SKTypeface.Default, height / 4f);
+        if (visible)
+        {
+            canvas.DrawText(_timerText, width / 2f, (height / 2f) + (font.Size / 3), SKTextAlign.Center, font, paint);
+        }
+
+        using var hint = new SKFont(SKTypeface.Default, 18 * _density);
+        paint.Color = new SKColor(0xFFC0C0C0);
+        canvas.DrawText($"{timer.Minutes} min — setas ou roda ajustam e reiniciam; Esc sai", width / 2f, height - (40 * _density),
+            SKTextAlign.Center, hint, paint);
     }
 
     private void DrawSaveMessage(SKCanvas canvas, int width)

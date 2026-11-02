@@ -119,7 +119,7 @@ não apaga capturas PNG. Detalhes e limites por método estão no
 ```bash
 pixelpointer install-desktop-file   # Linux: registra o app id usado pelos portais
 pixelpointer grant                  # GNOME/Wayland: permissão de captura (uma vez)
-pixelpointer daemon                 # Ctrl+1 zoom, Ctrl+2 desenho
+pixelpointer daemon                 # Ctrl+1 zoom, Ctrl+2 desenho, Ctrl+3 timer
 ```
 
 O comando `daemon` permanece em **primeiro plano**: mantém os atalhos e o IPC
@@ -152,6 +152,7 @@ execute `pixelpointer daemon` em primeiro plano.
 | --- | --- |
 | **Ctrl+1** | Zoom: congela a tela ampliada; o mouse percorre a imagem |
 | **Ctrl+2** | Desenho sem zoom |
+| **Ctrl+3** | Timer de intervalo (10 min; setas ou roda ajustam e reiniciam) |
 | `pixelpointer status` | Consulta se o daemon está em execução |
 | `pixelpointer quit` | Encerra o daemon e a sobreposição ativa |
 | Roda do mouse / setas | Mais ou menos zoom |

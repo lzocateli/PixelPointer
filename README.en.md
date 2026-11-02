@@ -119,7 +119,7 @@ for details and limitations by installation method.
 ```bash
 pixelpointer install-desktop-file   # Linux: registers the app id used by the portals
 pixelpointer grant                  # GNOME/Wayland: screen capture permission (once)
-pixelpointer daemon                 # Ctrl+1 zoom, Ctrl+2 draw
+pixelpointer daemon                 # Ctrl+1 zoom, Ctrl+2 draw, Ctrl+3 timer
 ```
 
 The `daemon` command runs in the **foreground**: it keeps hotkeys and IPC active
@@ -151,6 +151,7 @@ mode the daemon's messages are not shown; to diagnose hotkey conflicts, run
 | --- | --- |
 | **Ctrl+1** | Zoom: freezes the magnified screen; the mouse pans the image |
 | **Ctrl+2** | Draw without zoom |
+| **Ctrl+3** | Break timer (10 min; arrows or wheel adjust and restart) |
 | `pixelpointer status` | Check whether the daemon is running |
 | `pixelpointer quit` | Stop the daemon and any active overlay |
 | Mouse wheel / arrows | Zoom in or out |
