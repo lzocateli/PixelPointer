@@ -370,9 +370,11 @@ package.
 
 ## Current limitations
 
-- Break timer (Ctrl+3), Live Zoom (Ctrl+4), recording (Ctrl+5), snip (Ctrl+6)
-  and DemoType (Ctrl+7) do not exist yet; see the [plan](../plano-implementacao.md).
-- With several monitors on Wayland, the compositor picks the window's monitor.
+- Live Zoom (Ctrl+4), recording (Ctrl+5) and DemoType (Ctrl+7) do not exist
+  yet; see the [plan](../plano-implementacao.md).
+- With several monitors, on X11 and Windows the overlay opens on the cursor's
+  monitor; on Wayland the compositor picks the window's monitor; on macOS it
+  opens on the main monitor, the only one covered by the current capture.
 - macOS has no native global hotkeys and no signature in version 1.
 
 ## Manual X11 acceptance test

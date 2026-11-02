@@ -255,7 +255,7 @@ de las fases F2 a F9 de la sección 5.
 | Recorrido manual completo en Windows | F0; issue #3 | Evidencia parcial el 2026-10-31, descrita abajo |
 | Recorrido manual completo en macOS | F0; issue #3 | Sin evidencia nativa |
 | Revisión humana de los vídeos y referencias del E2E X11 | E2E, 6 y 8 | Cerrado por decisión del mantenedor el 2026-10-31, sin revisión registrada |
-| Conflicto físico de atajos con otra aplicación, escala fraccionaria, otras topologías y GPU, lápiz | Issue #3, 3.2 y 3.3; E2E, 8 | Pendiente |
+| Conflicto físico de atajos con otra aplicación, escala fraccionaria, otras topologías y GPU, lápiz | Issue #3, 3.2 y 3.3; E2E, 8 | Pendiente. Branch `feat/overlay-cursor-display`: en X11 y Windows la superposición se abre en el monitor del cursor, y el recorte de la captura se mide desde la esquina del escritorio (monitores con coordenadas negativas en Windows); falta validación en hardware real |
 | Linux arm64 en arquitectura adecuada | E2E, 8 | Pendiente |
 | Completar traducciones de documentos autorales anteriores | F9; regla de documentación multilingüe | [Informe F0](../f0-relatorio.md) y plan histórico de la issue #3 aún sin versiones en/es; README y guías actuales traducidos no completan esa cobertura |
 

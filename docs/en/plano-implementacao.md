@@ -252,7 +252,7 @@ addition to phases F2 to F9 in section 5.
 | Full manual checklist on Windows | F0; issue #3 | Partial evidence on 2026-10-31, described below |
 | Full manual checklist on macOS | F0; issue #3 | No native evidence |
 | Human review of X11 E2E videos and references | E2E, 6 and 8 | Closed by maintainer decision on 2026-10-31, with no recorded review |
-| Physical hotkey conflict with another application, fractional scaling, other topologies and GPUs, pen | Issue #3, 3.2 and 3.3; E2E, 8 | Pending |
+| Physical hotkey conflict with another application, fractional scaling, other topologies and GPUs, pen | Issue #3, 3.2 and 3.3; E2E, 8 | Pending. Branch `feat/overlay-cursor-display`: on X11 and Windows the overlay opens on the cursor's monitor, and the capture crop is measured from the desktop corner (monitors with negative coordinates on Windows); real hardware validation pending |
 | Linux arm64 on suitable hardware | E2E, 8 | Pending |
 | Complete translations of legacy authored documents | F9; multilingual documentation rule | [F0 report](../f0-relatorio.md) and historical issue #3 plan still lack en/es versions; translated current READMEs and guides do not complete that coverage |
 

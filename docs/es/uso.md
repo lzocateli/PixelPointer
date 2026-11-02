@@ -379,10 +379,11 @@ directorios ni sockets de otras aplicaciones. Reinicia con el paquete corregido.
 
 ## Limitaciones actuales
 
-- El temporizador (Ctrl+3), Live Zoom (Ctrl+4), la grabación (Ctrl+5), el
-  recorte (Ctrl+6) y DemoType (Ctrl+7) aún no existen; consulta el
-  [plan](../plano-implementacao.md).
-- Con varios monitores en Wayland, el compositor elige el monitor de la ventana.
+- Live Zoom (Ctrl+4), la grabación (Ctrl+5) y DemoType (Ctrl+7) aún no existen;
+  consulta el [plan](../plano-implementacao.md).
+- Con varios monitores, en X11 y Windows la superposición se abre en el monitor
+  del cursor; en Wayland el compositor elige el monitor de la ventana; en macOS
+  se abre en el monitor principal, el único que cubre la captura actual.
 - macOS sin atajos globales nativos y sin firma en la versión 1.
 
 ## Guion de aceptación manual en X11

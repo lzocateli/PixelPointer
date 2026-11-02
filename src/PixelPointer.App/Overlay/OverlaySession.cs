@@ -103,7 +103,16 @@ internal sealed unsafe partial class OverlaySession
         SDL_Window* window = null;
         var initialWidth = 0;
         var initialHeight = 0;
-        if (string.Equals(SDL_GetCurrentVideoDriver(), "wayland", StringComparison.Ordinal))
+        var wayland = string.Equals(SDL_GetCurrentVideoDriver(), "wayland", StringComparison.Ordinal);
+        // O Wayland não expõe o cursor global nem posiciona janelas; o screencapture do macOS cobre só o monitor principal.
+        var cursorDisplay = wayland || OperatingSystem.IsMacOS() ? null : SecondaryDisplayUnderCursor();
+        if (cursorDisplay is { } placed)
+        {
+            flags = (flags & ~SDL_WindowFlags.SDL_WINDOW_FULLSCREEN) | SDL_WindowFlags.SDL_WINDOW_HIDDEN;
+            initialWidth = placed.w;
+            initialHeight = placed.h;
+        }
+        else if (wayland)
         {
             SDL_Rect displayBounds;
             if (!SDL_GetDisplayBounds(SDL_GetPrimaryDisplay(), &displayBounds))
@@ -128,6 +137,18 @@ internal sealed unsafe partial class OverlaySession
         if (window is null)
         {
             throw new InvalidOperationException($"SDL_CreateWindow: {SDL_GetError()}");
+        }
+
+        if (cursorDisplay is { } target)
+        {
+            SDL_SetWindowPosition(window, target.x, target.y);
+            if (!SDL_SetWindowFullscreen(window, true))
+            {
+                SDL_DestroyWindow(window);
+                throw new InvalidOperationException($"SDL_SetWindowFullscreen: {SDL_GetError()}");
+            }
+
+            SDL_ShowWindow(window);
         }
 
         GlOverlayTarget? gl = null;
@@ -295,6 +316,19 @@ internal sealed unsafe partial class OverlaySession
 
     private bool Animating => _zoom != _targetZoom;
 
+    /// <summary>Monitor sob o cursor quando não é o principal; no principal o caminho padrão de criação já serve.</summary>
+    private static SDL_Rect? SecondaryDisplayUnderCursor()
+    {
+        float x, y;
+        SDL_GetGlobalMouseState(&x, &y);
+        var point = new SDL_Point { x = (int)x, y = (int)y };
+        var display = SDL_GetDisplayForPoint(&point);
+        SDL_Rect bounds;
+        return display == default || display == SDL_GetPrimaryDisplay() || !SDL_GetDisplayBounds(display, &bounds)
+            ? null
+            : bounds;
+    }
+
     /// <summary>A captura cobre a área de trabalho inteira; recorta o monitor onde a janela está.</summary>
     private SKRect ComputeCrop(SDL_Window* window, int width, int height)
     {
@@ -305,15 +339,26 @@ internal sealed unsafe partial class OverlaySession
 
         var screenshot = _screenshot ?? throw new InvalidOperationException("A captura não está disponível nesta sobreposição.");
         SDL_Rect bounds;
-        var display = SDL_GetDisplayForWindow(window);
-        if (screenshot.Width == width && screenshot.Height == height
-            || !SDL_GetDisplayBounds(display, &bounds) || bounds.w == 0)
+        if (!SDL_GetDisplayBounds(SDL_GetDisplayForWindow(window), &bounds))
         {
             return new SKRect(0, 0, screenshot.Width, screenshot.Height);
         }
 
-        var scale = (float)width / bounds.w;
-        return SKRect.Create(bounds.x * scale, bounds.y * scale, width, height);
+        var displays = new List<DisplayBounds>();
+        using (var ids = SDL_GetDisplays())
+        {
+            for (var i = 0; ids is not null && i < ids.Count; i++)
+            {
+                SDL_Rect other;
+                if (SDL_GetDisplayBounds(ids[i], &other))
+                {
+                    displays.Add(new DisplayBounds(other.x, other.y, other.w, other.h));
+                }
+            }
+        }
+
+        return DisplayLayout.Crop(new DisplayBounds(bounds.x, bounds.y, bounds.w, bounds.h), displays,
+            screenshot.Width, screenshot.Height, width, height);
     }
 
     private bool Handle(SDL_Event e)
