@@ -6,6 +6,7 @@ using PixelPointer.App.Capture;
 using PixelPointer.App.Hotkeys;
 using PixelPointer.App.Linux;
 using PixelPointer.App.Overlay;
+using PixelPointer.App.Recording;
 using PixelPointer.App.Windows;
 using SDL;
 using SkiaSharp;
@@ -28,6 +29,7 @@ try
         "overlay" => Overlay(Option("--image"), OverlayModes.FromCommand(Option("--mode"))),
         "daemon" => Daemon(),
         "zoom" or "draw" or "timer" or "snip" => SendOrRun(command),
+        "record" => SendToDaemon(command),
         "status" => Status(),
         "quit" => Quit(),
         "install-desktop-file" => InstallDesktopFile(),
@@ -88,9 +90,10 @@ static int Help(TextWriter writer)
           capture [--out arq.png]  captura a tela e mede a latência
           overlay [--image arq] [--mode zoom|draw|timer|snip]
                                    captura (ou usa a imagem) e abre a sobreposição
-          daemon                   registra Ctrl+1/Ctrl+2/Ctrl+3/Ctrl+6; Esc fecha só a janela e Ctrl+C encerra
+          daemon                   registra Ctrl+1/2/3/5/6; Esc fecha só a janela e Ctrl+C encerra
           zoom | draw | timer | snip
                                    envia o comando ao daemon (ou executa direto)
+          record                   inicia ou encerra a gravação GIF no daemon (X11 e Windows)
           status                   informa se o daemon está em execução
           quit                     encerra o daemon e a sobreposição ativa
           install-desktop-file     instala a entrada de menu e o ícone do app (Linux)
@@ -286,7 +289,27 @@ static int Daemon()
         using var tray = TrayController.TryCreate(Enqueue, cancellation.Cancel, out var trayUnavailableReason);
         Console.WriteLine(tray is null
             ? $"Tray ............. indisponível ({trayUnavailableReason}); use 'pixelpointer status' e 'pixelpointer quit'."
-            : "Tray ............. registrada (Zoom, Desenhar, Timer, Recorte, Sair); a visibilidade depende do desktop.");
+            : "Tray ............. registrada (Zoom, Desenhar, Timer, Recorte, Gravar, Sair); a visibilidade depende do desktop.");
+
+        ScreenRecorder? recorder = null;
+        void ToggleRecording()
+        {
+            if (recorder is not null)
+            {
+                var (path, frames, duration) = recorder.Stop();
+                recorder = null;
+                Console.WriteLine($"Gravação salva: {path} ({frames} quadros, {duration.TotalSeconds:0} s)");
+            }
+            else if (!OperatingSystem.IsWindows() && !SessionInfo.IsX11)
+            {
+                Console.Error.WriteLine("informação: a gravação ainda não está disponível nesta sessão (disponível no X11 e no Windows).");
+            }
+            else
+            {
+                recorder = ScreenRecorder.Start(ScreenCaptureFactory.Create(null), SnapshotStorage.GetDirectory());
+                Console.WriteLine($"Gravando em {recorder.Path}; repita Ctrl+5 para salvar (limite {ScreenRecorder.MaxDuration.TotalMinutes:0} min).");
+            }
+        }
 
         while (!cancellation.IsCancellationRequested)
         {
@@ -304,13 +327,20 @@ static int Daemon()
 
             try
             {
+                if (item.Command.Id == "record")
+                {
+                    ToggleRecording();
+                    continue;
+                }
+
                 RunOverlay(portal, item.Command, null, item.Received, cancellation.Token);
             }
             catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
             {
                 break;
             }
-            catch (Exception ex) when (ex is InvalidOperationException or OperationCanceledException)
+            catch (Exception ex) when (ex is InvalidOperationException or OperationCanceledException
+                or IOException or UnauthorizedAccessException or NotSupportedException)
             {
                 Console.Error.WriteLine($"erro: {ex.Message}");
             }
@@ -319,6 +349,11 @@ static int Daemon()
             while (queue.TryTake(out _))
             {
             }
+        }
+
+        if (recorder is not null)
+        {
+            ToggleRecording();
         }
     }
     finally
@@ -329,6 +364,17 @@ static int Daemon()
     }
 
     return 0;
+}
+
+static int SendToDaemon(string command)
+{
+    if (IpcChannel.TrySendAsync(command).GetAwaiter().GetResult())
+    {
+        return 0;
+    }
+
+    Console.Error.WriteLine($"O comando '{command}' exige o daemon em execução: inicie 'pixelpointer daemon'.");
+    return 1;
 }
 
 static int SendOrRun(string command) =>

@@ -80,21 +80,8 @@ internal static class SnapshotStorage
 
     internal static string Save(string directory, Action<Stream> write)
     {
-        directory = RequireAbsolutePath(directory, "destino da captura");
-        Directory.CreateDirectory(directory);
-        var path = Path.Combine(directory, $"pixelpointer-{DateTime.Now:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}.png");
-        var options = new FileStreamOptions
-        {
-            Mode = FileMode.CreateNew,
-            Access = FileAccess.Write,
-            Share = FileShare.None,
-        };
-        if (!OperatingSystem.IsWindows())
-        {
-            options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
-        }
-
-        using (var stream = new FileStream(path, options))
+        var (path, stream) = Create(directory, "png");
+        using (stream)
         {
             try
             {
@@ -110,6 +97,26 @@ internal static class SnapshotStorage
         }
 
         return path;
+    }
+
+    /// <summary>Cria um arquivo novo e exclusivo do usuário; quem chama grava, fecha e remove em caso de falha.</summary>
+    internal static (string Path, FileStream Stream) Create(string directory, string extension)
+    {
+        directory = RequireAbsolutePath(directory, "destino da captura");
+        Directory.CreateDirectory(directory);
+        var path = Path.Combine(directory, $"pixelpointer-{DateTime.Now:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}.{extension}");
+        var options = new FileStreamOptions
+        {
+            Mode = FileMode.CreateNew,
+            Access = FileAccess.Write,
+            Share = FileShare.None,
+        };
+        if (!OperatingSystem.IsWindows())
+        {
+            options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+        }
+
+        return (path, new FileStream(path, options));
     }
 
     private static string ParseXdgValue(string value, string home)
