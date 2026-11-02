@@ -36,12 +36,13 @@ executar a partir de um terminal; os detalhes e erros ficam nessa saída.
 
 | Comando | Função |
 | --- | --- |
-| `pixelpointer daemon` | Fica em execução, registra os atalhos globais (Ctrl+1 zoom, Ctrl+2 desenho) e o canal local de comandos; Ctrl+C ou SIGTERM encerra |
+| `pixelpointer daemon` | Fica em execução, registra os atalhos globais (Ctrl+1 zoom, Ctrl+2 desenho, Ctrl+3 timer) e o canal local de comandos; Ctrl+C ou SIGTERM encerra |
 | `pixelpointer zoom` | Abre o zoom agora; com o `daemon` em execução, envia o comando a ele |
 | `pixelpointer draw` | Abre o desenho sem zoom; mesma regra do `zoom` |
+| `pixelpointer timer` | Abre o timer de intervalo (10 min) sobre a tela escurecida; setas ou roda ajustam os minutos e reiniciam, R/G/B/Y/O/P mudam a cor, Esc ou botão direito saem; mesma regra do `zoom` |
 | `pixelpointer status` | Informa se o daemon está em execução, sem abrir uma sobreposição |
 | `pixelpointer quit` | Encerra o daemon e uma sobreposição ativa |
-| `pixelpointer overlay [--image arq.png] [--mode zoom\|draw]` | Abre a sobreposição sobre uma captura nova ou sobre uma imagem |
+| `pixelpointer overlay [--image arq.png] [--mode zoom\|draw\|timer]` | Abre a sobreposição sobre uma captura nova ou sobre uma imagem |
 | `pixelpointer capture [--out arq.png]` | Captura a tela e informa a latência |
 | `pixelpointer probe` | Diagnóstico: SO, sessão, monitores, versões dos portais |
 | `pixelpointer install-desktop-file` | Linux: instala a entrada visível do menu e o ícone próprio com o app id `io.github.lzocateli.PixelPointer` |
