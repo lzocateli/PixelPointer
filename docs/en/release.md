@@ -202,7 +202,7 @@ are not Authenticode-signed; do not disable Windows protections to bypass warnin
 #### Test checklist and returning to stable
 
 - Confirm the chosen version, `selftest`, and session/portals in `probe`.
-- Test Ctrl+1, mouse wheel, Ctrl+2, Ctrl+3 (timer), colors, highlighter (Shift+color), blur (X and Shift+X), shapes (Shift, Ctrl, Ctrl+Shift and Tab while dragging), text (T), Ctrl+C and Ctrl+Z.
+- Test Ctrl+1, mouse wheel, Ctrl+2, Ctrl+3 (timer), Ctrl+6 (snip, with and without Shift), colors, highlighter (Shift+color), blur (X and Shift+X), shapes (Shift, Ctrl, Ctrl+Shift and Tab while dragging), text (T), Ctrl+C and Ctrl+Z.
 - Test Ctrl+S: PNG under XDG Pictures/`Screenshots` on Linux or the special
    Pictures/`Screenshots` folder on Windows, respecting OneDrive.
 - Esc closes the overlay; `status` must confirm the daemon remains active
