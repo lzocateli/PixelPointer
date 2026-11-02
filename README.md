@@ -163,6 +163,7 @@ execute `pixelpointer daemon` em primeiro plano.
 | R G B Y O P | Vermelho, verde, azul, amarelo, laranja, rosa |
 | Shift + R G B Y O P | Marca-texto translúcido na cor |
 | X / Shift+X | Desfoque / desfoque forte (retângulo e elipse preenchidos) |
+| T | Texto no ponteiro (Enter quebra a linha, Esc ou clique termina) |
 | Ctrl+roda | Espessura da caneta |
 | Ctrl+Z / E | Desfazer / apagar tudo |
 | W / K | Quadro branco / quadro preto |

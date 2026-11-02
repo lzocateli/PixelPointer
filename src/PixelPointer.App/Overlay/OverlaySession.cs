@@ -42,6 +42,7 @@ internal sealed unsafe partial class OverlaySession
     private readonly bool _transparentBackground;
     private readonly bool _gpuRequested;
     private bool _penDown;
+    private SDL_Window* _window;
     private bool _tabHeld;
     private float _pressure = 1f;
     private int _penEvents;
@@ -133,6 +134,7 @@ internal sealed unsafe partial class OverlaySession
         }
 
         SDL_RaiseWindow(window);
+        _window = window;
 
         SDL_Texture* texture = null;
         SKSurface? surface = null;
@@ -296,8 +298,16 @@ internal sealed unsafe partial class OverlaySession
             case SDL_EventType.SDL_EVENT_WINDOW_CLOSE_REQUESTED:
                 return false;
 
+            case SDL_EventType.SDL_EVENT_KEY_DOWN when _annotations.IsTyping:
+                HandleTypingKey(e.key);
+                break;
+
             case SDL_EventType.SDL_EVENT_KEY_DOWN:
                 return HandleKey(e.key);
+
+            case SDL_EventType.SDL_EVENT_TEXT_INPUT when _annotations.IsTyping:
+                _annotations.AppendText(Marshal.PtrToStringUTF8((nint)e.text.text) ?? string.Empty);
+                break;
 
             case SDL_EventType.SDL_EVENT_KEY_UP when e.key.key == SDL_Keycode.SDLK_TAB:
                 _tabHeld = false;
@@ -322,6 +332,7 @@ internal sealed unsafe partial class OverlaySession
                 break;
 
             case SDL_EventType.SDL_EVENT_MOUSE_BUTTON_DOWN when !IsSynthetic(e.button.which):
+                EndText();
                 if (e.button.button == SDL_BUTTON_RIGHT)
                 {
                     // Como no ZoomIt: o botão direito sai do desenho; no zoom, encerra.
@@ -377,6 +388,39 @@ internal sealed unsafe partial class OverlaySession
         return true;
     }
 
+    private void HandleTypingKey(SDL_KeyboardEvent key)
+    {
+        switch (key.key)
+        {
+            case SDL_Keycode.SDLK_ESCAPE:
+                EndText();
+                break;
+            case SDL_Keycode.SDLK_BACKSPACE:
+                _annotations.RemoveLastCharacter();
+                break;
+            case SDL_Keycode.SDLK_RETURN or SDL_Keycode.SDLK_KP_ENTER:
+                _annotations.AppendText("\n");
+                break;
+        }
+    }
+
+    private void BeginText()
+    {
+        _mode = OverlayMode.Draw;
+        var point = ToImage(_mouseX, _mouseY);
+        _annotations.BeginText(point.X, point.Y, ViewScale);
+        SDL_StartTextInput(_window);
+    }
+
+    private void EndText()
+    {
+        if (_annotations.IsTyping)
+        {
+            _annotations.EndText();
+            SDL_StopTextInput(_window);
+        }
+    }
+
     private bool HandleKey(SDL_KeyboardEvent key)
     {
         var ctrl = (key.mod & SDL_Keymod.SDL_KMOD_CTRL) != 0;
@@ -385,6 +429,9 @@ internal sealed unsafe partial class OverlaySession
         {
             case SDL_Keycode.SDLK_ESCAPE:
                 return false;
+            case SDL_Keycode.SDLK_T when !ctrl:
+                BeginText();
+                break;
             case SDL_Keycode.SDLK_TAB:
                 _tabHeld = true;
                 break;
@@ -487,7 +534,14 @@ internal sealed unsafe partial class OverlaySession
     {
         UpdateView(width, height);
         DrawScene(canvas, _view, width);
-        if (_mode == OverlayMode.Draw)
+        if (_annotations.IsTyping)
+        {
+            var caret = SceneRenderer.TextCaret(_annotations.Strokes[^1]);
+            using var caretPaint = new SKPaint { Color = new SKColor(_annotations.ColorArgb) };
+            canvas.DrawRect(SKRect.Create((caret.Left - _view.Left) * ViewScale, (caret.Top - _view.Top) * ViewScale,
+                MathF.Max(2f, caret.Width * ViewScale), caret.Height * ViewScale), caretPaint);
+        }
+        else if (_mode == OverlayMode.Draw)
         {
             // Na caneta de desfoque, o cursor fica cinza porque a cor não é usada.
             var cursorColor = _annotations.Effect == StrokeEffect.None ? _annotations.ColorArgb : 0xFFC0C0C0u;

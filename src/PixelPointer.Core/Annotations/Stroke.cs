@@ -11,6 +11,8 @@ public enum StrokeShape
     Arrow,
     Rectangle,
     Ellipse,
+    /// <summary>Texto ancorado no primeiro ponto; a espessura é o tamanho da fonte.</summary>
+    Text,
 }
 
 public static class StrokeShapes
@@ -38,6 +40,7 @@ public enum StrokeEffect
 public sealed class Stroke
 {
     private readonly List<StrokePoint> _points;
+    private readonly System.Text.StringBuilder _text = new();
 
     internal Stroke(uint color, float width, StrokePoint first, StrokeShape shape = StrokeShape.Freehand,
         StrokeEffect effect = StrokeEffect.None)
@@ -46,7 +49,7 @@ public sealed class Stroke
         Width = width;
         Shape = shape;
         Effect = effect;
-        _points = shape == StrokeShape.Freehand ? [first] : [first, first];
+        _points = shape is StrokeShape.Freehand or StrokeShape.Text ? [first] : [first, first];
     }
 
     public uint Color { get; }
@@ -56,6 +59,8 @@ public sealed class Stroke
     public StrokeShape Shape { get; }
 
     public StrokeEffect Effect { get; }
+
+    public string Text => _text.ToString();
 
     public IReadOnlyList<StrokePoint> Points => _points;
 
@@ -67,9 +72,23 @@ public sealed class Stroke
         {
             _points.Add(point);
         }
-        else
+        else if (Shape != StrokeShape.Text)
         {
             _points[1] = point;
         }
+    }
+
+    internal void AppendText(string text) => _text.Append(text);
+
+    /// <summary>Remove o último caractere, sem separar pares substitutos.</summary>
+    internal void RemoveLastCharacter()
+    {
+        if (_text.Length == 0)
+        {
+            return;
+        }
+
+        var count = _text.Length >= 2 && char.IsLowSurrogate(_text[^1]) && char.IsHighSurrogate(_text[^2]) ? 2 : 1;
+        _text.Remove(_text.Length - count, count);
     }
 }

@@ -218,6 +218,24 @@ public sealed class SceneRendererTests
     }
 
     [Fact]
+    public void Draw_TextPaintsGlyphsBelowAndRightOfTheAnchor()
+    {
+        Assert.SkipWhen(SKTypeface.Default.GlyphCount == 0, "Sem fonte disponível no ambiente.");
+        var document = new AnnotationDocument(PenColor.Red, 6f);
+        document.BeginText(20, 20, 1f);
+        document.AppendText("HH\nHH");
+        document.EndText();
+
+        using var bitmap = Render(document, background: null, Full, transparent: true);
+        var painted = CountPainted(bitmap, SKRect.Create(20, 20, 80, 80));
+
+        Assert.True(painted > 50, $"Esperava glifos, obtido {painted} pixels");
+        Assert.Equal(0, CountPainted(bitmap, SKRect.Create(0, 0, 18, 100)));
+        var caret = SceneRenderer.TextCaret(document.Strokes[0]);
+        Assert.True(caret.Left > 20 && caret.Top > 20);
+    }
+
+    [Fact]
     public void Draw_RejectsEmptyView()
     {
         using var surface = SKSurface.Create(new SKImageInfo(Size, Size));
@@ -274,6 +292,20 @@ public sealed class SceneRendererTests
         }
 
         return surface.Snapshot();
+    }
+
+    private static int CountPainted(SKBitmap bitmap, SKRect area)
+    {
+        var count = 0;
+        for (var y = (int)area.Top; y < (int)area.Bottom && y < bitmap.Height; y++)
+        {
+            for (var x = (int)area.Left; x < (int)area.Right && x < bitmap.Width; x++)
+            {
+                count += bitmap.GetPixel(x, y).Alpha > 0 ? 1 : 0;
+            }
+        }
+
+        return count;
     }
 
     private static int OpaqueRows(SKBitmap bitmap, int x)
