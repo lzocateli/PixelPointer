@@ -3,6 +3,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import signal
 import subprocess
 import threading
@@ -13,6 +14,8 @@ from PIL import Image, ImageChops
 
 from evidence import AviWriter, Timeline, read_avi, report
 from x11 import X11
+
+TRAY_ENTRIES = ["Zoom", "Desenhar", "Timer", "Live Zoom", "Recorte", "Gravar / parar gravação", "Sair"]
 
 
 class Recorder:
@@ -175,7 +178,7 @@ class Scenario:
         if not self.args.no_tray:
             self.wait("icone SNI", lambda: Path("/tmp/panel.json").exists())
             panel = json.loads(Path("/tmp/panel.json").read_text())
-            assert panel["icon"] and [item[1] for item in panel["entries"]] == ["Zoom", "Desenhar", "Sair"]
+            assert panel["icon"] and [item[1] for item in panel["entries"]] == TRAY_ENTRIES
             # O painel publica panel.json antes de repintar o icone.
             self.wait("icone renderizado", lambda: len(
                 self.display.screenshot().crop((588, 16, 628, 56)).getcolors(1601) or []) > 4)
@@ -198,8 +201,10 @@ class Scenario:
                         self.signals.append(token)
                 if line.startswith("Atalhos "):
                     available, _, conflicts = line.partition("; conflitos:")
-                    self.hotkeys = {"zoom": "zoom=" in available, "draw": "draw=" in available,
-                                    "conflict_zoom": "zoom" in conflicts}
+                    # Nomes inteiros: "livezoom" contém "zoom".
+                    self.hotkeys = {"zoom": re.search(r"\bzoom=", available) is not None,
+                                    "draw": re.search(r"\bdraw=", available) is not None,
+                                    "conflict_zoom": re.search(r"\bzoom\b", conflicts) is not None}
                 if line.startswith("Tray "):
                     self.tray_unavailable = "indispon" in line
                     initialized.set()
@@ -393,6 +398,30 @@ class Scenario:
         self.cli("status")
         self.close_overlay()
 
+    def live_lens(self):
+        # Tela 800x600 e zoom 2x: lupa de 266x200 sobre uma região de 133x100 centrada no cursor.
+        def red(x, y):
+            pixel = self.display.screenshot().getpixel((x, y))
+            return pixel[0] > 200 and pixel[1] < 60 and pixel[2] < 60
+
+        def cyan(x, y):
+            return all(abs(actual - expected) <= 12 for actual, expected in
+                       zip(self.display.screenshot().getpixel((x, y)), (0, 170, 204)))
+
+        self.display.move(110, 130)
+        self.cli("livezoom")
+        self.wait("lupa aberta", lambda: self.display.find("PixelPointer Live Zoom"))
+        # Região (44,80); lupa abaixo à direita em (193,196); cursor na lupa em (325,296).
+        self.wait("lupa ampliando o retângulo ciano", lambda: cyan(300, 296) and red(325, 296))
+        self.screenshot("13-live-lens")
+        self.display.move(700, 500)
+        # Perto do canto, a lupa passa para a esquerda da região (634,450): lupa em (352,400), cursor em (484,500).
+        self.wait("lupa acompanha o cursor", lambda: red(484, 500))
+        self.screenshot("14-live-lens-moved")
+        self.cli("livezoom")
+        self.wait("lupa fechada", lambda: not self.display.find("PixelPointer Live Zoom"))
+        self.cli("status")
+
     def lifecycle(self):
         blocker = X11()
         try:
@@ -491,12 +520,13 @@ class Scenario:
             _, image = self.save()
             assert image.getpixel((100, 200))[3] == 255, "Fallback nao e captura opaca"
         self.close_overlay()
+        self.live_lens()
         if not self.args.no_tray:
             for index in [0, 1]:
                 self.tray(index)
                 self.wait("sobreposicao via menu", lambda: self.display.find("PixelPointer"))
                 self.close_overlay()
-            self.tray(2)
+            self.tray(TRAY_ENTRIES.index("Sair"))
         else:
             assert self.tray_unavailable, "Limitacao da tray nao foi informada"
             self.cli("quit")
