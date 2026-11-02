@@ -166,6 +166,7 @@ mode the daemon's messages are not shown; to diagnose hotkey conflicts, run
 | Ctrl+Z / E | Undo / erase all |
 | W / K | Whiteboard / blackboard |
 | Ctrl+S | Save PNG |
+| Ctrl+C | Copy the image to the clipboard |
 | Esc or right click | Exit |
 
 On Wayland, the first `daemon` run asks the desktop to confirm the hotkeys.

@@ -58,7 +58,12 @@ Shift/Ctrl/Ctrl+Shift/Tab when you start dragging for a straight
 line/rectangle/arrow/ellipse, R/G/B/Y/O/P for colors, Shift+color for a
 translucent highlighter, X/Shift+X for blur/strong blur, Ctrl+wheel for pen width,
 Ctrl+Z to undo, E to erase, W/K for whiteboard/blackboard, Ctrl+S to save a PNG
-to the user's screenshots folder, Esc or right click to exit.
+to the user's screenshots folder, Ctrl+C to copy the image to the clipboard, Esc
+or right click to exit.
+
+Ctrl+C copies the visible image, with annotations, as PNG. The copy remains
+available while the `daemon` is running; in an overlay opened without the
+daemon, it is lost when PixelPointer exits.
 
 Shapes follow ZoomIt: hold the key when you start dragging; the shape follows
 the mouse until you release the button and uses the current color and width.

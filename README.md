@@ -167,6 +167,7 @@ execute `pixelpointer daemon` em primeiro plano.
 | Ctrl+Z / E | Desfazer / apagar tudo |
 | W / K | Quadro branco / quadro preto |
 | Ctrl+S | Salvar PNG |
+| Ctrl+C | Copiar a imagem para a área de transferência |
 | Esc ou botão direito | Sair |
 
 No Wayland, o primeiro `daemon` pede a confirmação dos atalhos ao desktop.

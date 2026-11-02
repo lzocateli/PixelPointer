@@ -169,6 +169,7 @@ de atajos, ejecuta `pixelpointer daemon` en primer plano.
 | Ctrl+Z / E | Deshacer / borrar todo |
 | W / K | Pizarra blanca / pizarra negra |
 | Ctrl+S | Guardar PNG |
+| Ctrl+C | Copiar la imagen al portapapeles |
 | Esc o clic derecho | Salir |
 
 En Wayland, el primer `daemon` pide al escritorio que confirme los atajos. Sin
