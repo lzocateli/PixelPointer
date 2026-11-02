@@ -28,6 +28,7 @@ public sealed class AnnotationDocument
     public const float PenWidthStep = 2f;
     public const float DefaultPenWidth = 6f;
     public const byte HighlighterAlpha = 0x60;
+    public const float MinTextSize = 16f;
 
     private readonly List<Stroke> _strokes = [];
     private Stroke? _current;
@@ -104,9 +105,9 @@ public sealed class AnnotationDocument
             throw new ArgumentOutOfRangeException(nameof(viewScale), viewScale, "A escala da vista deve ser positiva e finita.");
         }
 
-        if (!Enum.IsDefined(shape))
+        if (!Enum.IsDefined(shape) || shape == StrokeShape.Text)
         {
-            throw new ArgumentOutOfRangeException(nameof(shape), shape, null);
+            throw new ArgumentOutOfRangeException(nameof(shape), shape, "Texto usa BeginText.");
         }
 
         // Formas geométricas usam espessura uniforme, como no mouse.
@@ -118,7 +119,61 @@ public sealed class AnnotationDocument
     public void ContinueStroke(float x, float y, float pressure) =>
         _current?.Add(new StrokePoint(x, y, _current.Shape == StrokeShape.Freehand ? pressure : 1f));
 
-    public void EndStroke() => _current = null;
+    public void EndStroke()
+    {
+        if (!IsTyping)
+        {
+            _current = null;
+        }
+    }
+
+    public bool IsTyping => _current?.Shape == StrokeShape.Text;
+
+    /// <summary>Inicia um texto na posição; o tamanho da fonte acompanha a espessura atual e a escala da vista.</summary>
+    public void BeginText(float x, float y, float viewScale)
+    {
+        if (!(viewScale > 0) || !float.IsFinite(viewScale))
+        {
+            throw new ArgumentOutOfRangeException(nameof(viewScale), viewScale, "A escala da vista deve ser positiva e finita.");
+        }
+
+        EndText();
+        _current = new Stroke(ColorArgb, MathF.Max(PenWidth * 4, MinTextSize) / viewScale, new StrokePoint(x, y, 1f),
+            StrokeShape.Text);
+        _strokes.Add(_current);
+    }
+
+    public void AppendText(string text)
+    {
+        if (IsTyping && !string.IsNullOrEmpty(text))
+        {
+            _current!.AppendText(text);
+        }
+    }
+
+    public void RemoveLastCharacter()
+    {
+        if (IsTyping)
+        {
+            _current!.RemoveLastCharacter();
+        }
+    }
+
+    /// <summary>Encerra a digitação; texto vazio não fica no documento.</summary>
+    public void EndText()
+    {
+        if (!IsTyping)
+        {
+            return;
+        }
+
+        if (_current!.Text.Length == 0)
+        {
+            _strokes.Remove(_current);
+        }
+
+        _current = null;
+    }
 
     /// <summary>Remove o último traço; um traço em andamento é encerrado para não receber pontos depois de removido.</summary>
     public void Undo()

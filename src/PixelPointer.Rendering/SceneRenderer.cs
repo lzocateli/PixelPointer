@@ -49,6 +49,12 @@ public static class SceneRenderer
     {
         ArgumentNullException.ThrowIfNull(canvas);
         ArgumentNullException.ThrowIfNull(stroke);
+        if (stroke.Shape == StrokeShape.Text)
+        {
+            DrawText(canvas, stroke);
+            return;
+        }
+
         if (stroke.Effect != StrokeEffect.None)
         {
             DrawBlurStroke(canvas, stroke);
@@ -67,6 +73,38 @@ public static class SceneRenderer
         canvas.SaveLayer(Bounds(stroke, 0), layer);
         DrawOpaqueStroke(canvas, stroke, color.WithAlpha(255));
         canvas.Restore();
+    }
+
+    /// <summary>Retângulo do cursor de digitação ao fim do texto, em coordenadas da imagem.</summary>
+    public static SKRect TextCaret(Stroke stroke)
+    {
+        ArgumentNullException.ThrowIfNull(stroke);
+        using var font = new SKFont(SKTypeface.Default, stroke.Width);
+        var lines = stroke.Text.Split('\n');
+        var origin = stroke.Points[0];
+        var top = origin.Y + (font.Spacing * (lines.Length - 1));
+        var x = origin.X + font.MeasureText(lines[^1]);
+        return new SKRect(x, top, x + MathF.Max(1f, stroke.Width / 12), top + font.Spacing);
+    }
+
+    /// <summary>Texto com o canto superior esquerdo no ponto do traço; cada \n abre uma linha.</summary>
+    private static void DrawText(SKCanvas canvas, Stroke stroke)
+    {
+        var text = stroke.Text;
+        if (text.Length == 0)
+        {
+            return;
+        }
+
+        using var font = new SKFont(SKTypeface.Default, stroke.Width);
+        using var paint = new SKPaint { Color = new SKColor(stroke.Color), IsAntialias = true };
+        var origin = stroke.Points[0];
+        var baseline = origin.Y - font.Metrics.Ascent;
+        foreach (var line in text.Split('\n'))
+        {
+            canvas.DrawText(line, origin.X, baseline, SKTextAlign.Left, font, paint);
+            baseline += font.Spacing;
+        }
     }
 
     /// <summary>Desfoca o que já foi desenhado sob o traço; retângulo e elipse são preenchidos.</summary>

@@ -34,6 +34,52 @@ public sealed class AnnotationDocumentTests
     }
 
     [Fact]
+    public void Text_IsEditedUntilEndedAndEmptyTextIsDiscarded()
+    {
+        var document = new AnnotationDocument(PenColor.Blue, 10f);
+
+        document.BeginText(5, 6, viewScale: 2f);
+        document.AppendText("Olá 👋");
+        document.RemoveLastCharacter();
+        document.AppendText("!\nfim");
+        document.EndStroke();
+        Assert.True(document.IsTyping);
+        document.EndText();
+        document.BeginText(0, 0, 1f);
+        document.EndText();
+
+        var text = Assert.Single(document.Strokes);
+        Assert.Equal(StrokeShape.Text, text.Shape);
+        Assert.Equal("Olá !\nfim", text.Text);
+        Assert.Equal(new StrokePoint(5, 6, 1f), Assert.Single(text.Points));
+        Assert.Equal(40f / 2f, text.Width);
+        Assert.Equal(AnnotationDocument.ToArgb(PenColor.Blue), text.Color);
+        Assert.False(document.IsTyping);
+    }
+
+    [Fact]
+    public void Text_UsesMinimumSizeAndIgnoresInputWhenNotTyping()
+    {
+        var document = new AnnotationDocument(PenColor.Red, 1f);
+        document.AppendText("x");
+        document.RemoveLastCharacter();
+
+        document.BeginText(0, 0, 1f);
+        document.AppendText("a");
+        document.Undo();
+        document.AppendText("b");
+
+        Assert.Empty(document.Strokes);
+        Assert.False(document.IsTyping);
+        document.BeginText(0, 0, 1f);
+        Assert.Equal(AnnotationDocument.MinTextSize, document.Strokes[0].Width);
+    }
+
+    [Fact]
+    public void BeginStroke_RejectsTextShape() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() => new AnnotationDocument().BeginStroke(0, 0, 1f, 1f, StrokeShape.Text));
+
+    [Fact]
     public void BeginStroke_RejectsUnknownShape() =>
         Assert.Throws<ArgumentOutOfRangeException>(() => new AnnotationDocument().BeginStroke(0, 0, 1f, 1f, (StrokeShape)99));
 
