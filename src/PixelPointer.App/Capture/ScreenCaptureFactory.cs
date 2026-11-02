@@ -34,6 +34,27 @@ internal static class ScreenCaptureFactory
     internal static bool UseScreenCast(int displayCount, string? currentDesktop) =>
         displayCount == 1 && !IsGnome(currentDesktop);
 
+    /// <summary>Fonte contínua para gravação; quem recebe passa a ser dono e a descarta se for <see cref="IDisposable"/>.</summary>
+    internal static IScreenCapture CreateRecordingSource(PortalClient? portal)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return new GdiScreenCapture();
+        }
+
+        if (OperatingSystem.IsLinux() && !SessionInfo.IsWayland)
+        {
+            return new X11ScreenCapture();
+        }
+
+        if (OperatingSystem.IsLinux() && portal is not null)
+        {
+            return ScreenCastStream.OpenAsync(portal, TryCreateTokenStore(), CancellationToken.None).GetAwaiter().GetResult();
+        }
+
+        throw new NotSupportedException("A gravação ainda não está disponível neste sistema (disponível no Windows e no Linux).");
+    }
+
     private static bool IsGnome(string? currentDesktop) =>
         currentDesktop?.Split(':').Any(name => name.Equals("GNOME", StringComparison.OrdinalIgnoreCase)) == true;
 

@@ -30,7 +30,7 @@ internal static class PipeWireFrame
 }
 
 /// <summary>
-/// Lê um único quadro de um nó PipeWire do portal ScreenCast. Usa a libpipewire-0.3 do sistema (MIT), sem
+/// Lê quadros de um nó PipeWire do portal ScreenCast, um por pedido. Usa a libpipewire-0.3 do sistema (MIT), sem
 /// redistribuí-la; os callbacks rodam na thread do pw_thread_loop e entregam o quadro por TaskCompletionSource.
 /// </summary>
 internal sealed unsafe partial class PipeWireFrameReader : IDisposable
@@ -45,7 +45,13 @@ internal sealed unsafe partial class PipeWireFrameReader : IDisposable
 
     private static int s_initialized;
 
-    private readonly TaskCompletionSource<SKBitmap> _frame = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource<SKBitmap> _first = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private TaskCompletionSource<SKBitmap> _request;
+    private Exception? _failure;
+    private readonly object _latestLock = new();
+    private readonly System.Diagnostics.Stopwatch _sinceLatest = System.Diagnostics.Stopwatch.StartNew();
+    private SKBitmap? _latest;
+    private volatile bool _keepLatest;
     private GCHandle _self;
     private nint _loop;
     private nint _context;
@@ -57,6 +63,7 @@ internal sealed unsafe partial class PipeWireFrameReader : IDisposable
 
     private PipeWireFrameReader()
     {
+        _request = _first;
     }
 
     /// <summary>Conecta ao nó, aguarda o primeiro quadro válido e libera todos os recursos antes de retornar.</summary>
@@ -78,7 +85,38 @@ internal sealed unsafe partial class PipeWireFrameReader : IDisposable
         }
     }
 
-    internal Task<SKBitmap> Frame => _frame.Task;
+    internal Task<SKBitmap> Frame => _first.Task;
+
+    /// <summary>Pede o próximo quadro; quadros chegam só quando a tela muda em alguns compositores.</summary>
+    internal Task<SKBitmap> NextFrameAsync()
+    {
+        if (Volatile.Read(ref _failure) is { } failure)
+        {
+            return Task.FromException<SKBitmap>(failure);
+        }
+
+        lock (_latestLock)
+        {
+            if (_latest is { } latest)
+            {
+                _latest = null;
+                return Task.FromResult(latest);
+            }
+        }
+
+        var request = new TaskCompletionSource<SKBitmap>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Interlocked.Exchange(ref _request, request).TrySetCanceled();
+        return request.Task;
+    }
+
+    /// <summary>Modo contínuo: quadros que chegam sem pedido pendente ficam guardados (o mais recente) para o próximo pedido.</summary>
+    internal void KeepLatestFrames() => _keepLatest = true;
+
+    private void Fail(Exception error)
+    {
+        Volatile.Write(ref _failure, error);
+        Volatile.Read(ref _request).TrySetException(error);
+    }
 
     private void Connect(SafeFileHandle remote, uint nodeId)
     {
@@ -208,7 +246,12 @@ internal sealed unsafe partial class PipeWireFrameReader : IDisposable
             _self.Free();
         }
 
-        _frame.TrySetCanceled();
+        Volatile.Read(ref _request).TrySetCanceled();
+        lock (_latestLock)
+        {
+            _latest?.Dispose();
+            _latest = null;
+        }
     }
 
     private static PipeWireFrameReader? From(void* data) =>
@@ -220,7 +263,7 @@ internal sealed unsafe partial class PipeWireFrameReader : IDisposable
         if (state == StreamStateError && From(data) is { } reader)
         {
             var message = error is null ? "erro desconhecido" : Marshal.PtrToStringUTF8((nint)error);
-            reader._frame.TrySetException(new InvalidOperationException($"Stream PipeWire falhou: {message}"));
+            reader.Fail(new InvalidOperationException($"Stream PipeWire falhou: {message}"));
         }
     }
 
@@ -236,7 +279,7 @@ internal sealed unsafe partial class PipeWireFrameReader : IDisposable
         reader._info = SpaPod.ParseVideoFormat(new ReadOnlySpan<byte>(param, length));
         if (reader._info is null)
         {
-            reader._frame.TrySetException(new InvalidOperationException("O PipeWire negociou um formato de vídeo não suportado."));
+            reader.Fail(new InvalidOperationException("O PipeWire negociou um formato de vídeo não suportado."));
         }
     }
 
@@ -254,9 +297,13 @@ internal sealed unsafe partial class PipeWireFrameReader : IDisposable
             return;
         }
 
+        var request = Volatile.Read(ref reader._request);
+        var store = request.Task.IsCompleted;
         try
         {
-            if (reader._frame.Task.IsCompleted || reader._info is not { } info || buffer->Buffer is null
+            // Sem pedido pendente, o modo contínuo converte no máximo um quadro a cada 50 ms.
+            if ((store && (!reader._keepLatest || reader._sinceLatest.ElapsedMilliseconds < 50))
+                || reader._info is not { } info || buffer->Buffer is null
                 || buffer->Buffer->DataCount == 0)
             {
                 return;
@@ -278,11 +325,27 @@ internal sealed unsafe partial class PipeWireFrameReader : IDisposable
             }
 
             var span = new ReadOnlySpan<byte>((byte*)spaData->Data + chunk->Offset, (int)Math.Min(available, int.MaxValue));
-            reader._frame.TrySetResult(VideoFrameConverter.ToBitmap(span, info, stride));
+            var bitmap = VideoFrameConverter.ToBitmap(span, info, stride);
+            if (store)
+            {
+                reader._sinceLatest.Restart();
+                lock (reader._latestLock)
+                {
+                    reader._latest?.Dispose();
+                    reader._latest = bitmap;
+                }
+            }
+            else if (!request.TrySetResult(bitmap))
+            {
+                bitmap.Dispose();
+            }
         }
         catch (Exception ex)
         {
-            reader._frame.TrySetException(ex);
+            if (!store)
+            {
+                request.TrySetException(ex);
+            }
         }
         finally
         {
