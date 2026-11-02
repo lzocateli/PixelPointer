@@ -38,10 +38,11 @@ On-screen command labels remain Portuguese, like other native app messages.
 
 | Command | Purpose |
 | --- | --- |
-| `pixelpointer daemon` | Keeps running, registers the global hotkeys (Ctrl+1 zoom, Ctrl+2 draw, Ctrl+3 timer, Ctrl+6 snip) and the local command channel; Ctrl+C or SIGTERM stops it |
+| `pixelpointer daemon` | Keeps running, registers the global hotkeys (Ctrl+1 zoom, Ctrl+2 draw, Ctrl+3 timer, Ctrl+5 recording, Ctrl+6 snip) and the local command channel; Ctrl+C or SIGTERM stops it |
 | `pixelpointer zoom` | Opens zoom now; with the `daemon` running, sends the command to it |
 | `pixelpointer draw` | Opens draw mode without zoom; same rule as `zoom` |
 | `pixelpointer timer` | Opens the break timer (10 min) over the dimmed screen; arrows or wheel adjust the minutes and restart, R/G/B/Y/O/P change the color, Esc or right click exit; same rule as `zoom` |
+| `pixelpointer record` | With the `daemon` running, starts or saves a GIF recording of the whole screen (8 frames/s, up to 1280 px wide, 5 min limit, fixed 252-color palette) in the screenshots folder; also through Ctrl+5 or the tray. Available on X11 and Windows; annotations opened during the recording are included |
 | `pixelpointer snip` | Snip: drag an area of the capture to copy it as PNG (without annotations); hold Shift on release to save it to the screenshots folder; Esc or right click cancel; same rule as `zoom` |
 | `pixelpointer status` | Reports whether the daemon is running, without opening an overlay |
 | `pixelpointer quit` | Stops the daemon and any active overlay |

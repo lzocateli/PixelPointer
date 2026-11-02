@@ -69,6 +69,7 @@ public sealed class IpcChannelTests
     [InlineData("draw", true)]
     [InlineData("timer", true)]
     [InlineData("snip", true)]
+    [InlineData("record", true)]
     [InlineData("status", true)]
     [InlineData("quit", true)]
     [InlineData("ZOOM", false)]
