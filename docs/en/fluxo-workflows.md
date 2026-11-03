@@ -19,6 +19,10 @@ reviewers on GitHub; local file updates do not activate it.
 **Legend:** blue/rectangle = automatic; yellow/parallelogram = manual action;
 pink/diamond = human review or approval; green/cylinder = artifact or published state.
 Arrows show the success path: without approval, the next stage does not start.
+Dashed frames identify the **approval job's GitHub Environment**, not separate
+branches or servers. The same Environment may appear in multiple phases.
+Steps outside these frames do not automatically inherit an Environment; initial
+CI and review jobs do not declare `environment`.
 
 ```mermaid
 flowchart TD
@@ -36,18 +40,30 @@ flowchart TD
     RP --> MANUAL[/"Run workflow: Release preview on main"/]
     MANUAL --> RESOLVE["Resolve version, dependencies, current HEAD and green CI"]
     MAINCI --> RESOLVE
-    RESOLVE --> RELRC{"Approve release Environment"}
+    subgraph ENV_RC_TAG["Environment: release | RC tag"]
+      RELRC{"Approve RC tag creation"}
+    end
+    RESOLVE --> RELRC
     RELRC --> RCTAG["Revalidate source; GitHub App creates tag and draft"]
     RCTAG --> RCREF[("vX.Y.Z-rc.N: draft prerelease")]
     RCREF --> RCCTX["Validate tag version and ancestry"]
-    RCCTX --> DISTRC{"Authorize public RC distribution: distribution"}
+    subgraph ENV_RC_DISTRIBUTION["Environment: distribution | RC"]
+      DISTRC{"Authorize public RC distribution"}
+    end
+    RCCTX --> DISTRC
     DISTRC --> PUB["publish.yml: build 6 RIDs, smoke, installers, SBOM"]
-    PUB --> RCASSETAPP{"Approve upload in release Environment"}
+    subgraph ENV_RC_ASSETS["Environment: release | RC assets"]
+      RCASSETAPP{"Approve RC asset upload"}
+    end
+    PUB --> RCASSETAPP
     RCASSETAPP --> ASSETS["Attest and attach assets; create manifest; finalize RC"]
     ASSETS --> RCFINAL[("Public attested RC, no Latest")]
     RCFINAL --> Q["Dispatch Deploy on tag; quality guard"]
     Q --> TESTRC[/"Download and manually test RC package"/]
-    TESTRC --> QA{"Accept candidate: approve quality"}
+    subgraph ENV_RC_QUALITY["Environment: quality | RC acceptance"]
+      QA{"Accept tested candidate"}
+    end
+    TESTRC --> QA
     QA --> QS["Verify assets and run linux-x64 smoke in containers"]
     QS --> ACCEPT[("preview-acceptance.json")]
     ACCEPT --> REFRESH["Rerun Release PR CI"]
@@ -65,26 +81,44 @@ flowchart TD
     FINALGUARD --> FINALTAG["GitHub App creates final tag and draft"]
     FINALTAG --> FINALREF[("vX.Y.Z: draft release")]
     FINALREF --> FINALCTX["Validate tag versions and ancestry"]
-    FINALCTX --> DISTFINAL{"Authorize public stable distribution: distribution"}
+    subgraph ENV_STABLE_DISTRIBUTION["Environment: distribution | stable"]
+      DISTFINAL{"Authorize public stable distribution"}
+    end
+    FINALCTX --> DISTFINAL
     DISTFINAL --> FINALBUILD["Build, smoke and SBOM of authorized tag"]
-    FINALBUILD --> FINALAPP{"Approve publication in release Environment"}
+    subgraph ENV_STABLE_RELEASE["Environment: release | stable assets"]
+      FINALAPP{"Approve asset publication"}
+    end
+    FINALBUILD --> FINALAPP
     FINALAPP --> FINALPUB["Revalidate source; attest assets and manifest; publish"]
     FINALPUB --> STABLE[("Public stable release")]
   end
 
   subgraph DISTRIBUTION["4. Distribution and Verification"]
     STABLE --> POST["post-release.yml"]
-    POST --> BREWAPP{"Approve release for Homebrew"}
+    subgraph ENV_HOMEBREW["Environment: release | Homebrew"]
+      BREWAPP{"Approve tap update"}
+    end
+    POST --> BREWAPP
     BREWAPP --> BREW["Update tap and verify installation"]
     POST --> WINGETCHECK["winget.yml: validate package"]
-    WINGETCHECK --> WINGETAPP{"Approve winget Environment"}
+    subgraph ENV_WINGET["Environment: winget"]
+      WINGETAPP{"Approve winget submission"}
+    end
+    WINGETCHECK --> WINGETAPP
     WINGETAPP --> WINGET["Submit to winget-pkgs; await external moderation"]
     STABLE --> AUTOQ["Auto-dispatch Deploy to quality; guard"]
-    AUTOQ --> STABLEQA{"Approve quality Environment"}
+    subgraph ENV_STABLE_QUALITY["Environment: quality | stable"]
+      STABLEQA{"Approve stable verification"}
+    end
+    AUTOQ --> STABLEQA
     STABLEQA --> VERIFYQ["Verify assets and run smoke"]
     STABLE --> PROD[/"Run workflow: Deploy on stable tag, production"/]
     PROD --> PRODGUARD["Production guard"]
-    PRODGUARD --> PRODAPP{"Approve production Environment"}
+    subgraph ENV_PRODUCTION["Environment: production"]
+      PRODAPP{"Approve production verification"}
+    end
+    PRODGUARD --> PRODAPP
     PRODAPP --> VERIFYPROD["Verify assets and run smoke"]
   end
 
@@ -96,6 +130,16 @@ flowchart TD
   class PR,MERGE,MANUAL,TESTRC,RPMERGE,RESUME,PROD manual
   class REVIEW,RELRC,DISTRC,RCASSETAPP,QA,RPREVIEW,DISTFINAL,FINALAPP,BREWAPP,WINGETAPP,STABLEQA,PRODAPP approval
   class RCREF,RCFINAL,ACCEPT,FINALREF,STABLE artifact
+  style ENV_RC_TAG fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
+  style ENV_RC_DISTRIBUTION fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
+  style ENV_RC_ASSETS fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
+  style ENV_RC_QUALITY fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
+  style ENV_STABLE_DISTRIBUTION fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
+  style ENV_STABLE_RELEASE fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
+  style ENV_HOMEBREW fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
+  style ENV_WINGET fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
+  style ENV_STABLE_QUALITY fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
+  style ENV_PRODUCTION fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
 ```
 
 Environment approvals happen under **Actions > run > Review deployments**, not in

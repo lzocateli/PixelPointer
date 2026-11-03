@@ -20,6 +20,10 @@ en GitHub; actualizar los archivos locales no lo activa.
 **Leyenda:** azul/rectángulo = automático; amarillo/paralelogramo = acción manual;
 rosa/rombo = revisión o aprobación humana; verde/cilindro = artefacto o estado publicado.
 Las flechas muestran el camino de éxito: sin aprobación, la etapa siguiente no empieza.
+Los marcos discontinuos identifican el **GitHub Environment del job de aprobación**,
+no branches ni servidores separados. El mismo Environment puede aparecer en varias
+fases. Las etapas fuera de esos marcos no heredan un Environment automáticamente;
+los jobs iniciales de CI y revisión no declaran `environment`.
 
 ```mermaid
 flowchart TD
@@ -37,18 +41,30 @@ flowchart TD
     RP --> MANUAL[/"Run workflow: Release preview en main"/]
     MANUAL --> RESOLVE["Resolver versión, dependencias, HEAD actual y CI verde"]
     MAINCI --> RESOLVE
-    RESOLVE --> RELRC{"Aprobar Environment release"}
+    subgraph ENV_RC_TAG["Environment: release | tag RC"]
+      RELRC{"Aprobar creación de tag RC"}
+    end
+    RESOLVE --> RELRC
     RELRC --> RCTAG["Revalidar fuente; GitHub App crea tag y borrador"]
     RCTAG --> RCREF[("vX.Y.Z-rc.N: prerelease en borrador")]
     RCREF --> RCCTX["Validar versión y ascendencia de la tag"]
-    RCCTX --> DISTRC{"Autorizar divulgación del RC: distribution"}
+    subgraph ENV_RC_DISTRIBUTION["Environment: distribution | RC"]
+      DISTRC{"Autorizar divulgación del RC"}
+    end
+    RCCTX --> DISTRC
     DISTRC --> PUB["publish.yml: build de 6 RIDs, smoke, instaladores, SBOM"]
-    PUB --> RCASSETAPP{"Aprobar upload en Environment release"}
+    subgraph ENV_RC_ASSETS["Environment: release | assets RC"]
+      RCASSETAPP{"Aprobar upload de assets RC"}
+    end
+    PUB --> RCASSETAPP
     RCASSETAPP --> ASSETS["Atestar y adjuntar assets; crear manifiesto; finalizar RC"]
     ASSETS --> RCFINAL[("RC pública y atestada, sin Latest")]
     RCFINAL --> Q["Disparar Deploy en tag; guard quality"]
     Q --> TESTRC[/"Descargar y probar manualmente el paquete RC"/]
-    TESTRC --> QA{"Aceptar candidata: aprobar quality"}
+    subgraph ENV_RC_QUALITY["Environment: quality | aceptación RC"]
+      QA{"Aceptar candidata probada"}
+    end
+    TESTRC --> QA
     QA --> QS["Verificar assets y ejecutar smoke linux-x64 en containers"]
     QS --> ACCEPT[("preview-acceptance.json")]
     ACCEPT --> REFRESH["Reejecutar CI del Release PR"]
@@ -66,26 +82,44 @@ flowchart TD
     FINALGUARD --> FINALTAG["GitHub App crea tag final y borrador"]
     FINALTAG --> FINALREF[("vX.Y.Z: release en borrador")]
     FINALREF --> FINALCTX["Validar versiones y ascendencia de la tag"]
-    FINALCTX --> DISTFINAL{"Autorizar divulgación de estable: distribution"}
+    subgraph ENV_STABLE_DISTRIBUTION["Environment: distribution | estable"]
+      DISTFINAL{"Autorizar divulgación de estable"}
+    end
+    FINALCTX --> DISTFINAL
     DISTFINAL --> FINALBUILD["Build, smoke y SBOM de la tag autorizada"]
-    FINALBUILD --> FINALAPP{"Aprobar publicación en Environment release"}
+    subgraph ENV_STABLE_RELEASE["Environment: release | assets estables"]
+      FINALAPP{"Aprobar publicación de assets"}
+    end
+    FINALBUILD --> FINALAPP
     FINALAPP --> FINALPUB["Revalidar fuente; atestar assets y manifiesto; publicar"]
     FINALPUB --> STABLE[("Release estable pública")]
   end
 
   subgraph DISTRIBUTION["4. Distribución y verificación"]
     STABLE --> POST["post-release.yml"]
-    POST --> BREWAPP{"Aprobar release para Homebrew"}
+    subgraph ENV_HOMEBREW["Environment: release | Homebrew"]
+      BREWAPP{"Aprobar actualización del tap"}
+    end
+    POST --> BREWAPP
     BREWAPP --> BREW["Actualizar tap y verificar instalación"]
     POST --> WINGETCHECK["winget.yml: validar paquete"]
-    WINGETCHECK --> WINGETAPP{"Aprobar Environment winget"}
+    subgraph ENV_WINGET["Environment: winget"]
+      WINGETAPP{"Aprobar envío al winget"}
+    end
+    WINGETCHECK --> WINGETAPP
     WINGETAPP --> WINGET["Enviar a winget-pkgs; esperar moderación externa"]
     STABLE --> AUTOQ["Auto-disparo Deploy en quality; guard"]
-    AUTOQ --> STABLEQA{"Aprobar Environment quality"}
+    subgraph ENV_STABLE_QUALITY["Environment: quality | estable"]
+      STABLEQA{"Aprobar verificación de estable"}
+    end
+    AUTOQ --> STABLEQA
     STABLEQA --> VERIFYQ["Verificar assets y ejecutar smoke"]
     STABLE --> PROD[/"Run workflow: Deploy en tag estable, production"/]
     PROD --> PRODGUARD["Guard de production"]
-    PRODGUARD --> PRODAPP{"Aprobar Environment production"}
+    subgraph ENV_PRODUCTION["Environment: production"]
+      PRODAPP{"Aprobar verificación de producción"}
+    end
+    PRODGUARD --> PRODAPP
     PRODAPP --> VERIFYPROD["Verificar assets y ejecutar smoke"]
   end
 
@@ -97,6 +131,16 @@ flowchart TD
   class PR,MERGE,MANUAL,TESTRC,RPMERGE,RESUME,PROD manual
   class REVIEW,RELRC,DISTRC,RCASSETAPP,QA,RPREVIEW,DISTFINAL,FINALAPP,BREWAPP,WINGETAPP,STABLEQA,PRODAPP approval
   class RCREF,RCFINAL,ACCEPT,FINALREF,STABLE artifact
+  style ENV_RC_TAG fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
+  style ENV_RC_DISTRIBUTION fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
+  style ENV_RC_ASSETS fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
+  style ENV_RC_QUALITY fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
+  style ENV_STABLE_DISTRIBUTION fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
+  style ENV_STABLE_RELEASE fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
+  style ENV_HOMEBREW fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
+  style ENV_WINGET fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
+  style ENV_STABLE_QUALITY fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
+  style ENV_PRODUCTION fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
 ```
 
 Las aprobaciones de Environment se hacen en **Actions > ejecución > Review deployments**,
