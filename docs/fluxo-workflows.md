@@ -19,6 +19,10 @@ configuração dos revisores no GitHub; atualizar os arquivos locais não o ativ
 **Legenda:** azul/retângulo = automático; amarelo/paralelogramo = ação manual;
 rosa/losango = revisão ou aprovação humana; verde/cilindro = artefato ou estado publicado.
 As setas mostram o caminho de sucesso: sem aprovação, a etapa seguinte não começa.
+As molduras tracejadas identificam o **GitHub Environment do job de aprovação**;
+não representam branches nem servidores separados. O mesmo Environment pode
+aparecer em mais de uma fase. Etapas fora dessas molduras não herdam um Environment
+automaticamente; os jobs iniciais de CI e revisão não declaram `environment`.
 
 ```mermaid
 flowchart TD
@@ -36,18 +40,30 @@ flowchart TD
       RP --> MANUAL[/"Run workflow: Release preview na main"/]
       MANUAL --> RESOLVE["Resolver versão, dependências, HEAD atual e CI verde"]
       MAINCI --> RESOLVE
-      RESOLVE --> RELRC{"Aprovar Environment release"}
+      subgraph ENV_RC_TAG["Environment: release | tag RC"]
+         RELRC{"Aprovar criação da tag RC"}
+      end
+      RESOLVE --> RELRC
       RELRC --> RCTAG["Revalidar fonte; GitHub App cria tag e rascunho"]
       RCTAG --> RCREF[("vX.Y.Z-rc.N: prerelease em rascunho")]
       RCREF --> RCCTX["Validar versão e ancestralidade da tag"]
-      RCCTX --> DISTRC{"Autorizar divulgação do RC: distribution"}
+      subgraph ENV_RC_DISTRIBUTION["Environment: distribution | RC"]
+         DISTRC{"Autorizar divulgação do RC"}
+      end
+      RCCTX --> DISTRC
       DISTRC --> PUB["publish.yml: build 6 RIDs, smoke, instaladores, SBOM"]
-      PUB --> RCASSETAPP{"Aprovar upload no Environment release"}
+      subgraph ENV_RC_ASSETS["Environment: release | assets RC"]
+         RCASSETAPP{"Aprovar upload dos assets RC"}
+      end
+      PUB --> RCASSETAPP
       RCASSETAPP --> ASSETS["Atestar e anexar assets; gerar manifesto; finalizar RC"]
       ASSETS --> RCFINAL[("RC pública e atestada, sem Latest")]
       RCFINAL --> Q["Disparar Deploy na tag; guard quality"]
       Q --> TESTRC[/"Baixar e testar manualmente o pacote RC"/]
-      TESTRC --> QA{"Aceitar candidata: aprovar quality"}
+      subgraph ENV_RC_QUALITY["Environment: quality | aceite RC"]
+         QA{"Aceitar candidata testada"}
+      end
+      TESTRC --> QA
       QA --> QS["Conferir assets e executar smoke linux-x64 em containers"]
       QS --> ACCEPT[("preview-acceptance.json")]
       ACCEPT --> REFRESH["Reexecutar CI do Release PR"]
@@ -65,26 +81,44 @@ flowchart TD
       FINALGUARD --> FINALTAG["GitHub App cria tag final e rascunho"]
       FINALTAG --> FINALREF[("vX.Y.Z: release em rascunho")]
       FINALREF --> FINALCTX["Validar versões e ancestralidade da tag"]
-      FINALCTX --> DISTFINAL{"Autorizar divulgação da estável: distribution"}
+      subgraph ENV_STABLE_DISTRIBUTION["Environment: distribution | estável"]
+         DISTFINAL{"Autorizar divulgação da estável"}
+      end
+      FINALCTX --> DISTFINAL
       DISTFINAL --> FINALBUILD["Build, smoke e SBOM da tag autorizada"]
-      FINALBUILD --> FINALAPP{"Aprovar publicação no Environment release"}
+      subgraph ENV_STABLE_RELEASE["Environment: release | assets estáveis"]
+         FINALAPP{"Aprovar publicação dos assets"}
+      end
+      FINALBUILD --> FINALAPP
       FINALAPP --> FINALPUB["Revalidar fonte; atestar assets e manifesto; publicar"]
       FINALPUB --> STABLE[("Release estável pública")]
    end
 
    subgraph DISTRIBUTION["4. Distribuição e verificação"]
       STABLE --> POST["post-release.yml"]
-      POST --> BREWAPP{"Aprovar release para Homebrew"}
+      subgraph ENV_HOMEBREW["Environment: release | Homebrew"]
+         BREWAPP{"Aprovar atualização do tap"}
+      end
+      POST --> BREWAPP
       BREWAPP --> BREW["Atualizar tap e verificar instalação"]
       POST --> WINGETCHECK["winget.yml: validar pacote"]
-      WINGETCHECK --> WINGETAPP{"Aprovar Environment winget"}
+      subgraph ENV_WINGET["Environment: winget"]
+         WINGETAPP{"Aprovar submissão ao winget"}
+      end
+      WINGETCHECK --> WINGETAPP
       WINGETAPP --> WINGET["Submeter ao winget-pkgs; aguardar moderação externa"]
       STABLE --> AUTOQ["Auto-disparo Deploy em quality; guard"]
-      AUTOQ --> STABLEQA{"Aprovar Environment quality"}
+      subgraph ENV_STABLE_QUALITY["Environment: quality | estável"]
+         STABLEQA{"Aprovar verificação da estável"}
+      end
+      AUTOQ --> STABLEQA
       STABLEQA --> VERIFYQ["Conferir assets e executar smoke"]
       STABLE --> PROD[/"Run workflow: Deploy na tag estável, production"/]
       PROD --> PRODGUARD["Guard de production"]
-      PRODGUARD --> PRODAPP{"Aprovar Environment production"}
+      subgraph ENV_PRODUCTION["Environment: production"]
+         PRODAPP{"Aprovar verificação de produção"}
+      end
+      PRODGUARD --> PRODAPP
       PRODAPP --> VERIFYPROD["Conferir assets e executar smoke"]
    end
 
@@ -96,6 +130,16 @@ flowchart TD
    class PR,MERGE,MANUAL,TESTRC,RPMERGE,RESUME,PROD manual
    class REVIEW,RELRC,DISTRC,RCASSETAPP,QA,RPREVIEW,DISTFINAL,FINALAPP,BREWAPP,WINGETAPP,STABLEQA,PRODAPP approval
    class RCREF,RCFINAL,ACCEPT,FINALREF,STABLE artifact
+   style ENV_RC_TAG fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
+   style ENV_RC_DISTRIBUTION fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
+   style ENV_RC_ASSETS fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
+   style ENV_RC_QUALITY fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
+   style ENV_STABLE_DISTRIBUTION fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
+   style ENV_STABLE_RELEASE fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
+   style ENV_HOMEBREW fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
+   style ENV_WINGET fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
+   style ENV_STABLE_QUALITY fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
+   style ENV_PRODUCTION fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
 ```
 
 As aprovações de Environment são feitas em **Actions > execução > Review deployments**,
