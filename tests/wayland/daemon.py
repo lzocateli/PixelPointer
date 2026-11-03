@@ -218,6 +218,105 @@ def check_recording():
             daemon.wait(timeout=10)
 
 
+def check_live_zoom():
+    capabilities = command(['dbus-send', '--session', '--print-reply', '--dest=org.freedesktop.portal.Desktop',
+                            '/org/freedesktop/portal/desktop', 'org.freedesktop.DBus.Properties.Get',
+                            'string:org.freedesktop.portal.ScreenCast', 'string:AvailableCursorModes'])
+    modes = re.search(r'uint32 ([0-9]+)', capabilities.stdout)
+    if modes is None:
+        raise RuntimeError('ScreenCast portal omitted AvailableCursorModes')
+    cursor_modes = int(modes.group(1))
+
+    if cursor_modes & 4 == 0:
+        daemon = None
+        try:
+            with (EVIDENCE / 'livezoom-daemon.out').open('w') as output, \
+                    (EVIDENCE / 'livezoom-daemon.err').open('w') as errors:
+                daemon = subprocess.Popen([PACKAGE, 'daemon'], stdout=output, stderr=errors)
+                wait_for('daemon IPC for live zoom', lambda: command([PACKAGE, 'status'], check=False).returncode == 0)
+                command([PACKAGE, 'livezoom'])
+                wait_for('controlled cursor-metadata rejection', lambda:
+                         'AvailableCursorModes=0x' in (EVIDENCE / 'livezoom-daemon.err').read_text())
+                if daemon.poll() is not None or command([PACKAGE, 'status'], check=False).returncode != 0:
+                    raise RuntimeError('Daemon stopped after unsupported cursor metadata')
+                if any(window.get('name') == 'PixelPointer Live Zoom' for window in windows()):
+                    raise RuntimeError('Unsupported Wayland lens unexpectedly created a window')
+                command([PACKAGE, 'quit'])
+                if daemon.wait(timeout=10) != 0:
+                    raise RuntimeError('Daemon did not exit cleanly after unsupported Live Zoom')
+                (EVIDENCE / 'livezoom-result.json').write_text(json.dumps({
+                    'passed': True, 'mode': 'cursor-metadata-unavailable', 'cursor_modes': cursor_modes,
+                    'controlled_rejection': True, 'daemon_kept_running': True,
+                }))
+                return
+        finally:
+            if daemon is not None and daemon.poll() is None:
+                command([PACKAGE, 'quit'], check=False)
+                daemon.wait(timeout=10)
+
+    pattern = EVIDENCE / 'livezoom-pattern.png'
+    command(['magick', '-size', '800x600', 'xc:#101820', '-fill', '#ee2200',
+             '-draw', 'rectangle 150,170 179,199', '-fill', '#11dd22',
+             '-draw', 'rectangle 550,370 579,399', str(pattern)])
+    command(['swaymsg', 'output', 'HEADLESS-1', 'bg', str(pattern), 'fill'])
+    daemon = None
+    checks = []
+
+    def lens_window():
+        candidates = [window for window in windows() if window.get('name') == 'PixelPointer Live Zoom']
+        if len(candidates) != 1:
+            return None
+        bounds = candidates[0].get('rect', {})
+        if candidates[0].get('fullscreen_mode', 0) <= 0 or bounds.get('width') != 800 or bounds.get('height') != 600:
+            return None
+        return candidates[0]
+
+    try:
+        with (EVIDENCE / 'livezoom-daemon.out').open('w') as output, \
+                (EVIDENCE / 'livezoom-daemon.err').open('w') as errors:
+            daemon = subprocess.Popen([PACKAGE, 'daemon'], stdout=output, stderr=errors)
+            wait_for('daemon IPC for live zoom', lambda: command([PACKAGE, 'status'], check=False).returncode == 0)
+            command(['swaymsg', 'seat', 'seat0', 'cursor', 'set', '200', '200'])
+            command([PACKAGE, 'livezoom'])
+            wait_for('fullscreen live zoom lens', lens_window)
+
+            for index, (cursor_x, cursor_y, sample_x, sample_y, expected) in enumerate((
+                (200, 200, 345, 336, 'srgb(238,34,0)'),
+                (600, 400, 314, 470, 'srgb(17,221,34)'),
+            ), start=1):
+                command(['swaymsg', 'seat', 'seat0', 'cursor', 'set', str(cursor_x), str(cursor_y)])
+                screenshot = EVIDENCE / f'livezoom-{index}.png'
+
+                def magnified_sample():
+                    if lens_window() is None or daemon.poll() is not None:
+                        raise RuntimeError('Live Zoom overlay or daemon disappeared')
+                    command(['grim', '-o', 'HEADLESS-1', str(screenshot)])
+                    pixel = command(['magick', str(screenshot), '-format',
+                                     f'%[pixel:p{{{sample_x},{sample_y}}}]', 'info:']).stdout
+                    return pixel if pixel in (expected, expected.replace('srgb(', 'srgba(').replace(')', ',1)')) else None
+
+                observed = wait_for(f'cursor-following crop {index}', magnified_sample)
+                checks.append({'cursor': [cursor_x, cursor_y], 'pixel': [sample_x, sample_y],
+                               'expected': expected, 'observed': observed})
+                if command([PACKAGE, 'status'], check=False).returncode != 0:
+                    raise RuntimeError('Daemon stopped while the Wayland lens was visible')
+
+            command([PACKAGE, 'livezoom'])
+            wait_for('live zoom lens closed', lambda: not any(
+                window.get('name') == 'PixelPointer Live Zoom' for window in windows()))
+            command([PACKAGE, 'quit'])
+            if daemon.wait(timeout=10) != 0:
+                raise RuntimeError('Daemon did not exit cleanly after live zoom')
+            (EVIDENCE / 'livezoom-result.json').write_text(json.dumps({
+                'passed': True, 'fullscreen': True, 'input_region_applied': True,
+                'cursor_positions': checks, 'daemon_running_during_lens': True,
+            }))
+    finally:
+        if daemon is not None and daemon.poll() is None:
+            command([PACKAGE, 'quit'], check=False)
+            daemon.wait(timeout=10)
+
+
 def main():
     baseline = subprocess.run(['sh', '/opt/wayland/run.sh'], check=False, timeout=90)
     if baseline.returncode != 0:
@@ -236,6 +335,9 @@ def main():
         return
     if os.environ.get('CHECK_RECORDING') == '1':
         check_recording()
+        return
+    if os.environ.get('CHECK_LIVE_ZOOM') == '1':
+        check_live_zoom()
         return
     output_scale = float(os.environ.get('OUTPUT_SCALE', '1'))
     if output_scale not in (1, 1.5, 2):
@@ -379,6 +481,6 @@ def main():
 try:
     main()
 except Exception as error:
-    result_name = 'setup-result.json' if os.environ.get('CHECK_SETUP') == '1' else 'multi-monitor-result.json' if os.environ.get('CHECK_MULTI_MONITOR') == '1' else 'recording-result.json' if os.environ.get('CHECK_RECORDING') == '1' else 'daemon-result.json'
+    result_name = 'setup-result.json' if os.environ.get('CHECK_SETUP') == '1' else 'multi-monitor-result.json' if os.environ.get('CHECK_MULTI_MONITOR') == '1' else 'recording-result.json' if os.environ.get('CHECK_RECORDING') == '1' else 'livezoom-result.json' if os.environ.get('CHECK_LIVE_ZOOM') == '1' else 'daemon-result.json'
     (EVIDENCE / result_name).write_text(json.dumps({'passed': False, 'error': str(error)}))
     raise

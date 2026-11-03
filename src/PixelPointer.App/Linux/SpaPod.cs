@@ -26,10 +26,12 @@ internal static class SpaPod
     internal const uint TypeFraction = 11;
     internal const uint TypeObject = 15;
     internal const uint TypeChoice = 19;
+    internal const uint ObjectMeta = 0x40006;
 
     internal const uint ObjectFormat = 0x40003;
     internal const uint ParamEnumFormat = 3;
     internal const uint ParamFormat = 4;
+    internal const uint ParamMeta = 6;
 
     internal const uint KeyMediaType = 1;
     internal const uint KeyMediaSubtype = 2;
@@ -37,12 +39,15 @@ internal static class SpaPod
     internal const uint KeyVideoModifier = 0x20002;
     internal const uint KeyVideoSize = 0x20003;
     internal const uint KeyVideoFramerate = 0x20004;
+    internal const uint KeyMetaType = 1;
+    internal const uint KeyMetaSize = 2;
 
     internal const uint MediaTypeVideo = 2;
     internal const uint MediaSubtypeRaw = 1;
 
     private const uint ChoiceRange = 1;
     private const uint ChoiceEnum = 3;
+    internal const uint MetaCursor = 5;
 
     /// <summary>EnumFormat de vídeo bruto em memória: sem modificadores, para o compositor não usar DMA-BUF.</summary>
     internal static byte[] BuildVideoEnumFormat()
@@ -59,6 +64,21 @@ internal static class SpaPod
             Pair(1920, 1080), Pair(1, 1), Pair(16384, 16384)));
         AppendProperty(body, KeyVideoFramerate, Choice(ChoiceRange, TypeFraction, 8,
             Pair(30, 1), Pair(0, 1), Pair(1000, 1)));
+        return Pod(TypeObject, [.. body]);
+    }
+
+    internal static byte[] BuildCursorMetadataParam()
+    {
+        const uint cursorBaseSize = 28;
+        const uint bitmapMetadataSize = 20;
+        static uint CursorBufferSize(uint width, uint height) => cursorBaseSize + bitmapMetadataSize + (width * height * 4);
+
+        var body = new List<byte>();
+        AppendUInt32(body, ObjectMeta);
+        AppendUInt32(body, ParamMeta);
+        AppendProperty(body, KeyMetaType, Pod(TypeId, UInt32(MetaCursor)));
+        AppendProperty(body, KeyMetaSize, Choice(ChoiceRange, TypeInt, 4,
+            UInt32(CursorBufferSize(64, 64)), UInt32(CursorBufferSize(1, 1)), UInt32(CursorBufferSize(256, 256))));
         return Pod(TypeObject, [.. body]);
     }
 

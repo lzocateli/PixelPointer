@@ -42,7 +42,7 @@ On-screen command labels remain Portuguese, like other native app messages.
 | `pixelpointer zoom` | Opens zoom now; with the `daemon` running, sends the command to it |
 | `pixelpointer draw` | Opens draw mode without zoom; same rule as `zoom` |
 | `pixelpointer timer` | Opens the break timer (10 min) over the dimmed screen; arrows or wheel adjust the minutes and restart, R/G/B/Y/O/P change the color, Esc or right click exit; same rule as `zoom` |
-| `pixelpointer livezoom` | With the `daemon` running, turns Live Zoom on or off (also Ctrl+4 or the tray): on Windows, the full-screen magnifier follows the cursor while mouse and keyboard keep working. Stopping the daemon restores the screen. On X11 and macOS, it is a window magnifier (one third of the screen), marked with a cross, with the magnified region following the cursor; it hides during zoom, drawing, timer and snip. On macOS, ScreenCaptureKit excludes PixelPointer windows and captures only the main display; Screen Recording permission is required. Not yet available on Wayland |
+| `pixelpointer livezoom` | With the `daemon` running, turns Live Zoom on or off (also Ctrl+4 or the tray): on Windows, the full-screen magnifier follows the cursor while mouse and keyboard keep working. Stopping the daemon restores the screen. On X11 and macOS, it is a window magnifier (one third of the screen), marked with a cross, with the magnified region following the cursor; it hides during zoom, drawing, timer and snip. On macOS, ScreenCaptureKit excludes PixelPointer windows and captures only the main display; Screen Recording permission is required. On Wayland, support is best effort: it uses ScreenCast and follows the cursor only when the portal provides cursor metadata; one monitor is required, and GNOME keeps the Screenshot policy from D13 and disables this lens. The Sway E2E checks controlled rejection when metadata is absent; visual acceptance on a supporting compositor is still pending |
 | `pixelpointer record` | With the `daemon` running, starts or saves a GIF recording of the whole screen (8 frames/s, up to 1280 px wide, 5 min limit, fixed 252-color palette) in the screenshots folder; also through Ctrl+5 or the tray. Available on Linux and Windows; annotations opened during the recording are included. On Wayland, recording uses a ScreenCast session kept open until saving, includes the cursor when the portal allows it and asks for the monitor (or reuses the saved authorization); the sharing indicator stays on while recording |
 | `pixelpointer snip` | Snip: drag an area of the capture to copy it as PNG (without annotations); hold Shift on release to save it to the screenshots folder; Esc or right click cancel; same rule as `zoom` |
 | `pixelpointer status` | Reports whether the daemon is running, without opening an overlay |
@@ -372,7 +372,7 @@ package.
 
 ## Current limitations
 
-- Live Zoom (Ctrl+4) exists on Windows, macOS (main display) and X11 (window magnifier); it is not yet available on Wayland. DemoType (Ctrl+7) does not exist yet and
+- Live Zoom (Ctrl+4) exists on Windows, macOS (main display) and X11 (window magnifier). Wayland is best effort and depends on portal cursor metadata; the tested Sway/wlr portal advertises `AvailableCursorModes=0x3` and does not provide it. DemoType (Ctrl+7) does not exist yet and
   recording (Ctrl+5) is GIF only and not yet available on macOS. See the
   [plan](../plano-implementacao.md).
 - With several monitors, on X11 and Windows the overlay opens on the cursor's

@@ -94,6 +94,7 @@ class Scenario:
         self.deadline = time.monotonic() + 120
         self.recorder = None
         self.signals = []
+        self.daemon_lines = []
 
     def check_deadline(self):
         if time.monotonic() > self.deadline:
@@ -196,6 +197,7 @@ class Scenario:
 
         def diagnostics():
             for line in daemon.stdout:
+                self.daemon_lines.append(line)
                 for token in ["congelada", "indispon", "registrada", "salvar", "salva", "Atalhos", "ignoradas"]:
                     if token in line:
                         self.signals.append(token)
@@ -409,7 +411,10 @@ class Scenario:
                        zip(self.display.screenshot().getpixel((x, y)), (0, 170, 204)))
 
         self.display.move(110, 130)
+        commands_before = sum("comando livezoom" in line for line in self.daemon_lines)
         self.cli("livezoom")
+        self.wait("Live Zoom solicitado por IPC", lambda:
+              sum("comando livezoom" in line for line in self.daemon_lines) == commands_before + 1)
         self.wait("lupa aberta", lambda: self.display.find("PixelPointer Live Zoom"))
         # Região (44,80); lupa abaixo à direita em (193,196); cursor na lupa em (325,296).
         self.wait("lupa ampliando o retângulo ciano", lambda: cyan(300, 296) and red(325, 296))
@@ -418,8 +423,21 @@ class Scenario:
         # Perto do canto, a lupa passa para a esquerda da região (634,450): lupa em (352,400), cursor em (484,500).
         self.wait("lupa acompanha o cursor", lambda: red(484, 500))
         self.screenshot("14-live-lens-moved")
-        self.cli("livezoom")
+        commands_before = sum("comando livezoom" in line for line in self.daemon_lines)
+        self.timeline.emit("keys", keys=["Control_L", "4", "autorepeat"], repeats=5)
+        self.display.key("Control_L", True)
+        self.display.key("4", True)
+        self.display.repeat("4", 5)
+        self.display.key("4", False)
+        self.display.key("Control_L", False)
+        self.wait("Ctrl+4 recebido", lambda:
+              sum("comando livezoom" in line for line in self.daemon_lines) >= commands_before + 1)
+        time.sleep(0.2)
+        commands_received = sum("comando livezoom" in line for line in self.daemon_lines) - commands_before
+        assert commands_received == 1, f"Ctrl+4 gerou {commands_received} comandos com auto-repeat"
         self.wait("lupa fechada", lambda: not self.display.find("PixelPointer Live Zoom"))
+        time.sleep(0.2)
+        assert not self.display.find("PixelPointer Live Zoom"), "Auto-repeat reabriu a lupa"
         self.cli("status")
 
     def lifecycle(self):

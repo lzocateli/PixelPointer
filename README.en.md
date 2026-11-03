@@ -152,7 +152,7 @@ mode the daemon's messages are not shown; to diagnose hotkey conflicts, run
 | **Ctrl+1** | Zoom: freezes the magnified screen; the mouse pans the image |
 | **Ctrl+2** | Draw without zoom |
 | **Ctrl+3** | Break timer (10 min; arrows or wheel adjust and restart) |
-| **Ctrl+4** | Live Zoom: magnifies the live screen following the cursor, without freezing; press again to exit (full screen on Windows; window magnifier on macOS and X11; on macOS, use the tray or `pixelpointer livezoom`) |
+| **Ctrl+4** | Live Zoom: magnifies the live screen following the cursor, without freezing; press again to exit (full screen on Windows; window magnifier on macOS and X11; Wayland best effort when the portal provides cursor metadata; disabled on GNOME) |
 | **Ctrl+5** | Start or save a GIF screen recording (Linux and Windows; up to 5 min) |
 | **Ctrl+6** | Snip: drag an area to copy it; hold Shift on release to save a PNG |
 | `pixelpointer status` | Check whether the daemon is running |

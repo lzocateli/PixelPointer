@@ -10,6 +10,7 @@ namespace PixelPointer.App.Linux;
 internal sealed class ScreenCastStream : IScreenCapture, IDisposable
 {
     private const uint CursorEmbedded = 2;
+    private const uint CursorMetadata = 4;
     private static readonly TimeSpan FirstFrameTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan FrameTimeout = TimeSpan.FromMilliseconds(500);
 
@@ -28,9 +29,11 @@ internal sealed class ScreenCastStream : IScreenCapture, IDisposable
 
     public string Name => "xdg-desktop-portal ScreenCast + PipeWire (contínuo)";
 
+    internal SpaCursorPosition? CursorPosition => _reader.CursorPosition;
+
     /// <summary>Abre a sessão; o desktop pode pedir a escolha do monitor, reaproveitando o restore token salvo.</summary>
     internal static async Task<ScreenCastStream> OpenAsync(PortalClient portal, RestoreTokenStore? tokens,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, bool cursorMetadata = false)
     {
         var (capabilities, _) = await portal.GetScreenCastCapabilitiesAsync().ConfigureAwait(false);
         if (capabilities.Version == 0 || !capabilities.SupportsMonitor)
@@ -38,11 +41,11 @@ internal sealed class ScreenCastStream : IScreenCapture, IDisposable
             throw new NotSupportedException("o portal ScreenCast não oferece captura de monitor");
         }
 
+        var cursor = SelectCursorMode(capabilities.AvailableCursorModes, cursorMetadata);
         var persist = capabilities.Version >= 4 && tokens is not null;
         var session = await portal.CreateScreenCastSessionAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var cursor = (capabilities.AvailableCursorModes & CursorEmbedded) != 0 ? CursorEmbedded : 0;
             await portal.SelectScreenCastSourcesAsync(session, cursor, persist, persist ? tokens!.Read() : null,
                 cancellationToken).ConfigureAwait(false);
             var (nodeId, newToken) = await portal.StartScreenCastAsync(session, cancellationToken).ConfigureAwait(false);
@@ -59,7 +62,7 @@ internal sealed class ScreenCastStream : IScreenCapture, IDisposable
             }
 
             using var remote = await portal.OpenPipeWireRemoteAsync(session).ConfigureAwait(false);
-            var reader = PipeWireFrameReader.Start(remote, nodeId);
+            var reader = PipeWireFrameReader.Start(remote, nodeId, cursorMetadata);
             reader.KeepLatestFrames();
             return new ScreenCastStream(portal, session, reader);
         }
@@ -86,6 +89,20 @@ internal sealed class ScreenCastStream : IScreenCapture, IDisposable
         }
 
         return _last?.Copy() ?? throw new TimeoutException("O ScreenCast não entregou o primeiro quadro.");
+    }
+
+    internal static uint SelectCursorMode(uint availableModes, bool requireMetadata) => requireMetadata
+        ? (availableModes & CursorMetadata) != 0
+            ? CursorMetadata
+            : throw new NotSupportedException(
+                $"o portal ScreenCast não oferece metadados de cursor (AvailableCursorModes=0x{availableModes:X})")
+        : (availableModes & CursorEmbedded) != 0 ? CursorEmbedded : 0;
+
+    internal async Task<(SKBitmap Bitmap, SpaCursorPosition? Cursor)> CaptureFrameAsync(
+        CancellationToken cancellationToken)
+    {
+        var bitmap = await CaptureAsync(cancellationToken).ConfigureAwait(false);
+        return (bitmap, CursorPosition);
     }
 
     public void Dispose()

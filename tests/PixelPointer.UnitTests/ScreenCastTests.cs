@@ -112,6 +112,31 @@ public sealed class ScreenCastTests
     }
 
     [Fact]
+    public void CursorMetadataParam_RequestsPipeWireCursorMetadata()
+    {
+        var pod = SpaPod.BuildCursorMetadataParam();
+
+        Assert.Equal(0, pod.Length % 8);
+        Assert.Equal((uint)pod.Length - 8, BinaryPrimitives.ReadUInt32LittleEndian(pod));
+        Assert.Equal(SpaPod.TypeObject, BinaryPrimitives.ReadUInt32LittleEndian(pod.AsSpan(4)));
+        Assert.Equal(SpaPod.ObjectMeta, BinaryPrimitives.ReadUInt32LittleEndian(pod.AsSpan(8)));
+        Assert.Equal(SpaPod.ParamMeta, BinaryPrimitives.ReadUInt32LittleEndian(pod.AsSpan(12)));
+        Assert.Equal(new[] { SpaPod.KeyMetaType, SpaPod.KeyMetaSize }, Keys(pod));
+        Assert.Equal(SpaPod.MetaCursor, BinaryPrimitives.ReadUInt32LittleEndian(pod.AsSpan(32)));
+    }
+
+    [Theory]
+    [InlineData(2u, false, 2u)]
+    [InlineData(1u, false, 0u)]
+    [InlineData(4u, true, 4u)]
+    public void CursorMode_SelectsOnlyAdvertisedMode(uint available, bool requireMetadata, uint expected) =>
+        Assert.Equal(expected, ScreenCastStream.SelectCursorMode(available, requireMetadata));
+
+    [Fact]
+    public void CursorMode_RejectsMissingMetadataMode() =>
+        Assert.Throws<NotSupportedException>(() => ScreenCastStream.SelectCursorMode(2u, requireMetadata: true));
+
+    [Fact]
     public void ParseVideoFormat_ReadsDefaultsOfChoices() =>
         Assert.Equal(new SpaVideoInfo(SpaVideoFormat.BGRx, 1920, 1080), SpaPod.ParseVideoFormat(SpaPod.BuildVideoEnumFormat()));
 
@@ -176,6 +201,29 @@ public sealed class ScreenCastTests
     public void Converter_RejectsShortBuffers() =>
         Assert.Throws<InvalidOperationException>(() =>
             VideoFrameConverter.ToBitmap(new byte[15], new SpaVideoInfo(SpaVideoFormat.BGRx, 2, 2), stride: 8));
+
+    [Fact]
+    public void CursorMetadata_ParsesPositionFromSpaLayout()
+    {
+        var metadata = new byte[28];
+        BinaryPrimitives.WriteUInt32LittleEndian(metadata, 1);
+        BinaryPrimitives.WriteInt32LittleEndian(metadata.AsSpan(8), 320);
+        BinaryPrimitives.WriteInt32LittleEndian(metadata.AsSpan(12), 240);
+        BinaryPrimitives.WriteInt32LittleEndian(metadata.AsSpan(16), 4);
+        BinaryPrimitives.WriteInt32LittleEndian(metadata.AsSpan(20), 8);
+
+        Assert.True(SpaCursorMetadata.TryParse(metadata, out var position));
+        Assert.Equal(new SpaCursorPosition(320, 240), position);
+    }
+
+    [Fact]
+    public void CursorMetadata_RejectsEmptyOrInvalidMetadata()
+    {
+        Assert.False(SpaCursorMetadata.TryParse(new byte[27], out _));
+
+        var metadata = new byte[28];
+        Assert.False(SpaCursorMetadata.TryParse(metadata, out _));
+    }
 
     [Fact]
     public void TokenStore_RoundTripsWithPrivatePermissions()

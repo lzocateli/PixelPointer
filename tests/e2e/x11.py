@@ -148,6 +148,15 @@ class X11:
         self.xtest.XTestFakeKeyEvent(self.display, code, int(pressed), 0)
         self.flush()
 
+    def repeat(self, key, count):
+        code = self.lib.XKeysymToKeycode(self.display, self.lib.XStringToKeysym(key.encode()))
+        if not code:
+            raise ValueError(f"Tecla desconhecida: {key}")
+        for _ in range(count):
+            self.xtest.XTestFakeKeyEvent(self.display, code, 0, 0)
+            self.xtest.XTestFakeKeyEvent(self.display, code, 1, 0)
+        self.flush()
+
     def chord(self, *keys):
         for key in keys:
             self.key(key, True)

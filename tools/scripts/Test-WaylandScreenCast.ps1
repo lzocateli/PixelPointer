@@ -44,6 +44,9 @@ e verifica tela nao vazia, ausencia de gravacoes e estado do daemon preservado.
 Exige RenderNode; nao combina com os outros cenarios de janela. Inicia um daemon,
 grava por IPC com ScreenCast continuo enquanto o fundo muda e exige GIF privado
 na pasta de capturas, com mais de um quadro e as cores exibidas.
+.PARAMETER CheckLiveZoom
+Exige RenderNode; nao combina com os outros cenarios de janela. Valida Live Zoom
+em um monitor com cursor metadata, fullscreen transparente e recortes em duas posicoes.
 .PARAMETER RemainingArguments
 Somente --help. Ajuda nao produz efeitos colaterais.
 .EXAMPLE
@@ -62,6 +65,8 @@ pwsh ./tools/scripts/Test-WaylandScreenCast.ps1 -Engine podman -RenderNode /dev/
 pwsh ./tools/scripts/Test-WaylandScreenCast.ps1 -Engine podman -RenderNode /dev/dri/renderD128 -RepeatDaemonCaptures -CheckDaemonLifecycle -OutputScale 1.5
 .EXAMPLE
 pwsh ./tools/scripts/Test-WaylandScreenCast.ps1 -Engine podman -RenderNode /dev/dri/renderD128 -CheckRecording
+.EXAMPLE
+pwsh ./tools/scripts/Test-WaylandScreenCast.ps1 -Engine podman -RenderNode /dev/dri/renderD128 -CheckLiveZoom
 .NOTES
 Requer PowerShell 7, Linux x64, Docker/Podman e o pacote gerado por Publish-Aot.ps1.
 Prazo do container: 120 segundos. Codigo 0: aprovado. Codigo 1: falha. Codigo 2: uso invalido.
@@ -80,6 +85,7 @@ param(
     [string] $OutputScale = '1',
     [switch] $CheckSetupWindow,
     [switch] $CheckRecording,
+    [switch] $CheckLiveZoom,
     [ValidateSet('docker', 'podman')] [string] $Engine,
     [Parameter(ValueFromRemainingArguments)] [string[]] $RemainingArguments
 )
@@ -112,6 +118,9 @@ try {
     if ($CheckRecording -and ($RepeatDaemonCaptures -or $CheckMultiMonitorPolicy -or $CheckSetupWindow)) {
         throw 'CheckRecording nao combina com os outros cenarios de janela. Use --help.'
     }
+    if ($CheckLiveZoom -and ($RepeatDaemonCaptures -or $CheckMultiMonitorPolicy -or $CheckSetupWindow -or $CheckRecording)) {
+        throw 'CheckLiveZoom nao combina com os outros cenarios de janela. Use --help.'
+    }
     if ($OutputScale -ne '1' -and -not $RepeatDaemonCaptures) {
         throw 'OutputScale diferente de 1 exige RepeatDaemonCaptures. Use --help.'
     }
@@ -121,7 +130,7 @@ try {
     if ($CheckDaemonLifecycle -and -not $RepeatDaemonCaptures) {
         throw 'CheckDaemonLifecycle exige RepeatDaemonCaptures. Use --help.'
     }
-    $useDriver = $RepeatDaemonCaptures -or $CheckMultiMonitorPolicy -or $CheckSetupWindow -or $CheckRecording
+    $useDriver = $RepeatDaemonCaptures -or $CheckMultiMonitorPolicy -or $CheckSetupWindow -or $CheckRecording -or $CheckLiveZoom
     if (($DenyScreenCastGetAll -or $useDriver) -and [string]::IsNullOrWhiteSpace($RenderNode)) {
         throw 'Os modos de captura real exigem RenderNode. Use --help.'
     }
@@ -200,12 +209,14 @@ try {
         $multiMonitor = if ($CheckMultiMonitorPolicy) { '1' } else { '0' }
         $setup = if ($CheckSetupWindow) { '1' } else { '0' }
         $recording = if ($CheckRecording) { '1' } else { '0' }
+        $liveZoom = if ($CheckLiveZoom) { '1' } else { '0' }
         $modeArguments += @('--volume', "${driver}:/opt/wayland/daemon.py:ro,Z", '--env', "DENY_GETALL=$deny",
             '--env', "CHECK_LIFECYCLE=$lifecycle",
             '--env', "CHECK_MULTI_MONITOR=$multiMonitor",
             '--env', "OUTPUT_SCALE=$OutputScale",
             '--env', "CHECK_SETUP=$setup",
             '--env', "CHECK_RECORDING=$recording",
+            '--env', "CHECK_LIVE_ZOOM=$liveZoom",
             '--entrypoint', 'python')
     }
     $volume = "$container-evidence"
@@ -333,6 +344,35 @@ try {
             throw
         }
         Write-Output 'Setup aprovado: janela nao vazia, fechamento sem efeitos e daemon preservado.'
+    }
+    if ($CheckLiveZoom) {
+        try {
+            $result = Get-Content -LiteralPath (Join-Path $output 'livezoom-result.json') -Raw | ConvertFrom-Json
+            if ($result.passed -ne $true) {
+                throw 'Resultado do Live Zoom incompleto.'
+            }
+            if ($result.mode -eq 'cursor-metadata-unavailable') {
+                if (($result.cursor_modes -band 4) -ne 0 -or $result.controlled_rejection -ne $true -or
+                    $result.daemon_kept_running -ne $true) {
+                    throw 'O portal recusou cursor metadata sem manter o daemon funcional.'
+                }
+            } elseif ($result.fullscreen -ne $true -or $result.input_region_applied -ne $true -or
+                $result.daemon_running_during_lens -ne $true -or $result.cursor_positions.Count -ne 2) {
+                throw 'As asserções visuais e de interação do Live Zoom Wayland estão incompletas.'
+            }
+            @{ passed = $true; mode = 'livezoom'; livezoom = $result } |
+                ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $output 'result.json') -Encoding utf8NoBOM
+        }
+        catch {
+            @{ passed = $false; mode = 'livezoom'; error = $_.Exception.Message } |
+                ConvertTo-Json | Set-Content -LiteralPath (Join-Path $output 'result.json') -Encoding utf8NoBOM
+            throw
+        }
+        if ($result.mode -eq 'cursor-metadata-unavailable') {
+            Write-Output "Live Zoom Wayland: portal não anuncia cursor metadata (0x$('{0:X}' -f $result.cursor_modes)); recusa controlada e daemon preservado."
+        } else {
+            Write-Output 'Live Zoom Wayland aprovado: cursor metadata, fullscreen transparente e dois recortes.'
+        }
     }
     if ($CheckRecording) {
         try {

@@ -153,7 +153,7 @@ execute `pixelpointer daemon` em primeiro plano.
 | **Ctrl+1** | Zoom: congela a tela ampliada; o mouse percorre a imagem |
 | **Ctrl+2** | Desenho sem zoom |
 | **Ctrl+3** | Timer de intervalo (10 min; setas ou roda ajustam e reiniciam) |
-| **Ctrl+4** | Live Zoom: amplia a tela ao vivo seguindo o cursor, sem congelar; repita para sair (Windows em tela cheia; macOS e X11 como lupa em janela; no macOS, use a tray ou `pixelpointer livezoom`) |
+| **Ctrl+4** | Live Zoom: amplia a tela ao vivo seguindo o cursor, sem congelar; repita para sair (Windows em tela cheia; macOS e X11 como lupa em janela; Wayland best effort quando o portal oferece cursor metadata; GNOME desabilitado) |
 | **Ctrl+5** | Inicia ou salva uma gravação GIF da tela (Linux e Windows; até 5 min) |
 | **Ctrl+6** | Recorte: arraste uma área para copiá-la; com Shift ao soltar, salva PNG |
 | `pixelpointer status` | Consulta se o daemon está em execução |

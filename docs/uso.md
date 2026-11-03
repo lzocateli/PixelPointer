@@ -40,7 +40,7 @@ executar a partir de um terminal; os detalhes e erros ficam nessa saída.
 | `pixelpointer zoom` | Abre o zoom agora; com o `daemon` em execução, envia o comando a ele |
 | `pixelpointer draw` | Abre o desenho sem zoom; mesma regra do `zoom` |
 | `pixelpointer timer` | Abre o timer de intervalo (10 min) sobre a tela escurecida; setas ou roda ajustam os minutos e reiniciam, R/G/B/Y/O/P mudam a cor, Esc ou botão direito saem; mesma regra do `zoom` |
-| `pixelpointer livezoom` | Com o `daemon` em execução, liga ou desliga o Live Zoom (também Ctrl+4 ou tray): no Windows, a lupa de tela cheia acompanha o cursor; mouse e teclado continuam funcionando. Encerrar o daemon restaura a tela. No X11 e macOS, é uma lupa em janela (um terço da tela), marcada com uma cruz e com a região ampliada seguindo o cursor; ela some durante zoom, desenho, timer e recorte. No macOS, ScreenCaptureKit exclui as janelas do PixelPointer e captura apenas o monitor principal; exige permissão de Gravação de Tela. Ainda não existe no Wayland |
+| `pixelpointer livezoom` | Com o `daemon` em execução, liga ou desliga o Live Zoom (também Ctrl+4 ou tray): no Windows, a lupa de tela cheia acompanha o cursor; mouse e teclado continuam funcionando. Encerrar o daemon restaura a tela. No X11 e macOS, é uma lupa em janela (um terço da tela), marcada com uma cruz e com a região ampliada seguindo o cursor; ela some durante zoom, desenho, timer e recorte. No macOS, ScreenCaptureKit exclui as janelas do PixelPointer e captura apenas o monitor principal; exige permissão de Gravação de Tela. No Wayland, é best effort: usa ScreenCast e só segue o cursor quando o portal oferece metadata; exige um monitor, o GNOME usa Screenshot por D13 e não habilita essa lupa. O E2E Sway verifica recusa controlada quando metadata não é oferecido; aceite visual positivo ainda pendente |
 | `pixelpointer record` | Com o `daemon` em execução, inicia ou salva uma gravação GIF da tela inteira (8 quadros/s, até 1280 px de largura, limite de 5 min, paleta fixa de 252 cores) na pasta de capturas; também por Ctrl+5 ou pela tray. Disponível no Linux e no Windows; anotações abertas durante a gravação entram no GIF. No Wayland a gravação usa uma sessão ScreenCast aberta até salvar, inclui o cursor quando o portal permite e pede o monitor (ou reaproveita a autorização salva); o indicador de compartilhamento fica ativo durante a gravação |
 | `pixelpointer snip` | Recorte: arraste uma área da captura para copiá-la como PNG (sem anotações); segure Shift ao soltar para salvar na pasta de capturas; Esc ou botão direito cancelam; mesma regra do `zoom` |
 | `pixelpointer status` | Informa se o daemon está em execução, sem abrir uma sobreposição |
@@ -359,7 +359,7 @@ nem sockets de outras aplicações. Reinicie o daemon pelo pacote corrigido.
 
 ## Limitações atuais
 
-- O Live Zoom (Ctrl+4) existe no Windows, macOS (monitor principal) e X11 (lupa em janela); ainda não existe no Wayland. DemoType (Ctrl+7) ainda não existe e
+- O Live Zoom (Ctrl+4) existe no Windows, macOS (monitor principal) e X11 (lupa em janela). No Wayland é best effort, condicionado a cursor metadata do portal; o Sway/wlr testado anuncia `AvailableCursorModes=0x3` e não oferece metadata. DemoType (Ctrl+7) ainda não existe e
   a gravação (Ctrl+5) é só em GIF e ainda não existe no macOS. Veja o
   [plano](plano-implementacao.md).
 - Com vários monitores, no X11 e no Windows a sobreposição abre no monitor do

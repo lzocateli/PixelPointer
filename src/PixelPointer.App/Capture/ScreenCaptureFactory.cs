@@ -55,6 +55,22 @@ internal static class ScreenCaptureFactory
         throw new NotSupportedException("A gravação ainda não está disponível neste sistema (disponível no Windows e no Linux).");
     }
 
+    internal static Task<ScreenCastStream> OpenWaylandLiveZoomAsync(PortalClient portal,
+        CancellationToken cancellationToken)
+    {
+        if (!OperatingSystem.IsLinux() || !SessionInfo.IsWayland)
+        {
+            throw new NotSupportedException("O Live Zoom ScreenCast exige uma sessão Wayland.");
+        }
+
+        if (IsGnome(Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP")))
+        {
+            throw new NotSupportedException("O Live Zoom ScreenCast está desabilitado no GNOME para preservar a política de captura Screenshot.");
+        }
+
+        return ScreenCastStream.OpenAsync(portal, TryCreateTokenStore(), cancellationToken, cursorMetadata: true);
+    }
+
     private static bool IsGnome(string? currentDesktop) =>
         currentDesktop?.Split(':').Any(name => name.Equals("GNOME", StringComparison.OrdinalIgnoreCase)) == true;
 
