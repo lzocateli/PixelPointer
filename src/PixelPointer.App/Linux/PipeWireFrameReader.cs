@@ -46,12 +46,16 @@ internal sealed unsafe partial class PipeWireFrameReader : IDisposable
     private static int s_initialized;
 
     private readonly TaskCompletionSource<SKBitmap> _first = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly object _cursorLock = new();
+    private readonly bool _captureCursorMetadata;
     private TaskCompletionSource<SKBitmap> _request;
     private Exception? _failure;
     private readonly object _latestLock = new();
     private readonly System.Diagnostics.Stopwatch _sinceLatest = System.Diagnostics.Stopwatch.StartNew();
     private SKBitmap? _latest;
     private volatile bool _keepLatest;
+    private int _cursorMetadataRequested;
+    private SpaCursorPosition? _cursorPosition;
     private GCHandle _self;
     private nint _loop;
     private nint _context;
@@ -61,8 +65,9 @@ internal sealed unsafe partial class PipeWireFrameReader : IDisposable
     private nint _events;
     private SpaVideoInfo? _info;
 
-    private PipeWireFrameReader()
+    private PipeWireFrameReader(bool captureCursorMetadata)
     {
+        _captureCursorMetadata = captureCursorMetadata;
         _request = _first;
     }
 
@@ -70,9 +75,20 @@ internal sealed unsafe partial class PipeWireFrameReader : IDisposable
     internal static Task<SKBitmap> ReadFrameAsync(SafeFileHandle remote, uint nodeId, TimeSpan timeout,
         CancellationToken cancellationToken) => PipeWireFrame.ReadAsync(remote, nodeId, timeout, cancellationToken);
 
-    internal static PipeWireFrameReader Start(SafeFileHandle remote, uint nodeId)
+    internal SpaCursorPosition? CursorPosition
     {
-        var reader = new PipeWireFrameReader();
+        get
+        {
+            lock (_cursorLock)
+            {
+                return _cursorPosition;
+            }
+        }
+    }
+
+    internal static PipeWireFrameReader Start(SafeFileHandle remote, uint nodeId, bool captureCursorMetadata = false)
+    {
+        var reader = new PipeWireFrameReader(captureCursorMetadata);
         try
         {
             reader.Connect(remote, nodeId);
@@ -275,11 +291,32 @@ internal sealed unsafe partial class PipeWireFrameReader : IDisposable
             return;
         }
 
-        var length = checked(8 + (int)param->Size);
-        reader._info = SpaPod.ParseVideoFormat(new ReadOnlySpan<byte>(param, length));
-        if (reader._info is null)
+        try
         {
-            reader.Fail(new InvalidOperationException("O PipeWire negociou um formato de vídeo não suportado."));
+            var length = checked(8 + (int)param->Size);
+            reader._info = SpaPod.ParseVideoFormat(new ReadOnlySpan<byte>(param, length));
+            if (reader._info is null)
+            {
+                reader.Fail(new InvalidOperationException("O PipeWire negociou um formato de vídeo não suportado."));
+                return;
+            }
+
+            if (reader._captureCursorMetadata && Interlocked.Exchange(ref reader._cursorMetadataRequested, 1) == 0)
+            {
+                var cursorMeta = SpaPod.BuildCursorMetadataParam();
+                fixed (byte* pod = cursorMeta)
+                {
+                    var parameters = (nint)pod;
+                    if (Native.pw_stream_update_params(reader._stream, &parameters, 1) < 0)
+                    {
+                        reader.Fail(new NotSupportedException("O PipeWire não aceitou SPA_META_Cursor."));
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            reader.Fail(ex);
         }
     }
 
@@ -292,10 +329,12 @@ internal sealed unsafe partial class PipeWireFrameReader : IDisposable
         }
 
         var buffer = Native.pw_stream_dequeue_buffer(reader._stream);
-        if (buffer is null)
+        if (buffer is null || buffer->Buffer is null)
         {
             return;
         }
+
+        reader.UpdateCursorPosition(buffer->Buffer);
 
         var request = Volatile.Read(ref reader._request);
         var store = request.Task.IsCompleted;
@@ -303,7 +342,7 @@ internal sealed unsafe partial class PipeWireFrameReader : IDisposable
         {
             // Sem pedido pendente, o modo contínuo converte no máximo um quadro a cada 50 ms.
             if ((store && (!reader._keepLatest || reader._sinceLatest.ElapsedMilliseconds < 50))
-                || reader._info is not { } info || buffer->Buffer is null
+                || reader._info is not { } info
                 || buffer->Buffer->DataCount == 0)
             {
                 return;
@@ -353,6 +392,34 @@ internal sealed unsafe partial class PipeWireFrameReader : IDisposable
         }
     }
 
+    private void UpdateCursorPosition(SpaBuffer* buffer)
+    {
+        if (!_captureCursorMetadata || buffer->Metas is null)
+        {
+            return;
+        }
+
+        for (var index = 0; index < buffer->MetaCount; index++)
+        {
+            var metadata = &buffer->Metas[index];
+            if (metadata->Type != 5 || metadata->Data == 0 || metadata->Size < 28)
+            {
+                continue;
+            }
+
+            if (SpaCursorMetadata.TryParse(new ReadOnlySpan<byte>((void*)metadata->Data, checked((int)metadata->Size)),
+                    out var position))
+            {
+                lock (_cursorLock)
+                {
+                    _cursorPosition = position;
+                }
+            }
+
+            return;
+        }
+    }
+
     [StructLayout(LayoutKind.Sequential)]
     private struct SpaDict
     {
@@ -396,8 +463,16 @@ internal sealed unsafe partial class PipeWireFrameReader : IDisposable
     {
         public uint MetaCount;
         public uint DataCount;
-        public void* Metas;
+        public SpaMeta* Metas;
         public SpaData* Datas;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct SpaMeta
+    {
+        public uint Type;
+        public uint Size;
+        public nint Data;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -471,6 +546,9 @@ internal sealed unsafe partial class PipeWireFrameReader : IDisposable
         [LibraryImport(Library)]
         internal static partial int pw_stream_connect(nint stream, uint direction, uint targetId, uint flags,
             nint* parameters, uint count);
+
+        [LibraryImport(Library)]
+        internal static partial int pw_stream_update_params(nint stream, nint* parameters, uint count);
 
         [LibraryImport(Library)]
         internal static partial PwBuffer* pw_stream_dequeue_buffer(nint stream);

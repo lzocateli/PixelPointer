@@ -323,6 +323,14 @@ static int Daemon()
                 return;
             }
 
+            if (OperatingSystem.IsLinux() && SessionInfo.IsWayland)
+            {
+                lens = WaylandLiveLens.Start(level, portal
+                    ?? throw new InvalidOperationException("Wayland exige o portal de captura."));
+                Console.WriteLine("Live Zoom (Wayland) iniciado; a sessão ScreenCast fica ativa até encerrar com Ctrl+4.");
+                return;
+            }
+
             liveZoom = LiveZoom.Start(level);
             Console.WriteLine($"Live Zoom ativo em {liveZoom.Level:0.##}x; repita Ctrl+4 para encerrar.");
         }
@@ -358,7 +366,7 @@ static int Daemon()
                         lens.Tick();
                     }
                     catch (Exception ex) when (ex is InvalidOperationException or IOException
-                        or UnauthorizedAccessException or DllNotFoundException or TimeoutException)
+                        or UnauthorizedAccessException or DllNotFoundException or TimeoutException or NotSupportedException)
                     {
                         Console.Error.WriteLine($"Live Zoom encerrado: {ex.Message}");
                         lens.Dispose();

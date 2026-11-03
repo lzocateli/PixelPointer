@@ -10,7 +10,9 @@ internal sealed class X11Hotkeys : IHotkeyService
     private const uint LockMask = 1 << 1;
     private const uint Mod2Mask = 1 << 4;
     private const long KeyPressMask = 1 << 0;
+    private const long KeyReleaseMask = 1 << 1;
     private const int KeyPress = 2;
+    private const int KeyRelease = 3;
     private const int GrabModeAsync = 1;
     private const int BadAccess = 10;
 
@@ -59,7 +61,7 @@ internal sealed class X11Hotkeys : IHotkeyService
             _keycodes[keycode] = shortcut.Id;
         }
 
-        Xlib.XSelectInput(_display, _root, KeyPressMask);
+        Xlib.XSelectInput(_display, _root, KeyPressMask | KeyReleaseMask);
         if (_keycodes.Count == 0)
         {
             Dispose();
@@ -73,6 +75,7 @@ internal sealed class X11Hotkeys : IHotkeyService
         _thread = new Thread(() =>
         {
             var buffer = Marshal.AllocHGlobal(192);
+            var nextBuffer = Marshal.AllocHGlobal(192);
             try
             {
                 while (!stopToken.IsCancellationRequested)
@@ -84,7 +87,23 @@ internal sealed class X11Hotkeys : IHotkeyService
                     }
 
                     Xlib.XNextEvent(display, buffer);
-                    if (Marshal.ReadInt32(buffer) == KeyPress
+                    var eventType = Marshal.ReadInt32(buffer);
+                    if (eventType == KeyRelease && Xlib.XPending(display) > 0)
+                    {
+                        Xlib.XPeekEvent(display, nextBuffer);
+                        var isAutoRepeat = Marshal.ReadInt32(nextBuffer) == KeyPress
+                            && Marshal.ReadInt32(buffer, X11EventLayout.KeycodeOffset)
+                                == Marshal.ReadInt32(nextBuffer, X11EventLayout.KeycodeOffset)
+                            && Marshal.ReadIntPtr(buffer, X11EventLayout.TimeOffset)
+                                == Marshal.ReadIntPtr(nextBuffer, X11EventLayout.TimeOffset);
+                        if (isAutoRepeat)
+                        {
+                            Xlib.XNextEvent(display, nextBuffer);
+                            continue;
+                        }
+                    }
+
+                    if (eventType == KeyPress
                         && _keycodes.TryGetValue(Marshal.ReadInt32(buffer, X11EventLayout.KeycodeOffset), out var id))
                     {
                         onActivated(new HotkeyCommand(id));
@@ -94,6 +113,7 @@ internal sealed class X11Hotkeys : IHotkeyService
             finally
             {
                 Marshal.FreeHGlobal(buffer);
+                Marshal.FreeHGlobal(nextBuffer);
             }
         })
         { IsBackground = true, Name = "x11-hotkeys" };
@@ -225,4 +245,6 @@ internal static class X11EventLayout
     }
 
     internal static int KeycodeOffset => Marshal.OffsetOf<KeyEvent>(nameof(KeyEvent.Keycode)).ToInt32();
+
+    internal static int TimeOffset => Marshal.OffsetOf<KeyEvent>(nameof(KeyEvent.Time)).ToInt32();
 }

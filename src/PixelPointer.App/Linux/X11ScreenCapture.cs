@@ -145,6 +145,9 @@ internal static partial class Xlib
     internal static partial int XNextEvent(nint display, nint eventBuffer);
 
     [LibraryImport(Lib)]
+    internal static partial int XPeekEvent(nint display, nint eventBuffer);
+
+    [LibraryImport(Lib)]
     internal static partial int XPending(nint display);
 
     [LibraryImport(Lib)]
