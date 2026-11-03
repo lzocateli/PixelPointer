@@ -81,6 +81,26 @@ public sealed class ScreenCastTests
         Assert.Equal(expected, ScreenCaptureFactory.UseScreenCast(1, currentDesktop));
 
     [Theory]
+    [InlineData("GNOME", true)]
+    [InlineData("ubuntu:GNOME", true)]
+    [InlineData("KDE", false)]
+    [InlineData("sway", false)]
+    [InlineData(null, false)]
+    public void LiveZoomPolicy_RejectsGnomeSynchronously(string? currentDesktop, bool disabled)
+    {
+        if (disabled)
+        {
+            var exception = Assert.Throws<NotSupportedException>(
+                () => ScreenCaptureFactory.EnsureWaylandLiveZoomAllowed(currentDesktop));
+            Assert.Contains("desabilitado no GNOME", exception.Message);
+        }
+        else
+        {
+            ScreenCaptureFactory.EnsureWaylandLiveZoomAllowed(currentDesktop);
+        }
+    }
+
+    [Theory]
     [InlineData(true, "sim")]
     [InlineData(false, "nao")]
     public void Timings_SeparatePortalRemoteAndFrameWithoutChangingLegacyFields(bool restoreRequested, string restoreStatus)

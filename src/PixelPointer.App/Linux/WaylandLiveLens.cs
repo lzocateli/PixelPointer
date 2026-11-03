@@ -75,6 +75,7 @@ internal sealed unsafe class WaylandLiveLens : ILiveLens
             throw new NotSupportedException("O Live Zoom Wayland exige uma sessão Wayland.");
         }
 
+        ScreenCaptureFactory.EnsureWaylandLiveZoomAllowed(Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP"));
         return new WaylandLiveLens(level, portal);
     }
 
@@ -205,6 +206,9 @@ internal sealed unsafe class WaylandLiveLens : ILiveLens
                 _captureTask.WaitAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult();
             }
             catch (OperationCanceledException) when (_stop.IsCancellationRequested)
+            {
+            }
+            catch (NotSupportedException) when (_captureTask.IsFaulted)
             {
             }
             catch (TimeoutException)
