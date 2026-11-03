@@ -126,6 +126,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Commit nao e ancestral de origin/main.' }
     Import-Module (Join-Path $PSScriptRoot 'ci/GroundworkRelease.psm1') -Force
     $repository = 'lzocateli/PixelPointer'
+    & (Join-Path $PSScriptRoot 'ci/Assert-ReleaseSource.ps1') -Repository $repository -Commit $Commit -DefaultBranch main
+    if ($LASTEXITCODE -ne 0) { throw 'Fonte da preview desatualizada ou sem CI verde; gere uma nova execução na main atual.' }
     $release = Find-GitHubRelease -Repository $repository -Tag $tag
     if ($null -eq $release) {
         if ($Stage -ne 'draft') { throw 'Rascunho de preview inexistente.' }

@@ -25,11 +25,14 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
+      actions: read
+      checks: read
     outputs:
       tag: ${{ steps.version.outputs.tag }}
       version: ${{ steps.version.outputs.version }}
       commit: ${{ steps.version.outputs.commit }}
       environment: ${{ steps.version.outputs.environment }}
+      release_pr_head: ${{ steps.version.outputs.release_pr_head }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -62,7 +65,27 @@ jobs:
     environment: release
     permissions:
       contents: read
+      pull-requests: read
+      actions: read
+      checks: read
     steps:
+      - name: Checkout source for candidate guard
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Revalidate approved candidate before creating tag
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          SOURCE_COMMIT: ${{ needs.resolve.outputs.commit }}
+          RELEASE_PR_HEAD: ${{ needs.resolve.outputs.release_pr_head }}
+          CANDIDATE_TAG: ${{ needs.resolve.outputs.tag }}
+        run: |
+          ./tools/scripts/ci/Get-PreviewVersion.ps1 -Repository $env:GITHUB_REPOSITORY -DefaultBranch $env:DEFAULT_BRANCH -Commit $env:SOURCE_COMMIT -ExpectedReleasePrHead $env:RELEASE_PR_HEAD -ExpectedTag $env:CANDIDATE_TAG
+          exit $LASTEXITCODE
+
       - name: Require release GitHub App
         shell: bash
         env:
@@ -143,6 +166,9 @@ jobs:
       packages: write
       id-token: write
       attestations: write
+      actions: read
+      checks: read
+      pull-requests: read
     with:
       tag: ${{ needs.context.outputs.tag }}
       version: ${{ needs.context.outputs.version }}
@@ -158,6 +184,9 @@ jobs:
       contents: write
       id-token: write
       attestations: write
+      actions: read
+      checks: read
+      pull-requests: read
     env:
       GH_TOKEN: ${{ github.token }}
       RELEASE_TAG: ${{ needs.context.outputs.tag }}
@@ -209,7 +238,10 @@ jobs:
         shell: pwsh
         env:
           UPLOAD_MANIFEST: ${{ steps.manifest.outputs.upload }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
+          ./tools/scripts/ci/Assert-ReleaseSource.ps1 -Repository $env:GITHUB_REPOSITORY -Commit $env:RELEASE_COMMIT -DefaultBranch $env:DEFAULT_BRANCH
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           if ($env:UPLOAD_MANIFEST -eq 'true') {
             gh release upload $env:RELEASE_TAG artifacts/release-manifest.json --repo $env:GITHUB_REPOSITORY
             if ($LASTEXITCODE -ne 0) { throw 'Falha ao anexar release-manifest.json.' }

@@ -80,6 +80,19 @@ function global:gh {
         if (`$global:mode -eq 'existing-tag') { @{ object = @{ sha = `$global:commit } } | ConvertTo-Json; return }
         Write-Error 'HTTP 404' -ErrorAction Continue; `$global:LASTEXITCODE = 1; return
     }
+    if (`$path -like '*/git/ref/heads/main') {
+        `$sha = if (`$global:mode -eq 'stale-source') { 'b' * 40 } else { `$global:commit }
+        @{ object = @{ sha = `$sha } } | ConvertTo-Json; return
+    }
+    if (`$path -like '*/pulls?state=*') { '[]'; return }
+    if (`$path -like '*/actions/workflows/ci.yml/runs?*') {
+        `$status = if (`$global:mode -eq 'pending-ci') { 'in_progress' } else { 'completed' }
+        `$conclusion = if (`$global:mode -eq 'failed-ci') { 'failure' } else { 'success' }
+        ConvertTo-Json -InputObject @(@{ workflow_runs = @(@{ id = 9; check_suite_id = 12; head_sha = `$global:commit; head_branch = 'main'; event = 'push'; status = `$status; conclusion = `$conclusion }) }) -Depth 8; return
+    }
+    if (`$path -like '*/check-runs?*') {
+        ConvertTo-Json -InputObject @(@{ check_runs = @(@{ name = 'Result'; head_sha = `$global:commit; app = @{ id = 15368 }; check_suite = @{ id = 12 }; status = 'completed'; conclusion = 'success' }) }) -Depth 8; return
+    }
     if (`$path -like '*/commits/*') {
         `$sha = if (`$global:mode -eq 'wrong-commit') { 'b' * 40 } else { `$global:commit }
         @{ sha = `$sha } | ConvertTo-Json; return
@@ -120,7 +133,7 @@ function global:gh {
     Invoke-Case @{ Publish = $true } 'new'
     Invoke-Case @{ Publish = $true }
     Invoke-Case @{ Publish = $true; Stage = 'publish' }
-    foreach ($mode in @('bad-digest', 'missing-assets', 'published', 'stable', 'wrong-commit', 'wrong-ancestry', 'api-error', 'existing-tag', 'new')) {
+    foreach ($mode in @('bad-digest', 'missing-assets', 'published', 'stable', 'wrong-commit', 'wrong-ancestry', 'api-error', 'existing-tag', 'new', 'stale-source', 'pending-ci', 'failed-ci')) {
         Invoke-Case @{ Publish = $true; Stage = 'publish' } $mode 1
     }
     Invoke-Case @{ Publish = $true } 'existing-tag' 1

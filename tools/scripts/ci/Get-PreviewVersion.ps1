@@ -52,6 +52,8 @@ param(
     [string] $ConfigPath = '.github/ci-cd.json',
     [string] $NotesPath = '',
     [string] $OutputPath = '',
+    [string] $ExpectedReleasePrHead = '',
+    [string] $ExpectedTag = '',
     [Alias('h')]
     [switch] $Help,
     [Parameter(ValueFromRemainingArguments)]
@@ -88,6 +90,7 @@ try {
     if ($pulls.Count -ne 1) { throw "Nenhum Release PR aberto ($branch): não há versão a pré-lançar." }
     $pull = $pulls[0]
     $head = [string]$pull['head']['sha']
+    if ($ExpectedReleasePrHead -and $head -cne $ExpectedReleasePrHead) { throw 'Release PR mudou durante a aprovação; resolva e aprove uma nova candidata.' }
 
     $headCommit = Invoke-GhJson -Path "repos/$Repository/commits/$head"
     $parents = @($headCommit['parents'] | ForEach-Object { [string]$_['sha'] })
@@ -106,6 +109,9 @@ try {
         ForEach-Object { [int]($_.Split('.')[-1]) })
     $next = $numbers.Count -eq 0 ? 1 : (($numbers | Measure-Object -Maximum).Maximum + 1)
     $tag = "v$version-rc.$next"
+    if ($ExpectedTag -and $tag -cne $ExpectedTag) { throw 'Versão ou sequência da candidata mudou; resolva e aprove uma nova execução.' }
+    Assert-ReleaseDependencies -Repository $Repository -Commit $Commit -Body ([string]($pull['body'] ?? '')) -DefaultBranch $DefaultBranch
+    Assert-CurrentReleaseSource -Repository $Repository -Commit $Commit -DefaultBranch $DefaultBranch
 
     if ($NotesPath) {
         $body = [string]($pull['body'] ?? '')
@@ -124,6 +130,7 @@ Write-GitHubOutput -Path $OutputPath -Values @{
     base_version = $version
     commit       = $Commit
     release_pr   = [string]$pull['number']
+    release_pr_head = $head
     environment  = $policy.Environment
 } | Out-Null
 Write-Output "Candidata $tag no commit $Commit (Release PR #$($pull['number']))."
