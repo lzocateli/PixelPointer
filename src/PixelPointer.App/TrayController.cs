@@ -9,6 +9,8 @@ namespace PixelPointer.App;
 internal sealed unsafe partial class TrayController : IDisposable
 {
     private const uint TrayEntryButton = 1;
+    private const uint TrayEntrySubmenu = 4;
+    private const uint TrayEntryDisabled = 0x80000000;
     private static readonly TrayCallback Callback = OnTrayCallback;
 
     private readonly SKBitmap _iconBitmap;
@@ -68,6 +70,18 @@ internal sealed unsafe partial class TrayController : IDisposable
             controller.AddEntry(menu, "Live Zoom", () => onCommand(new HotkeyCommand("livezoom")));
             controller.AddEntry(menu, "Recorte", () => onCommand(new HotkeyCommand("snip")));
             controller.AddEntry(menu, "Gravar / parar gravação", () => onCommand(new HotkeyCommand("record")));
+            var about = controller.AddEntry(menu, "Sobre e atalhos", null, TrayEntrySubmenu);
+            var aboutMenu = SdlTrayNative.CreateTraySubmenu(about);
+            if (aboutMenu == 0)
+            {
+                throw new InvalidOperationException($"SDL não criou o submenu de informações: {SDL_GetError()}");
+            }
+
+            foreach (var label in AboutEntries)
+            {
+                controller.AddEntry(aboutMenu, label, null, TrayEntryButton | TrayEntryDisabled);
+            }
+
             controller.AddEntry(menu, "Sair", onQuit);
             unavailableReason = null;
             return controller;
@@ -107,20 +121,39 @@ internal sealed unsafe partial class TrayController : IDisposable
         _iconBitmap.Dispose();
     }
 
-    private void AddEntry(nint menu, string label, Action action)
+    internal static IReadOnlyList<string> AboutEntries =>
+    [
+        $"PixelPointer {AppInfo.Version}",
+        "Atalhos globais padrão",
+        .. HotkeyDefaults.Shortcuts.Select(shortcut => $"{shortcut.Trigger}  —  {shortcut.Description}"),
+        "O desktop pode redefinir os atalhos.",
+        "Disponibilidade depende da plataforma e das permissões.",
+    ];
+
+    private nint AddEntry(nint menu, string label, Action? action, uint flags = TrayEntryButton)
     {
         // O backend D-Bus do SDL 3.5.0 retém o ponteiro, sem copiar o texto.
         var nativeLabel = new TrayLabel(label);
         _labels.Add(nativeLabel);
-        var entry = SdlTrayNative.InsertTrayEntryAt(menu, -1, nativeLabel, TrayEntryButton);
+        var entry = SdlTrayNative.InsertTrayEntryAt(menu, -1, nativeLabel, flags);
         if (entry == 0)
         {
             throw new InvalidOperationException($"SDL não adicionou a opção '{label}' à tray: {SDL_GetError()}");
         }
 
-        var callback = GCHandle.Alloc(action);
-        _callbacks.Add(callback);
-        SdlTrayNative.SetTrayEntryCallback(entry, Marshal.GetFunctionPointerForDelegate(Callback), GCHandle.ToIntPtr(callback));
+        if ((flags & TrayEntryDisabled) != 0)
+        {
+            SdlTrayNative.SetTrayEntryEnabled(entry, false);
+        }
+
+        if (action is not null)
+        {
+            var callback = GCHandle.Alloc(action);
+            _callbacks.Add(callback);
+            SdlTrayNative.SetTrayEntryCallback(entry, Marshal.GetFunctionPointerForDelegate(Callback), GCHandle.ToIntPtr(callback));
+        }
+
+        return entry;
     }
 
     private static void OnTrayCallback(nint userdata, nint entry)
@@ -144,9 +177,17 @@ internal sealed unsafe partial class TrayController : IDisposable
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
         internal static partial nint CreateTrayMenu(nint tray);
 
+        [LibraryImport("SDL3", EntryPoint = "SDL_CreateTraySubmenu")]
+        [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
+        internal static partial nint CreateTraySubmenu(nint entry);
+
         [LibraryImport("SDL3", EntryPoint = "SDL_InsertTrayEntryAt")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
         internal static partial nint InsertTrayEntryAt(nint menu, int position, TrayLabel label, uint flags);
+
+        [LibraryImport("SDL3", EntryPoint = "SDL_SetTrayEntryEnabled")]
+        [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
+        internal static partial void SetTrayEntryEnabled(nint entry, [MarshalAs(UnmanagedType.U1)] bool enabled);
 
         [LibraryImport("SDL3", EntryPoint = "SDL_SetTrayEntryCallback")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]

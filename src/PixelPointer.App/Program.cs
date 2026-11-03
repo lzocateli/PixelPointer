@@ -291,7 +291,7 @@ static int Daemon()
         using var tray = TrayController.TryCreate(Enqueue, cancellation.Cancel, out var trayUnavailableReason);
         Console.WriteLine(tray is null
             ? $"Tray ............. indisponível ({trayUnavailableReason}); use 'pixelpointer status' e 'pixelpointer quit'."
-            : "Tray ............. registrada (Zoom, Desenhar, Timer, Live Zoom, Recorte, Gravar, Sair); a visibilidade depende do desktop.");
+            : "Tray ............. registrada (Zoom, Desenhar, Timer, Live Zoom, Recorte, Gravar, Sobre e atalhos, Sair); a visibilidade depende do desktop.");
 
         ScreenRecorder? recorder = null;
         LiveZoom? liveZoom = null;

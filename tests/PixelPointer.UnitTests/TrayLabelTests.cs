@@ -5,6 +5,22 @@ namespace PixelPointer.UnitTests;
 
 public sealed class TrayLabelTests
 {
+    [Fact]
+    public void AboutEntries_UseExecutableVersionAndEveryDefaultShortcut()
+    {
+        var entries = PixelPointer.App.TrayController.AboutEntries;
+        Assert.Equal($"PixelPointer {PixelPointer.App.AppInfo.Version}", entries[0]);
+        foreach (var shortcut in PixelPointer.App.Hotkeys.HotkeyDefaults.Shortcuts)
+        {
+            Assert.Contains($"{shortcut.Trigger}  —  {shortcut.Description}", entries);
+        }
+
+        Assert.Contains("Atalhos globais padrão", entries);
+        Assert.Contains("O desktop pode redefinir os atalhos.", entries);
+        Assert.Contains("Disponibilidade depende da plataforma e das permissões.", entries);
+        Assert.Equal(PixelPointer.App.Hotkeys.HotkeyDefaults.Shortcuts.Count + 4, entries.Count);
+    }
+
     [Theory]
     [InlineData("Zoom")]
     [InlineData("Desenhar")]

@@ -33,6 +33,16 @@ permisos requieren tu elección explícita. Cerrar setup no detiene el daemon
 existente. Ejecuta desde terminal para ver detalles y errores. Los comandos
 visibles permanecen en portugués como otros mensajes nativos de la aplicación.
 
+## Versión y atajos en el menú
+
+Con el daemon activo y la bandeja disponible, abre **Sobre e atalhos** en el
+menú del icono de PixelPointer. El submenú muestra la versión completa del
+ejecutable y los seis atajos globales predeterminados, de Ctrl+1 a Ctrl+6, sin
+ejecutar comandos ni solicitar permisos. El escritorio puede reasignar estas
+combinaciones; la lista no confirma vínculos activos ni disponibilidad de
+funciones en la plataforma. Sin bandeja, usa `pixelpointer --version` y la
+tabla de comandos siguiente.
+
 ## Comandos
 
 | Comando | Función |

@@ -53,7 +53,7 @@ async def main():
     scene = desktop.window("E2E external focus", 0, 0, 800, 600)
     desktop.focus(scene)
     no_tray = os.environ.get("E2E_NO_TRAY") == "1"
-    panel = None if no_tray else desktop.window("E2E StatusNotifier panel", 580, 12, 210, 300)
+    panel = None if no_tray else desktop.window("E2E StatusNotifier panel", 580, 12, 210, 330)
     bus = await MessageBus().connect()
     watcher = Watcher()
 
@@ -131,8 +131,11 @@ async def main():
             menu = bus.get_proxy_object(destination, menu_path, menu_intro).get_interface("com.canonical.dbusmenu")
             _, layout = await menu.call_get_layout(0, -1, [])
             entries = [(child.value[0], child.value[1]["label"].value) for child in layout[2]]
-            Path("/tmp/panel.json").write_text(json.dumps({"entries": entries, "icon": bool(icon)}))
-        desktop.fill(panel, 0x303030, 0, 0, 210, 300)
+            about = next(child.value for child in layout[2] if child.value[1]["label"].value == "Sobre e atalhos")
+            details = [(child.value[1]["label"].value, child.value[1].get("enabled", Variant("b", True)).value)
+                       for child in about[2]]
+            Path("/tmp/panel.json").write_text(json.dumps({"entries": entries, "icon": bool(icon), "about": details}))
+        desktop.fill(panel, 0x303030, 0, 0, 210, 330)
         if icon:
             width, height, pixels = min(icon, key=lambda value: abs(value[0] - 32))
             for row in range(min(height, 40)):
@@ -149,7 +152,7 @@ async def main():
         if previous_down and not down and 580 <= pointer_x < 790:
             if 12 <= pointer_y < 55 and menu:
                 opened = not opened
-            elif opened and 55 <= pointer_y < 312:
+            elif opened and 55 <= pointer_y < 342:
                 index = (pointer_y - 55) // 36
                 if index < len(entries):
                     await menu.call_event(entries[index][0], "clicked", Variant("i", 0), 0)
