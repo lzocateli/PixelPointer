@@ -15,7 +15,7 @@ from PIL import Image, ImageChops
 from evidence import AviWriter, Timeline, read_avi, report
 from x11 import X11
 
-TRAY_ENTRIES = ["Zoom", "Desenhar", "Timer", "Live Zoom", "Recorte", "Gravar / parar gravação", "Sair"]
+TRAY_ENTRIES = ["Zoom", "Desenhar", "Timer", "Live Zoom", "Recorte", "Gravar / parar gravação", "Sobre e atalhos", "Sair"]
 
 
 class Recorder:
@@ -180,6 +180,15 @@ class Scenario:
             self.wait("icone SNI", lambda: Path("/tmp/panel.json").exists())
             panel = json.loads(Path("/tmp/panel.json").read_text())
             assert panel["icon"] and [item[1] for item in panel["entries"]] == TRAY_ENTRIES
+            about = panel["about"]
+            assert about[0][0] == "PixelPointer " + self.cli("--version").strip()
+            assert [item[0] for item in about[1:]] == [
+                "Atalhos globais padrão", "CTRL+1  —  Zoom", "CTRL+2  —  Desenhar",
+                "CTRL+3  —  Timer", "CTRL+4  —  Live Zoom", "CTRL+5  —  Gravar",
+                "CTRL+6  —  Recorte", "O desktop pode redefinir os atalhos.",
+                "Disponibilidade depende da plataforma e das permissões.",
+            ]
+            assert all(not item[1] for item in about), "Informacoes devem ser somente leitura"
             # O painel publica panel.json antes de repintar o icone.
             self.wait("icone renderizado", lambda: len(
                 self.display.screenshot().crop((588, 16, 628, 56)).getcolors(1601) or []) > 4)

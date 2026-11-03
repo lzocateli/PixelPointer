@@ -32,6 +32,15 @@ de primeiro uso. Registro e permissões só ocorrem após sua escolha explícita
 Se já há daemon, fechar `setup` não o encerra. Para diagnosticar, prefira
 executar a partir de um terminal; os detalhes e erros ficam nessa saída.
 
+## Versão e atalhos no menu
+
+Com o daemon ativo e a tray disponível, abra **Sobre e atalhos** no menu do
+ícone do PixelPointer. O submenu mostra a versão completa do executável e os
+seis atalhos globais padrão, de Ctrl+1 a Ctrl+6, sem executar comandos ou pedir
+permissões. O desktop pode redefinir essas combinações; a lista não confirma
+vínculos ativos nem disponibilidade de recursos na plataforma. Sem tray, use
+`pixelpointer --version` e a tabela de comandos abaixo.
+
 ## Comandos
 
 | Comando | Função |

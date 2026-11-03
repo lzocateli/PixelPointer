@@ -34,6 +34,15 @@ requests happen only after your explicit choice. Closing setup does not stop
 an existing daemon. Run from a terminal to see diagnostic details and errors.
 On-screen command labels remain Portuguese, like other native app messages.
 
+## Version And Hotkeys In The Menu
+
+With the daemon running and the tray available, open **Sobre e atalhos** in
+the PixelPointer icon menu. The submenu shows the full executable version and
+the six default global hotkeys, Ctrl+1 through Ctrl+6, without running commands
+or requesting permissions. The desktop may remap these combinations; this list
+does not confirm active bindings or feature availability on the platform.
+Without a tray, use `pixelpointer --version` and the command table below.
+
 ## Commands
 
 | Command | Purpose |
