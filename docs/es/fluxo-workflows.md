@@ -12,46 +12,102 @@ Las guardas se implementaron en el catálogo y se aplicaron localmente mediante
 actualización gestionada. El [contrato de integridad](release-integrity.md) documenta
 interfaces, recuperación, migración y límites. Activación remota requiere integrar
 estos cambios. El portugués brasileño es la fuente normativa.
+El gate nuevo `distribution` requiere integrar workflows y configurar revisores
+en GitHub; actualizar los archivos locales no lo activa.
 
 ## Flujo implementado
 
+**Leyenda:** azul/rectángulo = automático; amarillo/paralelogramo = acción manual;
+rosa/rombo = revisión o aprobación humana; verde/cilindro = artefacto o estado publicado.
+Las flechas muestran el camino de éxito: sin aprobación, la etapa siguiente no empieza.
+
 ```mermaid
 flowchart TD
-    PR["PR común: feat, fix, docs y otros"] --> CI["ci.yml: higiene, Gitleaks, build, pruebas, AOT"]
-    CI --> RESULT["Result obligatorio + revisión + base actualizada"]
-    RESULT --> MERGE["Merge squash en main"]
+  subgraph INTEGRATION["1. Integración"]
+    PR[/"Abrir PR común: feat, fix, docs y otros"/] --> CI["ci.yml: higiene, Gitleaks, build, pruebas, AOT"]
+    CI --> RESULT["Result verde y base actualizada"]
+    RESULT --> REVIEW{"Revisión humana del PR"}
+    REVIEW --> MERGE[/"Merge squash en main"/]
     MERGE --> MAINCI["ci.yml en el SHA de main"]
-    MERGE --> RP["gw-release.yml: release-please crea o actualiza Release PR"]
+    MERGE --> RP["release-please crea o actualiza Release PR"]
     RP --> RPCI["CI del Release PR: incluye Preview gate"]
-    RP --> MANUAL["Disparo manual de gw-preview.yml en main"]
-    MANUAL --> RESOLVE["Get-PreviewVersion: versión, dependencias, HEAD actual y CI verde"]
+  end
+
+  subgraph CANDIDATE["2. Candidata y aceptación"]
+    RP --> MANUAL[/"Run workflow: Release preview en main"/]
+    MANUAL --> RESOLVE["Resolver versión, dependencias, HEAD actual y CI verde"]
     MAINCI --> RESOLVE
-    RESOLVE --> RELRC["Environment release: aprobación"]
-    RELRC --> RCTAG["GitHub App crea vX.Y.Z-rc.N + prerelease en borrador"]
-    RCTAG --> RCCTX["Valida versión y ascendencia de la tag"]
-    RCCTX --> PUB["publish.yml: build de 6 RIDs, smoke, instaladores, SBOM"]
-    PUB --> ASSETS["gw-github-assets.yml: Environment release, assets y procedencia"]
-    ASSETS --> RCFINAL["gw-preview.yml: manifiesto atestado + prerelease pública, sin Latest"]
-    RCFINAL --> Q["gw-deploy.yml en la tag: guard quality"]
-    Q --> QA["deploy.yml: aprobación humana en Environment quality"]
-    QA --> QS["Comprueba assets + smoke del paquete linux-x64 en containers"]
-    QS --> ACCEPT["preview-acceptance.json + repetición del CI del Release PR"]
-    ACCEPT --> RPCI
-    RPCI --> RPOK["Result verde + revisión humana"]
-    RPOK --> RPMERGE["Merge squash del Release PR en main"]
+    RESOLVE --> RELRC{"Aprobar Environment release"}
+    RELRC --> RCTAG["Revalidar fuente; GitHub App crea tag y borrador"]
+    RCTAG --> RCREF[("vX.Y.Z-rc.N: prerelease en borrador")]
+    RCREF --> RCCTX["Validar versión y ascendencia de la tag"]
+    RCCTX --> DISTRC{"Autorizar divulgación del RC: distribution"}
+    DISTRC --> PUB["publish.yml: build de 6 RIDs, smoke, instaladores, SBOM"]
+    PUB --> RCASSETAPP{"Aprobar upload en Environment release"}
+    RCASSETAPP --> ASSETS["Atestar y adjuntar assets; crear manifiesto; finalizar RC"]
+    ASSETS --> RCFINAL[("RC pública y atestada, sin Latest")]
+    RCFINAL --> Q["Disparar Deploy en tag; guard quality"]
+    Q --> TESTRC[/"Descargar y probar manualmente el paquete RC"/]
+    TESTRC --> QA{"Aceptar candidata: aprobar quality"}
+    QA --> QS["Verificar assets y ejecutar smoke linux-x64 en containers"]
+    QS --> ACCEPT[("preview-acceptance.json")]
+    ACCEPT --> REFRESH["Reejecutar CI del Release PR"]
+    REFRESH --> RPCI
+  end
+
+  subgraph RELEASE["3. Release estable"]
+    RPCI --> RPOK["Preview gate y Result verdes"]
+    RPOK --> RPREVIEW{"Revisión humana del Release PR"}
+    RPREVIEW --> RPMERGE[/"Merge squash del Release PR en main"/]
+    RPMERGE --> FINALCI["Ejecutar CI en el SHA integrado"]
+    FINALCI --> RESUME[/"Si hace falta, retomar Release en main: mode=release"/]
     RPMERGE --> FINALGUARD["Guard antes de tag: SHA actual, CI verde y código del RC aceptado"]
-    FINALGUARD --> FINALTAG["gw-release.yml: GitHub App crea vX.Y.Z + release en borrador"]
-    FINALTAG --> FINALCTX["Valida versiones y ascendencia de la tag"]
-    FINALCTX --> FINALPUB["publish.yml: build, smoke, SBOM y assets en Environment release"]
-    FINALPUB --> STABLE["gw-release.yml: manifiesto atestado + release estable pública"]
+    RESUME --> FINALGUARD
+    FINALGUARD --> FINALTAG["GitHub App crea tag final y borrador"]
+    FINALTAG --> FINALREF[("vX.Y.Z: release en borrador")]
+    FINALREF --> FINALCTX["Validar versiones y ascendencia de la tag"]
+    FINALCTX --> DISTFINAL{"Autorizar divulgación de estable: distribution"}
+    DISTFINAL --> FINALBUILD["Build, smoke y SBOM de la tag autorizada"]
+    FINALBUILD --> FINALAPP{"Aprobar publicación en Environment release"}
+    FINALAPP --> FINALPUB["Revalidar fuente; atestar assets y manifiesto; publicar"]
+    FINALPUB --> STABLE[("Release estable pública")]
+  end
+
+  subgraph DISTRIBUTION["4. Distribución y verificación"]
     STABLE --> POST["post-release.yml"]
-    POST --> BREW["Environment release: actualiza Homebrew + verifica instalación"]
-    POST --> WINGET["winget.yml: validación + envío en Environment winget"]
-    STABLE --> AUTOQ["Disparo automático de gw-deploy.yml en quality"]
-    STABLE --> PROD["Disparo manual de gw-deploy.yml en tag estable: production"]
-    AUTOQ --> VERIFYQ["Guard + aprobación quality + assets + smoke"]
-    PROD --> VERIFYPROD["Guard + aprobación production + assets + smoke"]
+    POST --> BREWAPP{"Aprobar release para Homebrew"}
+    BREWAPP --> BREW["Actualizar tap y verificar instalación"]
+    POST --> WINGETCHECK["winget.yml: validar paquete"]
+    WINGETCHECK --> WINGETAPP{"Aprobar Environment winget"}
+    WINGETAPP --> WINGET["Enviar a winget-pkgs; esperar moderación externa"]
+    STABLE --> AUTOQ["Auto-disparo Deploy en quality; guard"]
+    AUTOQ --> STABLEQA{"Aprobar Environment quality"}
+    STABLEQA --> VERIFYQ["Verificar assets y ejecutar smoke"]
+    STABLE --> PROD[/"Run workflow: Deploy en tag estable, production"/]
+    PROD --> PRODGUARD["Guard de production"]
+    PRODGUARD --> PRODAPP{"Aprobar Environment production"}
+    PRODAPP --> VERIFYPROD["Verificar assets y ejecutar smoke"]
+  end
+
+  classDef automatic fill:#e8f1fb,stroke:#1d4ed8,color:#102a43
+  classDef manual fill:#fff4cc,stroke:#966800,color:#3d2c00
+  classDef approval fill:#ffe4e6,stroke:#be123c,color:#4c0519
+  classDef artifact fill:#e7f6ec,stroke:#15803d,color:#12351e
+  class CI,RESULT,MAINCI,RP,RPCI,RESOLVE,RCTAG,RCCTX,PUB,ASSETS,Q,QS,REFRESH,RPOK,FINALCI,FINALGUARD,FINALTAG,FINALCTX,FINALBUILD,FINALPUB,POST,BREW,WINGETCHECK,WINGET,AUTOQ,VERIFYQ,PRODGUARD,VERIFYPROD automatic
+  class PR,MERGE,MANUAL,TESTRC,RPMERGE,RESUME,PROD manual
+  class REVIEW,RELRC,DISTRC,RCASSETAPP,QA,RPREVIEW,DISTFINAL,FINALAPP,BREWAPP,WINGETAPP,STABLEQA,PRODAPP approval
+  class RCREF,RCFINAL,ACCEPT,FINALREF,STABLE artifact
 ```
+
+Las aprobaciones de Environment se hacen en **Actions > ejecución > Review deployments**,
+no en el botón de merge del PR. Un mismo Environment puede pedir aprobación en
+varios jobs; aprobar el PR no sustituye aceptar su RC en `quality`.
+`distribution` autoriza divulgar la versión y el SHA indicados en el job, antes
+de cualquier paquete público en este flujo. `release` mantiene credenciales de
+publicación; una aprobación no sustituye la otra. Se exige evidencia humana del
+mismo run, incluso para RC, preview manual y republish; un ambiente sin revisores
+no permite enviar paquetes. Se revalidan fuente y CI tras la espera. Tags y
+borradores pueden preceder a la autorización, pero los paquetes no se distribuyen.
 
 El CI de main y release-please parten del mismo push, pero no existe dependencia
 `needs` entre esos workflows. El dibujo no implica que el CI de main termine
@@ -73,9 +129,9 @@ PixelPointer no tiene servidor desplegado; el deploy verifica paquetes publicado
 
 | Entrada | Recorrido y resultado | Environments |
 | --- | --- | --- |
-| `publish.yml`, dispatch en main con preview | Build y validación; crea `vX.Y.Z-preview.N` y GitHub Pre-release sin Latest; no promovible ni desplegable | `release` |
+| `publish.yml`, dispatch en main con preview | Build y validación; crea `vX.Y.Z-preview.N` y GitHub Pre-release sin Latest; no promovible ni desplegable | `distribution`, `release` |
 | `publish.yml`, PR que cambia la cadena de release | Build, smoke e instaladores; sin tag ni publicación | Ninguno |
-| `gw-release.yml`, dispatch en tag con `mode=republish` | Valida tag y release existente; repone artefactos ausentes, finaliza y repite distribución; no crea versión ni hace auto-deploy | `release`, `winget` al enviar |
+| `gw-release.yml`, dispatch en tag con `mode=republish` | Valida tag y release existente; exige autorización para artefactos ausentes, finaliza y repite distribución; no crea versión ni hace auto-deploy | `distribution`, `release`, `winget` al enviar |
 | `gw-deploy.yml`, dispatch de tag histórica | Redeploy/rollback con el mismo guard y smoke; respeta `rollbackMinimumVersion`; no recrea tag ni release | `quality` o `production` |
 | `winget.yml`, dispatch | Valida versión indicada; envío opcional e idempotente | `winget` si se envía |
 | `scheduled-smoke.yml`, lunes 09:00 UTC o dispatch | Recompila y prueba AOT/paquetes; no publica | Ninguno |

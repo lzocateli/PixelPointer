@@ -126,8 +126,14 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Commit nao e ancestral de origin/main.' }
     Import-Module (Join-Path $PSScriptRoot 'ci/GroundworkRelease.psm1') -Force
     $repository = 'lzocateli/PixelPointer'
-    & (Join-Path $PSScriptRoot 'ci/Assert-ReleaseSource.ps1') -Repository $repository -Commit $Commit -DefaultBranch main
-    if ($LASTEXITCODE -ne 0) { throw 'Fonte da preview desatualizada ou sem CI verde; gere uma nova execução na main atual.' }
+    $writeToken = $env:GH_TOKEN
+    try {
+        if ($env:DISTRIBUTION_READ_TOKEN) { $env:GH_TOKEN = $env:DISTRIBUTION_READ_TOKEN }
+        $publicTag = if ($Stage -eq 'publish') { $tag } else { '' }
+        & (Join-Path $PSScriptRoot 'ci/Assert-ReleaseSource.ps1') -Repository $repository -Commit $Commit -DefaultBranch main -Tag $publicTag
+        if ($LASTEXITCODE -ne 0) { throw 'Preview sem fonte/CI válido ou autorização humana de distribution; gere uma nova execução aprovada na main atual.' }
+    }
+    finally { $env:GH_TOKEN = $writeToken }
     $release = Find-GitHubRelease -Repository $repository -Tag $tag
     if ($null -eq $release) {
         if ($Stage -ne 'draft') { throw 'Rascunho de preview inexistente.' }

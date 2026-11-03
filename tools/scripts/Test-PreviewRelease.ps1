@@ -62,6 +62,7 @@ try {
 `$global:fixture = Get-Content -LiteralPath '$fixturePath' -Raw | ConvertFrom-Json -AsHashtable
 `$global:commit = '$commit'
 `$global:calls = '$calls'
+`$env:GITHUB_RUN_ID = '99'
 function global:git {
     `$global:LASTEXITCODE = 0
     if (`$args.Count -ne 6 -or `$args[2] -ne 'merge-base' -or `$args[3] -ne '--is-ancestor' -or `$args[-2] -ne `$global:commit -or `$args[-1] -ne 'origin/main' -or `$global:mode -eq 'wrong-ancestry') {
@@ -85,6 +86,14 @@ function global:gh {
         @{ object = @{ sha = `$sha } } | ConvertTo-Json; return
     }
     if (`$path -like '*/pulls?state=*') { '[]'; return }
+    if (`$path -like '*/actions/runs/99/approvals') {
+        if (`$global:mode -eq 'missing-approval') { '[]'; return }
+        ConvertTo-Json -InputObject @(@{ state = 'approved'; user = @{ type = 'User'; login = 'reviewer' }; environments = @(@{ name = 'distribution' }) }) -Depth 8; return
+    }
+    if (`$path -like '*/actions/runs/99') {
+        `$sha = if (`$global:mode -eq 'wrong-approval-source') { 'b' * 40 } else { `$global:commit }
+        @{ head_sha = `$sha; path = '.github/workflows/publish.yml' } | ConvertTo-Json; return
+    }
     if (`$path -like '*/actions/workflows/ci.yml/runs?*') {
         `$status = if (`$global:mode -eq 'pending-ci') { 'in_progress' } else { 'completed' }
         `$conclusion = if (`$global:mode -eq 'failed-ci') { 'failure' } else { 'success' }
@@ -133,7 +142,7 @@ function global:gh {
     Invoke-Case @{ Publish = $true } 'new'
     Invoke-Case @{ Publish = $true }
     Invoke-Case @{ Publish = $true; Stage = 'publish' }
-    foreach ($mode in @('bad-digest', 'missing-assets', 'published', 'stable', 'wrong-commit', 'wrong-ancestry', 'api-error', 'existing-tag', 'new', 'stale-source', 'pending-ci', 'failed-ci')) {
+    foreach ($mode in @('bad-digest', 'missing-assets', 'published', 'stable', 'wrong-commit', 'wrong-ancestry', 'api-error', 'existing-tag', 'new', 'stale-source', 'pending-ci', 'failed-ci', 'missing-approval', 'wrong-approval-source')) {
         Invoke-Case @{ Publish = $true; Stage = 'publish' } $mode 1
     }
     Invoke-Case @{ Publish = $true } 'existing-tag' 1

@@ -28,6 +28,39 @@ no autorizan cambios funcionales disfrazados de metadatos y requieren revisión 
 Al actualizar sólo el Release PR, release-please usa `skip-github-release: true`;
 sólo la salida `release_ready=true` de la guarda autoriza crear release/tag.
 
+## Autorización de distribución
+
+Estables, RCs, previews manuales y reenvíos de artefactos ausentes exigen aprobación
+humana en el nuevo Environment `distribution`, antes de publicar en feeds,
+registros o GitHub Releases y antes de Homebrew/winget. Tags y borradores privados
+pueden existir antes de autorizar; no equivalen a distribuir el paquete.
+
+El job identifica versión y SHA y espera en **Review deployments**. Tras aprobar,
+`Assert-DistributionApproval` consulta la evidencia del mismo run en GitHub y exige
+usuario humano, workflow autorizado, SHA correspondiente y tag sin cambios.
+Falta de revisión, aprobación sólo de quality, bot, rechazo o API inconclusa bloquean.
+Un rechazo exige una ejecución nueva. Se revalidan fuente y CI tras la espera y
+antes de publicar; aceptar código antiguo no autoriza avanzar main. Finalización
+y publicadores repiten la verificación.
+
+`distribution` autoriza divulgar; `release` mantiene credenciales de empaquetado
+y publicación; `quality` acepta pruebas del paquete; `production` verifica la versión
+ya publicada. Aprobación de PR, merge o `Preview-Waiver` no autorizan distribución.
+Republish conserva su excepción de HEAD histórico, pero exige aprobación para el
+nuevo envío. Los snapshots siguen internos: se rechaza paquete GitHub existente
+con visibilidad pública/desconocida. Paquetes nuevos usan la visibilidad privada
+predeterminada de GitHub Packages. Las guardas no impiden cambios administrativos
+de visibilidad fuera del workflow.
+
+Antes de activar los workflows nuevos, configure **Settings > Environments > distribution**
+con revisores obligatorios y refs de branch predeterminada/`v*`, conforme al contrato
+repository-policy. No necesita secrets. Aplique política por interfaz o
+`groundwork github --sync` sólo con autorización administrativa explícita. No hay
+fallback a ambiente sin revisores: si el plan de GitHub no soporta la protección,
+la publicación queda bloqueada. Un ambiente creado automáticamente sin aprobación
+registrada no permite enviar paquetes. Actualizar localmente el catálogo no configura
+GitHub ni activa gates remotos.
+
 ## Integraciones y fixes
 
 Un PR común, incluido fix, no exige aceptación de RC ni se bloquea por otros PRs
@@ -95,6 +128,20 @@ consumidores. No reaplique un catálogo antiguo sin estas guardas sobre el conju
 local validado. Los tests locales no activan cambios de workflows remotos.
 
 ## Seguridad y límites
+
+El publicador NuGet se ejecuta como root en container Linux, mientras el checkout
+puede pertenecer a otro UID. Después del checkout y antes de leer el SHA, la etapa
+`Trust checked-out workspace` registra sólo `$GITHUB_WORKSPACE` en `safe.directory`
+del Git del container. No use `safe.directory=*`: otro repositorio con ownership
+diferente debe seguir bloqueado. La configuración es efímera; no cambia el Git
+del desarrollador ni omite las guardas de fuente/CI.
+
+La imagen SDK no necesita incluir GitHub CLI. En `ubuntu-24.04`, el publicador
+monta sólo `/usr/bin/gh` del runner en `/usr/local/bin/gh:ro`; no monta HOME,
+credenciales ni socket Docker. El token de permisos mínimos viene del proceso
+del workflow. Runners alternativos deben proporcionar ese binario en esa ruta.
+`NuGetFeedTests` reproduce ownership diferente con Git real, verifica el orden de
+etapas e impide ampliar la confianza/mount a otros directorios.
 
 Amenazas cubiertas: aprobación de SHA antiguo, CI de PR/otro SHA/app/suite,
 integración omitida, diferencias RC/final, API inconclusa y borrador usado como

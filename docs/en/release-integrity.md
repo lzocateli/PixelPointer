@@ -28,6 +28,38 @@ functional changes; human review remains mandatory.
 When only updating the Release PR, release-please uses `skip-github-release: true`;
 only guard output `release_ready=true` authorizes release/tag creation.
 
+## Distribution Authorization
+
+Stable releases, RCs, manual previews and missing-artifact republish require human
+approval in the new `distribution` Environment before publishing to feeds,
+registries or GitHub Releases and before Homebrew/winget. Tags and private drafts
+may exist before authorization; they are not package distribution.
+
+The job identifies version and SHA and waits at **Review deployments**. After
+approval, `Assert-DistributionApproval` checks review evidence for the same GitHub
+run, requiring a human user, authorized workflow, matching SHA and unchanged tag.
+Missing reviews, quality-only approval, bots, rejection or inconclusive APIs block
+publication. Rejection requires a new run. Source and CI are revalidated after
+waiting and before publication; an old approval does not authorize advancing main.
+Finalization and publishers repeat verification.
+
+`distribution` authorizes disclosure; `release` supplies packaging/publication
+credentials; `quality` accepts package testing; `production` verifies an already
+published version. PR approval, merge or `Preview-Waiver` cannot authorize distribution.
+Republish retains its historical HEAD exception but requires approval for the new
+upload. Snapshots remain internal: the publisher rejects existing GitHub packages
+with public/unknown visibility. New packages use GitHub Packages default private
+visibility. These guards cannot prevent administrative visibility changes outside
+the workflow.
+
+Before enabling new workflows, configure **Settings > Environments > distribution**
+with required reviewers and default-branch/`v*` refs according to the repository-policy
+contract. It needs no secrets. Apply policy through the UI or `groundwork github --sync`
+only with explicit administrative authorization. There is no unprotected-environment
+fallback: if the GitHub plan lacks the protection, publication remains blocked.
+An automatically created environment without recorded approval cannot release
+packages. Local catalog updates neither configure GitHub nor activate remote gates.
+
 ## Integrations and Fixes
 
 Regular PRs, including fixes, require no RC acceptance and are not blocked by
@@ -95,6 +127,20 @@ older catalog lacking these guards over the validated local changes. Local tests
 do not activate remote workflow changes.
 
 ## Security and Limits
+
+The NuGet publisher runs as root in a Linux container, while checkout may belong
+to another UID. After checkout and before reading the SHA, `Trust checked-out
+workspace` registers only `$GITHUB_WORKSPACE` in the container Git `safe.directory`.
+Never use `safe.directory=*`: another differently owned repository must remain
+blocked. This configuration is ephemeral; it neither changes developer Git
+configuration nor bypasses source/CI guards.
+
+The SDK image need not include GitHub CLI. On `ubuntu-24.04`, the publisher mounts
+only runner `/usr/bin/gh` at `/usr/local/bin/gh:ro`; it mounts no HOME, credentials
+or Docker socket. The least-privilege token comes from the workflow process.
+Alternative runners must provide that binary at that path. `NuGetFeedTests`
+reproduces different ownership using real Git, checks step order and prevents
+expanding trust/mounts to other directories.
 
 Covered threats: approval of old source, CI from a PR/wrong SHA/app/suite, omitted
 integrations, RC/final differences, inconclusive APIs and drafts disguised as
