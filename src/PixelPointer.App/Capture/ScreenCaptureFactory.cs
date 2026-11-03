@@ -16,7 +16,7 @@ internal static class ScreenCaptureFactory
 
         if (OperatingSystem.IsMacOS())
         {
-            return new ScreencaptureToolCapture();
+            return new ScreenCaptureKitCapture();
         }
 
         if (!SessionInfo.IsWayland)
