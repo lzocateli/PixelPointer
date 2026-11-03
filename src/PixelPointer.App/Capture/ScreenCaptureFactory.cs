@@ -34,6 +34,14 @@ internal static class ScreenCaptureFactory
     internal static bool UseScreenCast(int displayCount, string? currentDesktop) =>
         displayCount == 1 && !IsGnome(currentDesktop);
 
+    internal static void EnsureWaylandLiveZoomAllowed(string? currentDesktop)
+    {
+        if (IsGnome(currentDesktop))
+        {
+            throw new NotSupportedException("O Live Zoom ScreenCast está desabilitado no GNOME para preservar a política de captura Screenshot.");
+        }
+    }
+
     /// <summary>Fonte contínua para gravação; quem recebe passa a ser dono e a descarta se for <see cref="IDisposable"/>.</summary>
     internal static IScreenCapture CreateRecordingSource(PortalClient? portal)
     {
@@ -63,10 +71,7 @@ internal static class ScreenCaptureFactory
             throw new NotSupportedException("O Live Zoom ScreenCast exige uma sessão Wayland.");
         }
 
-        if (IsGnome(Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP")))
-        {
-            throw new NotSupportedException("O Live Zoom ScreenCast está desabilitado no GNOME para preservar a política de captura Screenshot.");
-        }
+        EnsureWaylandLiveZoomAllowed(Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP"));
 
         return ScreenCastStream.OpenAsync(portal, TryCreateTokenStore(), cancellationToken, cursorMetadata: true);
     }
