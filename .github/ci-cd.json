@@ -1,6 +1,7 @@
 {
   "$comment": "Semente do Altivy.Groundwork: pertence ao projeto e é lida pelos workflows gw-*. Revise mudanças em PR.",
   "schemaVersion": 1,
+  "releaseDependencies": [],
   "defaultBranch": "main",
   "commitScopes": ["app", "core", "rendering", "capture", "hotkeys", "overlay", "ipc", "platform", "linux", "windows", "macos", "packaging", "tests", "docs", "tooling", "deps", "actions", "repo"],
   "dotnet": {

@@ -100,6 +100,10 @@ try {
     if (-not (Test-SemVer $version) -or $version.Contains('-')) { throw "Versão do Release PR inválida: '$version'." }
     $base = (git rev-parse --verify --quiet "$HeadCommit^1" 2>$null | Out-String).Trim()
     if ($LASTEXITCODE -ne 0 -or $base -notmatch '^[0-9a-f]{40}$') { throw 'Commit-base do Release PR indisponível; o checkout precisa de fetch-depth 0.' }
+    $pulls = @(Invoke-GhJson -Path "repos/$Repository/pulls?state=open&head=$($Repository.Split('/')[0]):$HeadRef&per_page=10" | Where-Object { $_ })
+    if ($pulls.Count -ne 1 -or $pulls[0]['head']['sha'] -cne $HeadCommit) { throw 'Release PR mudou ou está ausente; reexecute o CI na cabeça atual.' }
+    Assert-ReleaseDependencies -Repository $Repository -Commit $base -Body ([string]($pulls[0]['body'] ?? '')) -DefaultBranch $DefaultBranch
+    Assert-CurrentReleaseSource -Repository $Repository -Commit $base -DefaultBranch $DefaultBranch
 
     $candidate = Find-ValidatedCandidate -Repository $Repository -Version $version -Environment $policy.Environment -Commit $base
     if ($null -ne $candidate) {

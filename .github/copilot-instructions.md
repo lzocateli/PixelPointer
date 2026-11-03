@@ -44,6 +44,8 @@ comandos, identificadores, caminhos e marcadores literais exigidos pelas ferrame
 - Não registre tokens, certificados privados, variáveis de ambiente, secrets ou logs integrais.
 - O hook `.githooks/pre-commit` e o workflow `gw-gitleaks.yml` são obrigatórios; nunca use `--no-verify`. Consulte [SECRET-SCANNING.md](SECRET-SCANNING.md).
 - Workflows e scripts `gw-*` e `tools/scripts/ci/` são gerenciados pelo Groundwork: não os edite localmente; mudanças vão para o catálogo. Consulte [CI-CD.md](CI-CD.md).
+- Tags e pacotes novos exigem fonte atualizada, CI e Result no mesmo SHA, dependências explícitas integradas e equivalência com a candidata aceita. Revalide após aprovação; fixes comuns não ficam bloqueados por PRs independentes. Waiver não dispensa integridade da fonte.
+- Preserve as guardas de release do catálogo e seus testes. Republish de estável já pública e rollback são históricos e imutáveis; não use rascunho ou remoção de gates para contornar fonte desatualizada.
 - Dependências externas exigem licença permissiva, gratuita, versão fixada e manutenção verificada.
 - Nunca sugira, instale ou adicione biblioteca paga, proprietária, source-available, com licença comercial obrigatória, copyleft ou outra restrição incompatível com a distribuição MIT do PixelPointer. Licença ausente, ambígua ou não verificada bloqueia a dependência.
 - O padrão arquitetural Mediator é permitido quando houver necessidade comprovada de desacoplar dispatch, handlers e pipelines. Nesses casos, use `Nuuvify.CommonPack.Mediator` com versão centralizada e licença da versão exata verificada; nunca use MediatR.

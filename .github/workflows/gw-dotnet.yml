@@ -13,7 +13,7 @@ on:
         type: string
         default: Release
       test-filter:
-        description: Filtro opcional repassado a dotnet test --filter
+        description: Filtro opcional; no VSTest vira dotnet test --filter, no Microsoft.Testing.Platform é repassado como opções do runner (ex. --filter-class X)
         type: string
         default: ''
       pack:
@@ -102,11 +102,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          filter_args=()
-          if [[ -n "$TEST_FILTER" ]]; then
-            filter_args=(--filter "$TEST_FILTER")
+          # global.json com "test": { "runner": "Microsoft.Testing.Platform" } (xunit.v3 4+, MSTest 4+):
+          # o dotnet test exige --solution/--project e não aceita o --filter do VSTest.
+          if [[ -f global.json ]] && grep -Eq '"runner"[[:space:]]*:[[:space:]]*"Microsoft\.Testing\.Platform"' global.json; then
+            target=(--solution "$SOLUTION")
+            [[ "$SOLUTION" == *proj ]] && target=(--project "$SOLUTION")
+            read -r -a runner_args <<<"$TEST_FILTER"
+            dotnet test "${target[@]}" --configuration "$CONFIGURATION" --no-build "${runner_args[@]}"
+          else
+            filter_args=()
+            if [[ -n "$TEST_FILTER" ]]; then
+              filter_args=(--filter "$TEST_FILTER")
+            fi
+            dotnet test "$SOLUTION" --configuration "$CONFIGURATION" --no-build "${filter_args[@]}"
           fi
-          dotnet test "$SOLUTION" --configuration "$CONFIGURATION" --no-build "${filter_args[@]}"
 
       - name: Pack
         if: ${{ inputs.pack }}

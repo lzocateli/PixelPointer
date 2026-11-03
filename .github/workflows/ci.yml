@@ -25,6 +25,9 @@ jobs:
     uses: ./.github/workflows/gw-pr-hygiene.yml
     permissions:
       contents: read
+      pull-requests: read
+      actions: read
+      checks: read
 
   gitleaks:
     name: Gitleaks
