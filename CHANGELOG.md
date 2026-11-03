@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/lzocateli/PixelPointer/compare/v0.2.0...v0.2.1) (2026-11-03)
+
+
+### Corrigido
+
+* **actions:** exija fonte atualizada antes de criar releases ([#49](https://github.com/lzocateli/PixelPointer/issues/49)) ([84bc959](https://github.com/lzocateli/PixelPointer/commit/84bc959b59ab42f7a80182d80fbd76b15964333e))
+
 ## [0.2.0](https://github.com/lzocateli/PixelPointer/compare/v0.1.2...v0.2.0) (2026-11-03)
 
 
