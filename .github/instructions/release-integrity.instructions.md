@@ -7,6 +7,7 @@ applyTo: ".github/workflows/**,tools/scripts/**,tests/**"
 # Integridade da fonte de release
 
 - Antes de alterar o fluxo, leia `docs/release-integrity.md` e o contrato `.github/CI-CD.md`.
+- Toda distribuição de estável, RC, preview manual ou republish exige aprovação humana de `distribution` na mesma execução/SHA/tag antes do envio público. Preserve a consulta de evidência nos publicadores/finalização; ambiente sem revisores, quality, merge, bot ou waiver não substituem autorização. Nunca mova o gate para depois da publicação. Snapshots só podem enviar a pacotes internos.
 - Alterações de workflows `gw-*` e `tools/scripts/ci/` são feitas no catálogo Groundwork; aplique a atualização por reconciliação, nunca edite hashes para esconder desvios.
 - Novas tags e publicações exigem SHA igual ao HEAD remoto atual e `Result` verde da execução CI em `main` no mesmo SHA, aplicativo GitHub Actions e check suite. Não aceite apenas ancestralidade ou CI de PR.
 - Revalide depois de aprovações e antes de criar tags/publicar. Fixe SHA, versão e cabeça do Release PR; mudança exige nova resolução e novo aceite.

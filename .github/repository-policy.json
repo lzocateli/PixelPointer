@@ -87,6 +87,13 @@
       "deploymentPolicies": [{ "name": "main", "type": "branch" }, { "name": "v*", "type": "tag" }]
     },
     {
+      "name": "distribution",
+      "reviewers": ["lzocateli"],
+      "preventSelfReview": false,
+      "requireReviewers": true,
+      "deploymentPolicies": [{ "name": "main", "type": "branch" }, { "name": "v*", "type": "tag" }]
+    },
+    {
       "name": "quality",
       "reviewers": ["lzocateli"],
       "preventSelfReview": false,

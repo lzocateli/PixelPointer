@@ -529,6 +529,48 @@ function Assert-CurrentReleaseSource {
     Write-Output "Fonte atualizada: $DefaultBranch em $Commit, CI e Result verdes no mesmo SHA."
 }
 
+function Assert-InternalSnapshotPackage {
+    param(
+        [Parameter(Mandatory)][string] $Owner,
+        [Parameter(Mandatory)][string] $Package
+    )
+
+    if ($Owner -notmatch '^[A-Za-z0-9-]+$' -or [string]::IsNullOrWhiteSpace($Package)) { throw 'Destino de snapshot inválido.' }
+    $account = Invoke-GhJson -Path "users/$Owner"
+    $scope = switch ($account['type']) { 'Organization' { 'orgs' }; 'User' { 'users' }; default { throw 'Tipo de proprietário do feed interno desconhecido.' } }
+    $name = [uri]::EscapeDataString($Package)
+    $packageInfo = Invoke-GhJson -Path "$scope/$Owner/packages/nuget/$name" -AllowNotFound
+    if ($null -ne $packageInfo -and $packageInfo['visibility'] -cnotin @('private', 'internal')) {
+        throw "Snapshot bloqueado: pacote $Owner/$Package não é interno. Use candidata/release com aprovação de distribution para divulgação pública."
+    }
+}
+
+function Assert-DistributionApproval {
+    param(
+        [Parameter(Mandatory)][string] $Repository,
+        [Parameter(Mandatory)][string] $Commit,
+        [Parameter(Mandatory)][string] $Tag,
+        [string] $RunId = $env:GITHUB_RUN_ID
+    )
+
+    if ($Repository -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$' -or $Commit -notmatch '^[0-9a-f]{40}$' -or -not (Test-ReleaseTagName $Tag) -or $RunId -notmatch '^[1-9]\d{0,19}$') {
+        throw 'Distribuição bloqueada: repositório, tag, SHA ou execução inválidos.'
+    }
+    $run = Invoke-GhJson -Path "repos/$Repository/actions/runs/$RunId"
+    if ($run['head_sha'] -cne $Commit -or [string]$run['path'] -cnotmatch '^\.github/workflows/(gw-release|gw-preview|publish)\.yml(?:@|$)') {
+        throw "Distribuição bloqueada: execução $RunId não corresponde à fonte $Tag/$Commit ou ao workflow de publicação autorizado."
+    }
+    $reviews = @(Invoke-GhJson -Path "repos/$Repository/actions/runs/$RunId/approvals" | Where-Object { $_ })
+    $distribution = @($reviews | Where-Object { @($_['environments'] | Where-Object { $_['name'] -ceq 'distribution' }).Count -gt 0 })
+    $approved = @($distribution | Where-Object { $_['state'] -ceq 'approved' -and $_['user']['type'] -ceq 'User' -and $_['user']['login'] -and -not ([string]$_['user']['login']).EndsWith('[bot]', [StringComparison]::Ordinal) })
+    if ($approved.Count -eq 0 -or @($distribution | Where-Object { $_['state'] -ceq 'rejected' }).Count -gt 0) {
+        throw "Distribuição bloqueada: aprove manualmente o Environment distribution nesta execução para $Tag/$Commit. Ambiente sem revisor, aceite de quality e aprovação de PR não autorizam publicação; rejeição exige nova execução."
+    }
+    $tagCommit = Invoke-GhJson -Path "repos/$Repository/commits/$Tag"
+    if ($tagCommit['sha'] -cne $Commit) { throw "Distribuição bloqueada: tag $Tag mudou depois da autorização do SHA $Commit." }
+    Write-Output "Distribuição autorizada: $Tag/$Commit, execução $RunId, revisão humana no Environment distribution."
+}
+
 function Write-GitHubOutput {
     param(
         [Parameter(Mandatory)][hashtable] $Values,
@@ -547,4 +589,4 @@ Export-ModuleMember -Function Test-SemVer, Test-ReleaseTagName, Compare-SemVer, 
 Get-ProjectVersionFiles, Invoke-GhJson, Assert-ReleaseManifest, Assert-ReleaseEntries, Test-RollbackAllowed,
 Find-GitHubRelease, Save-ReleaseAsset, Get-ReleaseAssetText, Write-GitHubOutput, Get-PreviewPolicy, Test-CandidateTag,
 Get-CandidateBaseVersion, Get-TagCommit, Find-ValidatedCandidate, Find-PreviewWaiver, Get-ReleasePleaseFiles, Assert-CurrentReleaseSource,
-Assert-ReleaseDependencies, Assert-StableCandidateSource
+Assert-ReleaseDependencies, Assert-StableCandidateSource, Assert-DistributionApproval, Assert-InternalSnapshotPackage

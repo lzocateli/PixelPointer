@@ -8,6 +8,8 @@ Recusa novas publicações com SHA desatualizado, CI falho ou código diferente 
 Somente leitura no GitHub. ReleasePlease libera atualização de PR comum, mas valida
 release integrada antes da tag. Publication revalida após aprovação. Snapshot exige
 Result verde da própria execução. Republish exige release já pública e tag imutável.
+Publication com tag e Republish exigem revisão humana de distribution no mesmo run,
+SHA e tag; quality e waiver não substituem autorização de divulgação.
 .PARAMETER Repository
 Repositório owner/nome.
 .PARAMETER Commit
@@ -57,6 +59,7 @@ try {
     if ($Commit -notmatch '^[0-9a-f]{40}$') { throw 'SHA inválido.' }
     if ($DefaultBranch -notmatch '^[A-Za-z0-9._/-]+$' -or $DefaultBranch.Contains('..')) { throw 'Branch padrão inválida.' }
     if ($Republish) {
+        Assert-DistributionApproval -Repository $Repository -Commit $Commit -Tag $Tag
         if ($Tag -cnotmatch '^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$') { throw 'Republish exige tag estável.' }
         $release = Find-GitHubRelease -Repository $Repository -Tag $Tag
         if ($null -eq $release -or $release['draft'] -or $release['prerelease']) { throw 'Republish histórico exige release estável já pública; rascunho exige nova validação de fonte.' }
@@ -82,6 +85,13 @@ try {
     if ($Stage -eq 'ReleasePlease' -and ($pending.Count -ne 1 -or $pending[0]['merge_commit_sha'] -cne $Commit)) {
         throw "Release PR integrado pendente não corresponde ao SHA $Commit; recusa criar tag de uma base antiga. Resolva a integração e gere uma nova candidata."
     }
+    if ($Stage -eq 'ReleasePlease') {
+        $releaseConfig = Get-Content -LiteralPath 'release-please-config.json' -Raw | ConvertFrom-Json -AsHashtable
+        if ($releaseConfig['draft'] -isnot [bool] -or -not $releaseConfig['draft']) { throw 'Distribuição bloqueada: release-please precisa de draft=true até a aprovação de distribution.' }
+        foreach ($package in ($releaseConfig['packages'] ?? @{}).Values) {
+            if ($package.ContainsKey('draft') -and ($package['draft'] -isnot [bool] -or -not $package['draft'])) { throw 'Distribuição bloqueada: pacote do release-please não pode desativar draft antes da autorização.' }
+        }
+    }
     Assert-ReleaseDependencies -Repository $Repository -Commit $Commit -DefaultBranch $DefaultBranch
     foreach ($pull in $mergedPulls) {
         if ($pull['merge_commit_sha'] -ceq $Commit) { Assert-ReleaseDependencies -Repository $Repository -Commit $Commit -Body ([string]($pull['body'] ?? '')) -DefaultBranch $DefaultBranch }
@@ -92,6 +102,10 @@ try {
     }
     if ($Stable -or $Stage -eq 'ReleasePlease') { Assert-StableCandidateSource -Repository $Repository -Commit $Commit -Config (Read-CiCdConfig) }
     Assert-CurrentReleaseSource -Repository $Repository -Commit $Commit -DefaultBranch $DefaultBranch
+    if ($Stage -eq 'Publication' -and ($Stable -or $Tag)) {
+        if (-not $Tag) { $Tag = 'v' + [string]((Get-Content -LiteralPath '.release-please-manifest.json' -Raw | ConvertFrom-Json -AsHashtable)['.']) }
+        Assert-DistributionApproval -Repository $Repository -Commit $Commit -Tag $Tag
+    }
     if ($Stage -eq 'ReleasePlease') { Write-GitHubOutput -Path $OutputPath -Values @{ release_ready = 'true' } }
 }
 catch {

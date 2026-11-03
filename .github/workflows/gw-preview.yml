@@ -157,9 +157,41 @@ jobs:
           ./tools/scripts/ci/Test-PublishedRelease.ps1 -Tag $env:RELEASE_TAG -Repository $env:GITHUB_REPOSITORY -Expect Draft
           exit $LASTEXITCODE
 
+  authorize-distribution:
+    name: Authorize public RC distribution ${{ needs.context.outputs.tag }} at ${{ needs.context.outputs.commit }}
+    needs: context
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment:
+      name: distribution
+      url: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ needs.context.outputs.tag }}
+    permissions:
+      contents: read
+      actions: read
+      checks: read
+      pull-requests: read
+    steps:
+      - name: Checkout authorized candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ needs.context.outputs.tag }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require human distribution approval and current source
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.context.outputs.tag }}
+          RELEASE_COMMIT: ${{ needs.context.outputs.commit }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          ./tools/scripts/ci/Assert-ReleaseSource.ps1 -Repository $env:GITHUB_REPOSITORY -Commit $env:RELEASE_COMMIT -Tag $env:RELEASE_TAG -DefaultBranch $env:DEFAULT_BRANCH
+          exit $LASTEXITCODE
+
   publish:
     name: Publish
-    needs: context
+    needs: [context, authorize-distribution]
     uses: ./.github/workflows/publish.yml
     permissions:
       contents: write
@@ -240,7 +272,7 @@ jobs:
           UPLOAD_MANIFEST: ${{ steps.manifest.outputs.upload }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
-          ./tools/scripts/ci/Assert-ReleaseSource.ps1 -Repository $env:GITHUB_REPOSITORY -Commit $env:RELEASE_COMMIT -DefaultBranch $env:DEFAULT_BRANCH
+          ./tools/scripts/ci/Assert-ReleaseSource.ps1 -Repository $env:GITHUB_REPOSITORY -Commit $env:RELEASE_COMMIT -Tag $env:RELEASE_TAG -DefaultBranch $env:DEFAULT_BRANCH
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           if ($env:UPLOAD_MANIFEST -eq 'true') {
             gh release upload $env:RELEASE_TAG artifacts/release-manifest.json --repo $env:GITHUB_REPOSITORY

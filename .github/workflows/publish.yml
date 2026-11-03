@@ -394,9 +394,37 @@ jobs:
       artifact-name: release-assets
       republish: ${{ inputs.republish || false }}
 
+  authorize-preview-distribution:
+    name: Authorize public preview ${{ needs.validate.outputs.version }} at ${{ github.sha }}
+    needs: [validate, release-assets, attest-sbom]
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && needs.validate.outputs.preview == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: distribution
+    permissions:
+      contents: read
+      actions: read
+      checks: read
+      pull-requests: read
+    steps:
+      - name: Checkout approved preview source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Revalidate source after distribution approval
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          ./tools/scripts/ci/Assert-ReleaseSource.ps1 -Repository $env:GITHUB_REPOSITORY -Commit $env:GITHUB_SHA -DefaultBranch $env:DEFAULT_BRANCH
+          exit $LASTEXITCODE
+
   publish-preview:
     name: Publish GitHub Pre-release
-    needs: [validate, release-assets, attest-sbom]
+    needs: [validate, release-assets, attest-sbom, authorize-preview-distribution]
     if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && needs.validate.outputs.preview == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -411,6 +439,7 @@ jobs:
     env:
       PREVIEW_VERSION: ${{ needs.validate.outputs.version }}
       PREVIEW_COMMIT: ${{ github.sha }}
+      DISTRIBUTION_READ_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout approved source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
