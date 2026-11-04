@@ -47,6 +47,10 @@ defines the functional matrix. The runner checks external focus, hotkeys,
 modifiers, real grab conflicts, zoom, colors, thickness, editing, boards,
 transparency, saving, visible errors, ordered diagnostic logs for keys/buttons,
 tray, restart, quit with an open window, and desktop launcher install/open/removal.
+It also checks Ctrl+6 snipping with a 160x100 PNG and Ctrl+5 recording
+with an 800x600 multi-frame GIF. The virtual desktop has one display;
+the X11 query must reflect the new cursor position before each operation.
+selection between displays requires local acceptance on a real topology.
 The launcher interprets the installed desktop file but accepts only
 `/package/pixelpointer daemon`, without a shell and with `Terminal=false`.
 

@@ -18,17 +18,6 @@ cualquier sistema operativo, incluidos escritorios Wayland como GNOME y KDE.
 PixelPointer es un proyecto independiente; no es un producto de Microsoft y no
 usa el código, la marca ni los íconos de ZoomIt.
 
-> **Estado:** `v0.1.2` es la primera versión funcional, aceptada como estable por
-> el mantenedor en Linux/GNOME: Ubuntu 24.04.5/X11 y Ubuntu 26.04/Wayland, el
-> 2026-10-30. Zoom y dibujo tienen aceptación manual en los entornos probados,
-> incluido dibujo transparente según el relato y las capturas del usuario.
-> El producto sigue pre-1.0; Windows y macOS pasan CI, pero esperan aceptación
-> manual. Otros compositores/configuraciones no están incluidos en esta aceptación.
-> Evidencias y límites: [plan E2E](docs/es/plano-e2e-grafico-uv.md).
-> Temporizador, Live Zoom, recorte y grabación tienen implementación parcial
-> por plataforma; DemoType sigue en el [plan de implementación](docs/es/plano-implementacao.md); el
-> [informe F0](docs/f0-relatorio.md) (portugués) conserva resultados históricos del spike.
-
 ## Instalación
 
 Paquetes para `linux-x64`, `linux-arm64` (glibc 2.34+: Ubuntu 22.04, Debian 12,
@@ -100,7 +89,7 @@ desinstala PixelPointer con el mismo método que usaste para instalarlo:
 
 | Instalación | Comando o acción |
 | --- | --- |
-| `install.sh` (Linux/macOS, prefijo predeterminado) | En Linux, ejecuta `pixelpointer uninstall-desktop-file` si registraste la entrada del menú; luego ejecuta `rm -f -- "$HOME/.local/bin/pixelpointer"` y `rm -r -- "$HOME/.local/lib/pixelpointer"` |
+| `install.sh` (Linux/macOS, prefijo predeterminado) | En Linux, ejecuta `pixelpointer uninstall-desktop-file` si registraste la entrada del menú; luego ejecuta `rm -f -- "$HOME/.local/bin/pixelpointer" && rm -r -- "$HOME/.local/lib/pixelpointer"` |
 | `install.sh --prefix <dir>` | Elimina `<dir>/bin/pixelpointer` y `<dir>/lib/pixelpointer`, sustituyendo `<dir>` por el prefijo usado durante la instalación |
 | `install.sh --global` | Ejecuta `sudo rm -f -- /usr/local/bin/pixelpointer` y `sudo rm -r -- /usr/local/lib/pixelpointer`; en Linux, elimina primero la entrada del escritorio con el binario instalado |
 | `install.ps1` | En PowerShell, ejecuta `Remove-Item -LiteralPath "$env:LOCALAPPDATA\Programs\pixelpointer" -Recurse` |
@@ -156,8 +145,8 @@ de atajos, ejecuta `pixelpointer daemon` en primer plano.
 | **Ctrl+2** | Dibujo sin zoom |
 | **Ctrl+3** | Temporizador de pausa (10 min; flechas o rueda ajustan y reinician) |
 | **Ctrl+4** | Live Zoom: amplía la pantalla en vivo siguiendo el cursor, sin congelar; repite para salir (pantalla completa en Windows; lupa en ventana en macOS y X11; Wayland con mejor esfuerzo si el portal ofrece metadatos del cursor; deshabilitado en GNOME) |
-| **Ctrl+5** | Inicia o guarda una grabación GIF de la pantalla (Linux y Windows; hasta 5 min) |
-| **Ctrl+6** | Recorte: arrastra un área para copiarla; con Shift al soltar, guarda PNG |
+| **Ctrl+5** | Inicia o guarda GIF (hasta 5 min); X11/Windows: monitor bajo el cursor al iniciar; Wayland: monitor autorizado en el portal |
+| **Ctrl+6** | Recorte: X11/Windows abren en el monitor bajo el cursor; arrastra para copiar; con Shift al soltar, guarda PNG |
 | `pixelpointer status` | Consulta si el daemon está en ejecución |
 | `pixelpointer quit` | Detiene el daemon y la sobreposición activa |
 | Rueda del mouse / flechas | Más o menos zoom |

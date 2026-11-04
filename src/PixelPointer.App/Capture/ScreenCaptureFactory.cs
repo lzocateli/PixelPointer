@@ -47,12 +47,15 @@ internal static class ScreenCaptureFactory
     {
         if (OperatingSystem.IsWindows())
         {
-            return new GdiScreenCapture();
+            return new MonitorScreenCapture(new GdiScreenCapture(), CursorMonitor.Select()
+                ?? throw new InvalidOperationException("O monitor da gravação não está disponível."));
         }
 
         if (OperatingSystem.IsLinux() && !SessionInfo.IsWayland)
         {
-            return new X11ScreenCapture();
+            var monitor = CursorMonitor.Select()
+                ?? throw new InvalidOperationException("O monitor da gravação não está disponível.");
+            return new X11ScreenCapture(monitor.Bounds);
         }
 
         if (OperatingSystem.IsLinux() && portal is not null)

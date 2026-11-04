@@ -35,7 +35,7 @@ internal static class DesktopIntegration
             Name=PixelPointer
             Comment=Zoom e anotação de tela para apresentações
             Exec="{EscapeArgument(executable)}" daemon
-            Icon={PortalClient.AppId}
+            Icon={iconPath}
             Terminal=false
             NoDisplay=false
             Categories=Utility;
@@ -52,7 +52,7 @@ internal static class DesktopIntegration
         {
             if (Directory.Exists(resource.Path)
                 || (File.Exists(resource.Path) && File.ReadAllText(resource.Path) is var existing && existing != resource.Contents
-                    && !(resource.Relocatable && WithoutExec(existing) == WithoutExec(resource.Contents))))
+                    && !(resource.Relocatable && NormalizeDesktopEntry(existing, iconPath) == NormalizeDesktopEntry(resource.Contents, iconPath))))
             {
                 throw new InvalidOperationException($"O arquivo existente será preservado porque difere do recurso do PixelPointer: {resource.Path}");
             }
@@ -103,9 +103,10 @@ internal static class DesktopIntegration
         }
     }
 
-    private static string WithoutExec(string contents) =>
+    private static string NormalizeDesktopEntry(string contents, string iconPath) =>
         string.Join('\n', contents.ReplaceLineEndings("\n").Split('\n')
-            .Where(line => !line.StartsWith("Exec=", StringComparison.Ordinal)));
+            .Where(line => !line.StartsWith("Exec=", StringComparison.Ordinal))
+            .Select(line => line == $"Icon={iconPath}" ? $"Icon={PortalClient.AppId}" : line));
 
     private static string EscapeArgument(string value) =>
         value.Replace("\\", "\\\\", StringComparison.Ordinal)

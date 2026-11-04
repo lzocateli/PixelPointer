@@ -502,6 +502,7 @@ static void RunOverlay(
     CancellationToken cancellationToken)
 {
     var mode = OverlayModes.FromCommand(command.Id);
+    var snipMonitor = mode == OverlayMode.Snip ? CursorMonitor.Select() : null;
     var hasX11Compositor = SessionInfo.IsX11 && X11Capabilities.HasCompositingManager();
     var transparentDraw = image is null && mode == OverlayMode.Draw && hasX11Compositor;
     if (image is null && mode == OverlayMode.Draw && SessionInfo.IsX11 && !hasX11Compositor)
@@ -510,6 +511,10 @@ static void RunOverlay(
     }
 
     var capture = transparentDraw ? null : ScreenCaptureFactory.Create(portal, portal is null ? 1 : CountDisplays());
+    if (mode == OverlayMode.Snip && snipMonitor is not null && image is null && capture is not null)
+    {
+        capture = new MonitorScreenCapture(capture, snipMonitor);
+    }
     var captureStart = received.Elapsed.TotalMilliseconds;
     using var bitmap = image is not null
         ? SKBitmap.Decode(image) ?? throw new InvalidOperationException($"Imagem inválida: {image}")
@@ -525,7 +530,8 @@ static void RunOverlay(
     IScreenCapture? snapshotCapture = transparentDraw
         ? portal is not null ? new PortalScreenCapture(portal) : new DeferredPortalScreenCapture(ConnectPortal)
         : null;
-    var metrics = new OverlaySession(bitmap, mode, transparentDraw, LoadSettings(), snapshotCapture).Run(cancellationToken);
+    var metrics = new OverlaySession(bitmap, mode, transparentDraw, LoadSettings(), snapshotCapture,
+        snipMonitor?.Bounds).Run(cancellationToken);
     Console.WriteLine($"""
         --- sessão {command.Id} ---
         captura ......... {(transparentDraw ? "X11 transparente" : image is null ? capture!.Name : "arquivo")}: {bitmap?.Width ?? metrics.PixelWidth}x{bitmap?.Height ?? metrics.PixelHeight} em {captureMs:0} ms

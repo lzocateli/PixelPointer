@@ -494,6 +494,61 @@ class Scenario:
         assert not self.display.find("PixelPointer Live Zoom"), "Auto-repeat reabriu a lupa"
         self.cli("status")
 
+    def snip_and_record(self):
+        folder = self.pictures / "Screenshots"
+        previous_pngs = set(folder.glob("*.png"))
+        external = self.display.find("E2E external focus")
+        assert external, "Janela de foco externo ausente"
+        self.display.focus(external)
+        self.display.move(100, 200)
+        self.chord("Control_L", "6")
+        self.wait("comando snip recebido", lambda: any("COMMAND received id=snip" in line for line in self.daemon_lines))
+        self.wait("cursor do recorte consultado no X11", lambda:
+            any("cursor-monitor cursor=(100,200)" in line for line in self.daemon_lines))
+        self.wait("recorte via Ctrl+6", lambda: self.display.find("PixelPointer"))
+        self.screenshot("15-snip")
+        self.display.move(100, 200)
+        self.display.key("Shift_L", True)
+        self.display.button(1, True)
+        self.display.move(260, 300)
+        try:
+            self.wait("selecao do recorte renderizada", lambda:
+                self.display.screenshot().getpixel((150, 250)) == (24, 32, 40))
+            self.display.button(1, False)
+            created = self.wait("recorte PNG salvo", lambda: set(folder.glob("*.png")) - previous_pngs)
+        finally:
+            self.display.key("Shift_L", False)
+        assert len(created) == 1, "Mais de um PNG por recorte"
+        with Image.open(created.pop()) as image:
+            image.load()
+            assert image.size == (160, 100), f"Dimensao do recorte: {image.size}"
+            image.save(self.output / "16-snip-export.png")
+        self.wait("recorte fechado", lambda: not self.display.find("PixelPointer"))
+        self.wait("recorte recebeu apenas a imagem do monitor", lambda:
+            any("X11 XGetImage (monitor sob o cursor): 800x600" in line for line in self.daemon_lines))
+        previous_gifs = set(folder.glob("*.gif"))
+        self.display.focus(external)
+        self.display.move(600, 400)
+        self.chord("Control_L", "5")
+        self.wait("cursor da gravacao atualizado", lambda:
+            any("cursor-monitor cursor=(600,400)" in line for line in self.daemon_lines))
+        self.wait("captura regional X11 da gravacao", lambda:
+            any("source=XGetImage-region desktop=800x600 capture=(0,0,800,600)" in line
+                for line in self.daemon_lines))
+        created = self.wait("gravacao iniciada", lambda: set(folder.glob("*.gif")) - previous_gifs)
+        assert len(created) == 1, "Mais de um GIF por gravacao"
+        recording = created.pop()
+        self.wait("quadros GIF escritos", lambda: recording.stat().st_size > 4096)
+        self.screenshot("17-recording")
+        self.chord("Control_L", "5")
+        self.wait("gravacao salva", lambda: any("Gravação salva:" in line for line in self.daemon_lines))
+        with Image.open(recording) as image:
+            image.load()
+            assert image.size == (800, 600), f"Dimensao do GIF: {image.size}"
+            assert image.n_frames >= 2, "GIF sem varios quadros"
+        (self.output / "18-recording.gif").write_bytes(recording.read_bytes())
+        self.cli("status")
+
     def lifecycle(self):
         blocker = X11()
         try:
@@ -598,6 +653,7 @@ class Scenario:
             self.overlay("draw")
             self.close_overlay()
         self.live_lens()
+        self.snip_and_record()
         self.verify_diagnostic_log()
         if not self.args.no_tray:
             for index in [0, 1]:
@@ -659,6 +715,9 @@ class Scenario:
                 "session": "X11", "desktop": "twm + painel sintetico SNI",
                 "compositor": not self.args.no_compositor, "tray": not self.args.no_tray,
                 "video": video, "diagnostic_signals": sorted(set(self.signals)),
+                "snip_record_signals": [line.strip() for line in self.daemon_lines
+                    if "id=snip" in line or "id=record" in line or "SDL_SyncWindow" in line
+                    or "monitor sob o cursor" in line or "cursor-monitor" in line or "RECORDING" in line],
             }
             (self.output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
             for source, target in [("/opt/native-packages.tsv", "native-packages.tsv"),
