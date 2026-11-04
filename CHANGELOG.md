@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/lzocateli/PixelPointer/compare/v0.2.1...v0.3.0) (2026-11-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* **actions:** configurar Settings > Environments > distribution com revisores obrigatórios e refs main/v* antes de ativar os workflows integrados. Não há secrets novos nesse ambiente. Se o plano GitHub não suportar a proteção, os publicadores devem permanecer bloqueados. Não confundir release (credenciais), quality (aceite de teste), distribution (autorização de divulgação) e production (verificação posterior).
+
+### Adicionado
+
+* **actions:** exija autorização antes da distribuição pública ([#51](https://github.com/lzocateli/PixelPointer/issues/51)) ([060f141](https://github.com/lzocateli/PixelPointer/commit/060f1415be310041ae22b3b8e7d779c4661fd736))
+* **app:** mostre versão e atalhos no menu da tray ([#54](https://github.com/lzocateli/PixelPointer/issues/54)) ([1cc6c4b](https://github.com/lzocateli/PixelPointer/commit/1cc6c4b4c37bb4673e1c81e5ee2660da82bc0be4))
+
 ## [0.2.1](https://github.com/lzocateli/PixelPointer/compare/v0.2.0...v0.2.1) (2026-11-03)
 
 
