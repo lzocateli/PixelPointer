@@ -36,7 +36,8 @@ internal sealed partial class Win32Hotkeys : IHotkeyService
             {
                 if (msg.message == WmHotkey && msg.wParam > 0 && (int)msg.wParam <= HotkeyDefaults.Shortcuts.Count)
                 {
-                    onActivated(new HotkeyCommand(HotkeyDefaults.Shortcuts[(int)msg.wParam - 1].Id));
+                    onActivated(new HotkeyCommand(HotkeyDefaults.Shortcuts[(int)msg.wParam - 1].Id,
+                        Source: "global-hotkey"));
                 }
             }
         })

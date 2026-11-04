@@ -106,9 +106,9 @@ Esperar condições com deadlines; evitar sequências baseadas apenas em `sleep`
 | Anotações | Arrastar; R/G/B/Y/O/P; Ctrl+roda | Geometria, cores e espessuras dentro de tolerâncias definidas |
 | Edição | Ctrl+Z e E | Remoção do último traço e de todos os traços, respectivamente |
 | Quadros | W e K | Fundo branco/preto e comportamento de anotações conforme contrato |
-| Transparência | Desenhar sobre cena animada com compositor | Fundo segue mudando; traços persistem; PNG contém alfa |
-| Sem compositor | Repetir desenho em ambiente sem compositor | Aviso explícito e captura congelada, sem alegar transparência |
-| Salvamento | Ctrl+S repetido, destino XDG personalizado com espaços e acentos | PNG decodificável, pasta correta, nomes exclusivos e arquivos anteriores intactos |
+| Desenho transparente e salvamento | Desenhar sobre cena animada com compositor e salvar com Ctrl+S | Fundo segue mudando; traços persistem; PNG opaco contém o desktop capturado e as anotações |
+| Sem compositor | Repetir desenho em ambiente sem compositor | Aviso explícito e captura congelada, sem alegar transparência; Ctrl+S inclui a captura e as anotações |
+| Salvamento | Ctrl+S repetido, destino XDG personalizado com espaços e acentos | PNG opaco decodificável com captura e anotações, pasta correta, nomes exclusivos e arquivos anteriores intactos |
 | Configurações | `settings.json` com cor, espessura e zoom inicial; depois arquivo inválido | `probe` carrega o arquivo; zoom 4x, traço azul espesso; arquivo inválido gera aviso, usa padrões e permanece intacto |
 | Falha de salvamento | Configuração inválida ou destino sem acesso | Feedback de erro visível, ausência de destino alternativo e processo utilizável |
 | Saída da sobreposição | Esc e botão direito nos modos aplicáveis | Transições conforme contrato, possibilidade de reabrir e daemon preservado |

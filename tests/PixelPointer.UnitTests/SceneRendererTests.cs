@@ -1,4 +1,5 @@
 using PixelPointer.Core.Annotations;
+using PixelPointer.App.Overlay;
 using PixelPointer.Rendering;
 using SkiaSharp;
 
@@ -35,6 +36,53 @@ public sealed class SceneRendererTests
         // A vista 2x do quadrante superior direito (verde) ocupa a saída inteira.
         Assert.Equal(SKColors.Lime, bitmap.GetPixel(5, 5));
         Assert.Equal(SKColors.Lime, bitmap.GetPixel(94, 94));
+    }
+
+    [Fact]
+    public void Draw_CompositesAnnotationsOverTheCapturedScreen()
+    {
+        using var background = Quadrants();
+        var document = new AnnotationDocument(PenColor.Red, 8f);
+        document.BeginStroke(25, 50, 1f, 1f);
+        document.ContinueStroke(75, 50, 1f);
+
+        using var bitmap = Render(document, background, Full, transparent: false);
+
+        Assert.Equal(SKColors.Red, bitmap.GetPixel(50, 50));
+        Assert.Equal(SKColors.Lime, bitmap.GetPixel(75, 25));
+        Assert.Equal(255, bitmap.GetPixel(75, 25).Alpha);
+    }
+
+    [Fact]
+    public void Draw_ComposesAnnotationsOnTheSelectedMonitorCapture()
+    {
+        var info = new SKImageInfo(200, 100, SKColorType.Bgra8888, SKAlphaType.Opaque);
+        using var background = new SKBitmap(info);
+        using (var canvas = new SKCanvas(background))
+        using (var paint = new SKPaint())
+        {
+            paint.Color = SKColors.Lime;
+            canvas.DrawRect(SKRect.Create(0, 0, 100, 100), paint);
+            paint.Color = SKColors.Blue;
+            canvas.DrawRect(SKRect.Create(100, 0, 100, 100), paint);
+        }
+
+        var document = new AnnotationDocument(PenColor.Red, 8f);
+        document.BeginStroke(20, 50, 1f, 1f);
+        document.ContinueStroke(80, 50, 1f);
+        using var monitor = DisplayLayout.Crop(background, SKRect.Create(100, 0, 100, 100));
+        using var image = SKImage.FromBitmap(monitor);
+        var monitorInfo = new SKImageInfo(100, 100, SKColorType.Bgra8888, SKAlphaType.Premul);
+        using var surface = SKSurface.Create(monitorInfo);
+        SceneRenderer.Draw(surface.Canvas, document, image, SKRect.Create(0, 0, 100, 100),
+            SKRect.Create(0, 0, 100, 100), 100, transparent: false);
+        using var bitmap = new SKBitmap(monitorInfo);
+        Assert.True(surface.ReadPixels(monitorInfo, bitmap.GetPixels(), bitmap.RowBytes, 0, 0));
+
+        Assert.Equal((100, 100), (bitmap.Width, bitmap.Height));
+        Assert.Equal(SKColors.Blue, bitmap.GetPixel(0, 50));
+        Assert.Equal(SKColors.Red, bitmap.GetPixel(50, 50));
+        Assert.Equal(SKColors.Blue, bitmap.GetPixel(50, 20));
     }
 
     [Theory]

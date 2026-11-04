@@ -105,9 +105,9 @@ deadlines; avoid sequences relying only on `sleep`.
 | Annotations | Drag; R/G/B/Y/O/P; Ctrl+wheel | Geometry, colors and thickness within defined tolerances |
 | Editing | Ctrl+Z and E | Last stroke/all strokes removed, respectively |
 | Boards | W and K | White/black background and annotations according to contract |
-| Transparency | Draw over animated scene with compositor | Background keeps changing; strokes persist; PNG has alpha |
-| No compositor | Draw without compositor | Explicit warning and frozen capture; no transparency claim |
-| Saving | Repeated Ctrl+S, custom XDG destination with spaces/accents | Decodable PNG, correct folder, unique names, existing files preserved |
+| Transparent drawing and saving | Draw over animated scene with compositor and save with Ctrl+S | Background keeps changing; strokes persist; opaque PNG contains the captured desktop and annotations |
+| No compositor | Draw without compositor | Explicit warning and frozen capture; no transparency claim; Ctrl+S includes the capture and annotations |
+| Saving | Repeated Ctrl+S, custom XDG destination with spaces/accents | Decodable opaque PNG with capture and annotations, correct folder, unique names, existing files preserved |
 | Settings | `settings.json` with color, width and initial zoom; then an invalid file | `probe` loads the file; 4x zoom, thick blue stroke; the invalid file produces a warning, uses defaults and stays untouched |
 | Save failure | Invalid configuration or inaccessible destination | Visible error, no alternative destination, usable process |
 | Overlay exit | Esc and right click where applicable | Contractual transitions, reopening possible, daemon preserved |

@@ -287,6 +287,49 @@ class Scenario:
         threading.Event().wait(0.15)
         self.display.button(1, False)
 
+    def verify_diagnostic_log(self):
+        required = [
+            "COMMAND received id=draw source=global-hotkey shortcut=CTRL+2",
+            "DISPLAY stage=overlay-start",
+            "DISPLAY restore-target bounds=",
+            f"OVERLAY start mode=Draw transparent={not self.args.no_compositor}",
+            "INPUT key-down key=S",
+            "INPUT mouse-button-down button=left",
+            "INPUT mouse-button-up button=left",
+            "SNAPSHOT saved",
+        ]
+        if not self.args.no_compositor:
+            required.extend([
+                "DISPLAY stage=before-snapshot",
+                "DISPLAY stage=after-snapshot",
+                "SNAPSHOT compositor-settle ms=250",
+                "SNAPSHOT background-captured source=xdg-desktop-portal Screenshot desktop=800x600 monitor-bounds=(0,0,800,600) monitor=800x600",
+            ])
+        def missing():
+            return [expected for expected in required
+                    if not any(expected in line for line in self.daemon_lines)]
+
+        try:
+            self.wait("eventos de diagnostico", lambda: not missing())
+        except TimeoutError as error:
+            raise TimeoutError(f"{error}; eventos ausentes: {missing()}") from error
+        lines = [line for line in self.daemon_lines if "[DIAG #" in line]
+        sequences = [int(match.group(1)) for line in lines
+                     if (match := re.search(r"\[DIAG #(\d+) ", line))]
+        assert len(sequences) >= 20, f"Poucos eventos diagnosticos: {len(sequences)}"
+        assert sequences == sorted(set(sequences)), "Sequencias diagnosticas fora de ordem ou duplicadas"
+        diagnostic_text = "\n".join(lines)
+        if self.args.no_compositor:
+            return
+        before_bounds = re.findall(
+            r"DISPLAY stage=before-snapshot .*?window-bounds=(\([^)]*\))", diagnostic_text)
+        after_bounds = re.findall(
+            r"DISPLAY stage=after-snapshot .*?window-bounds=(\([^)]*\))", diagnostic_text)
+        assert before_bounds and len(before_bounds) == len(after_bounds), \
+            "Contexto de monitor ausente/incompleto nos snapshots"
+        assert before_bounds == after_bounds, \
+            f"Monitor da sobreposicao mudou ao salvar: {before_bounds} -> {after_bounds}"
+
     def annotations(self):
         self.overlay("draw")
         self.chord("w")
@@ -420,10 +463,11 @@ class Scenario:
                        zip(self.display.screenshot().getpixel((x, y)), (0, 170, 204)))
 
         self.display.move(110, 130)
-        commands_before = sum("comando livezoom" in line for line in self.daemon_lines)
+        command = "COMMAND received id=livezoom source=ipc"
+        commands_before = sum(command in line for line in self.daemon_lines)
         self.cli("livezoom")
         self.wait("Live Zoom solicitado por IPC", lambda:
-              sum("comando livezoom" in line for line in self.daemon_lines) == commands_before + 1)
+              sum(command in line for line in self.daemon_lines) == commands_before + 1)
         self.wait("lupa aberta", lambda: self.display.find("PixelPointer Live Zoom"))
         # Região (44,80); lupa abaixo à direita em (193,196); cursor na lupa em (325,296).
         self.wait("lupa ampliando o retângulo ciano", lambda: cyan(300, 296) and red(325, 296))
@@ -432,7 +476,7 @@ class Scenario:
         # Perto do canto, a lupa passa para a esquerda da região (634,450): lupa em (352,400), cursor em (484,500).
         self.wait("lupa acompanha o cursor", lambda: red(484, 500))
         self.screenshot("14-live-lens-moved")
-        commands_before = sum("comando livezoom" in line for line in self.daemon_lines)
+        commands_before = sum("COMMAND received id=livezoom source=global-hotkey" in line for line in self.daemon_lines)
         self.timeline.emit("keys", keys=["Control_L", "4", "autorepeat"], repeats=5)
         self.display.key("Control_L", True)
         self.display.key("4", True)
@@ -440,9 +484,10 @@ class Scenario:
         self.display.key("4", False)
         self.display.key("Control_L", False)
         self.wait("Ctrl+4 recebido", lambda:
-              sum("comando livezoom" in line for line in self.daemon_lines) >= commands_before + 1)
+              sum("COMMAND received id=livezoom source=global-hotkey" in line for line in self.daemon_lines) >= commands_before + 1)
         time.sleep(0.2)
-        commands_received = sum("comando livezoom" in line for line in self.daemon_lines) - commands_before
+        commands_received = sum("COMMAND received id=livezoom source=global-hotkey" in line
+                                for line in self.daemon_lines) - commands_before
         assert commands_received == 1, f"Ctrl+4 gerou {commands_received} comandos com auto-repeat"
         self.wait("lupa fechada", lambda: not self.display.find("PixelPointer Live Zoom"))
         time.sleep(0.2)
@@ -541,13 +586,19 @@ class Scenario:
                 before.crop((60, 400, 240, 490)), self.display.screenshot().crop((60, 400, 240, 490))).getbbox())
             assert self.red_count(self.screenshot("05-live-after")) > 300
             _, image = self.save()
-            assert image.getpixel((100, 200))[3] == 0 and self.red_count(image) > 300, "PNG sem alfa/traco"
+            assert image.getpixel((100, 200)) == (24, 32, 40, 255) and self.red_count(image) > 300, \
+                "PNG sem tela capturada/traco"
         else:
             assert "congelada" in self.signals, "Aviso de captura congelada ausente"
             _, image = self.save()
-            assert image.getpixel((100, 200))[3] == 255, "Fallback nao e captura opaca"
+            assert image.getpixel((100, 200)) == (24, 32, 40, 255) and self.red_count(image) > 300, \
+                "PNG sem tela capturada/traco"
         self.close_overlay()
+        if not self.args.no_compositor:
+            self.overlay("draw")
+            self.close_overlay()
         self.live_lens()
+        self.verify_diagnostic_log()
         if not self.args.no_tray:
             for index in [0, 1]:
                 self.tray(index)

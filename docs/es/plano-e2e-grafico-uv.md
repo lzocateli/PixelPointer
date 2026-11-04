@@ -106,9 +106,9 @@ basadas únicamente en `sleep`.
 | Anotaciones | Arrastrar; R/G/B/Y/O/P; Ctrl+rueda | Geometría, colores y grosores dentro de tolerancias |
 | Edición | Ctrl+Z y E | Eliminación del último trazo/todos los trazos, respectivamente |
 | Pizarras | W y K | Fondo blanco/negro y anotaciones según contrato |
-| Transparencia | Dibujar sobre escena animada con compositor | Fondo sigue cambiando; trazos persisten; PNG contiene alfa |
-| Sin compositor | Dibujar sin compositor | Aviso explícito y captura congelada; sin afirmar transparencia |
-| Guardado | Ctrl+S repetido, destino XDG con espacios y acentos | PNG decodificable, carpeta correcta, nombres únicos, archivos conservados |
+| Dibujo transparente y guardado | Dibujar sobre escena animada con compositor y guardar con Ctrl+S | El fondo sigue cambiando; los trazos persisten; el PNG opaco contiene el escritorio capturado y las anotaciones |
+| Sin compositor | Dibujar sin compositor | Aviso explícito y captura congelada, sin afirmar transparencia; Ctrl+S incluye la captura y las anotaciones |
+| Guardado | Ctrl+S repetido, destino XDG con espacios y acentos | PNG opaco decodificable con captura y anotaciones, carpeta correcta, nombres únicos y archivos anteriores conservados |
 | Configuración | `settings.json` con color, grosor y zoom inicial; después un archivo inválido | `probe` carga el archivo; zoom 4x, trazo azul grueso; el archivo inválido genera un aviso, usa los valores predeterminados y queda intacto |
 | Fallo de guardado | Configuración inválida o destino inaccesible | Error visible, sin destino alternativo, proceso utilizable |
 | Salir de superposición | Esc y botón derecho donde corresponda | Transiciones del contrato, reapertura posible, daemon conservado |

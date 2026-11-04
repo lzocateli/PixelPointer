@@ -119,7 +119,7 @@ para ver detalles y límites de cada método.
 
 ```bash
 pixelpointer install-desktop-file   # Linux: registra el app id que usan los portales
-pixelpointer grant                  # GNOME/Wayland: permiso de captura (una vez)
+pixelpointer grant                  # Linux: autoriza la captura por portal (una vez)
 pixelpointer daemon                 # Ctrl+1 zoom, Ctrl+2 dibujo, Ctrl+3 temporizador, Ctrl+4 Live Zoom, Ctrl+5 grabación, Ctrl+6 recorte
 ```
 
@@ -189,7 +189,7 @@ solución de problemas: [guía de uso](docs/es/uso.md).
 | Ventana, entrada y lápiz | SDL3 (Wayland nativo, X11, Win32, Cocoa) |
 | Dibujo y zoom | SkiaSharp |
 | Captura y atajos en Wayland | Portales XDG (Screenshot, GlobalShortcuts) por D-Bus |
-| Captura y atajos en X11, Windows y macOS | XGetImage/XGrabKey, GDI/RegisterHotKey, screencapture |
+| Captura y atajos en X11, Windows y macOS | XGetImage/XGrabKey y portal Screenshot para dibujo X11, GDI/RegisterHotKey, screencapture |
 | Distribución | .NET 10 Native AOT, ~19 MB con las bibliotecas nativas |
 
 ## Desarrollo

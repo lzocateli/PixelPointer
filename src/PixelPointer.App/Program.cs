@@ -100,7 +100,7 @@ static int Help(TextWriter writer)
           quit                     encerra o daemon e a sobreposição ativa
           install-desktop-file     instala a entrada de menu e o ícone do app (Linux)
           uninstall-desktop-file   remove entrada e ícone idênticos aos instalados (Linux)
-          grant                    pede permissão via portal (Wayland); não é necessário no X11
+          grant                    pede permissão de captura via portal (Linux)
           setup                    primeiro uso com ações explícitas, sem autorização automática
           selftest                 valida as bibliotecas nativas sem tela (Skia e SDL com driver dummy)
           --version | --help
@@ -220,7 +220,7 @@ static int Overlay(string? image, OverlayMode mode)
     InitSdl();
     try
     {
-        RunOverlay(portal, new HotkeyCommand(mode switch { OverlayMode.Draw => "draw", OverlayMode.Timer => "timer", OverlayMode.Snip => "snip", _ => "zoom" }), image,
+        RunOverlay(portal, new HotkeyCommand(mode switch { OverlayMode.Draw => "draw", OverlayMode.Timer => "timer", OverlayMode.Snip => "snip", _ => "zoom" }, Source: "cli"), image,
             Stopwatch.StartNew(), CancellationToken.None);
         return 0;
     }
@@ -235,6 +235,7 @@ static int Daemon()
     using var cancellation = new CancellationTokenSource();
     void Stop(PosixSignalContext context)
     {
+        DiagnosticLog.Write("DAEMON", $"stopping signal={context.Signal}");
         context.Cancel = true;
         cancellation.Cancel();
     }
@@ -248,8 +249,15 @@ static int Daemon()
     using var queue = new BlockingCollection<(HotkeyCommand Command, Stopwatch Received)>();
     void Enqueue(HotkeyCommand c)
     {
-        Console.Error.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] comando {c.Id}{(c.ActivationToken is null ? string.Empty : " (com activation token)")}");
-        queue.TryAdd((c, Stopwatch.StartNew()));
+        var shortcut = c.Source == "global-hotkey"
+            ? HotkeyDefaults.Shortcuts.FirstOrDefault(item => item.Id == c.Id).Trigger
+            : null;
+        DiagnosticLog.Write("COMMAND",
+            $"received id={c.Id} source={c.Source}{(string.IsNullOrEmpty(shortcut) ? string.Empty : $" shortcut={shortcut}")}");
+        if (!queue.TryAdd((c, Stopwatch.StartNew())))
+        {
+            DiagnosticLog.Write("COMMAND", $"rejected id={c.Id} source={c.Source} reason=queue-closed");
+        }
     }
 
     var ipc = IpcChannel.ServeAsync(Enqueue, () => "running", cancellation.Cancel, cancellation.Token);
@@ -259,6 +267,7 @@ static int Daemon()
     }
 
     Console.WriteLine("IPC ............. ativo");
+    DiagnosticLog.Write("DAEMON", "started");
 
     try
     {
@@ -398,6 +407,7 @@ static int Daemon()
                 lens?.Suspend();
                 try
                 {
+                    DiagnosticLog.Write("COMMAND", $"dispatch id={item.Command.Id} source={item.Command.Source}");
                     RunOverlay(portal, item.Command, null, item.Received, cancellation.Token);
                 }
                 finally
@@ -417,8 +427,10 @@ static int Daemon()
             }
 
             // Comandos recebidos durante a sessão não reabrem a sobreposição.
-            while (queue.TryTake(out _))
+            while (queue.TryTake(out var discarded))
             {
+                DiagnosticLog.Write("COMMAND",
+                    $"discarded id={discarded.Command.Id} source={discarded.Command.Source} reason=overlay-active");
             }
         }
 
@@ -510,7 +522,10 @@ static void RunOverlay(
         Environment.SetEnvironmentVariable("XDG_ACTIVATION_TOKEN", token);
     }
 
-    var metrics = new OverlaySession(bitmap, mode, transparentDraw, LoadSettings()).Run(cancellationToken);
+    IScreenCapture? snapshotCapture = transparentDraw
+        ? portal is not null ? new PortalScreenCapture(portal) : new DeferredPortalScreenCapture(ConnectPortal)
+        : null;
+    var metrics = new OverlaySession(bitmap, mode, transparentDraw, LoadSettings(), snapshotCapture).Run(cancellationToken);
     Console.WriteLine($"""
         --- sessão {command.Id} ---
         captura ......... {(transparentDraw ? "X11 transparente" : image is null ? capture!.Name : "arquivo")}: {bitmap?.Width ?? metrics.PixelWidth}x{bitmap?.Height ?? metrics.PixelHeight} em {captureMs:0} ms
@@ -610,15 +625,9 @@ static int Setup()
 
 static int Grant(bool auto)
 {
-    if (OperatingSystem.IsLinux() && SessionInfo.IsX11)
+    if (!OperatingSystem.IsLinux())
     {
-        Console.WriteLine("Captura X11 usa XGetImage; não é necessário solicitar permissão ao portal.");
-        return 0;
-    }
-
-    if (!OperatingSystem.IsLinux() || !SessionInfo.IsWayland)
-    {
-        Console.Error.WriteLine("A solicitação de permissão via portal está disponível somente em sessões Linux Wayland.");
+        Console.Error.WriteLine("A solicitação de permissão via portal está disponível somente no Linux.");
         return 2;
     }
 

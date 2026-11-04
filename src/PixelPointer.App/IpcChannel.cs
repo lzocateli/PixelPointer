@@ -68,6 +68,7 @@ internal static class IpcChannel
                     await SendResponseAsync(client, response + "\n", requestTimeout.Token).ConfigureAwait(false);
                     if (shouldQuit)
                     {
+                        DiagnosticLog.Write("COMMAND", "received id=quit source=ipc");
                         onQuit();
                     }
                 }
@@ -106,7 +107,7 @@ internal static class IpcChannel
 
     private static string QueueCommand(string command, Action<HotkeyCommand> onCommand)
     {
-        onCommand(new HotkeyCommand(command, Environment.GetEnvironmentVariable("XDG_ACTIVATION_TOKEN")));
+        onCommand(new HotkeyCommand(command, Environment.GetEnvironmentVariable("XDG_ACTIVATION_TOKEN"), "ipc"));
         return "ok";
     }
 

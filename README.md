@@ -118,7 +118,7 @@ não apaga capturas PNG. Detalhes e limites por método estão no
 
 ```bash
 pixelpointer install-desktop-file   # Linux: registra o app id usado pelos portais
-pixelpointer grant                  # GNOME/Wayland: permissão de captura (uma vez)
+pixelpointer grant                  # Linux: autoriza captura pelo portal (uma vez)
 pixelpointer daemon                 # Ctrl+1 zoom, Ctrl+2 desenho, Ctrl+3 timer, Ctrl+4 Live Zoom, Ctrl+5 gravação, Ctrl+6 recorte
 ```
 
@@ -197,7 +197,7 @@ sobreposição. Detalhes e exportação com alfa:
 | Janela, entrada e caneta | SDL3 (Wayland nativo, X11, Win32, Cocoa) |
 | Desenho e zoom | SkiaSharp |
 | Captura e atalhos no Wayland | Portais XDG (Screenshot, GlobalShortcuts) via D-Bus |
-| Captura e atalhos no X11, Windows e macOS | XGetImage/XGrabKey, GDI/RegisterHotKey, screencapture |
+| Captura e atalhos no X11, Windows e macOS | XGetImage/XGrabKey e Screenshot portal no desenho X11, GDI/RegisterHotKey, screencapture |
 | Distribuição | .NET 10 Native AOT, ~19 MB com as bibliotecas nativas |
 
 ## Desenvolvimento

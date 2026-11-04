@@ -42,7 +42,8 @@ exige sua disponibilidade na proxima verificacao. O relatorio deve registrar
 A matriz funcional pertence ao [plano](../../docs/plano-e2e-grafico-uv.md#5-matriz-de-cenários-das-funcionalidades-atuais).
 O runner verifica foco externo, atalhos, modificadores, conflito real de grab,
 zoom, cores, espessura, edicao, quadros, alfa, salvamento e erro visivel,
-tray, reinicio, quit com janela aberta e instalacao/abertura/remocao do launcher.
+ordem dos logs de diagnostico de teclas/botoes, tray, reinicio, quit com janela
+aberta e instalacao/abertura/remocao do launcher.
 O launcher interpreta o arquivo desktop instalado, mas aceita exclusivamente
 `/package/pixelpointer daemon`, sem shell e com `Terminal=false`.
 
@@ -50,7 +51,8 @@ Referencias sao calculadas por regioes e cores explicitas no runner, nao por
 baselines atualizadas automaticamente. Exemplos: cena ciano RGB `(0,170,204)`,
 larguras de zoom `280/350/438` com tolerancia de 4 pixels, cores de anotacao com
 tolerancia de 8 canais e area minima, fundo animado alterado com traco persistente,
-PNG transparente com compositor e opaco sem compositor. Os PNGs sao decodificados.
+PNG opaco com a tela capturada e os tracos, com ou sem compositor. Os PNGs sao
+decodificados.
 
 Geometria fixa: 800x600, escala 1, renderizacao SDL por software, locale `C.UTF-8`,
 UTC e compositor `xcompmgr -n`. A imagem nao tem GLX/Mesa. No caso com compositor,
@@ -102,6 +104,11 @@ porta expostos. A rede interna e o sandbox nao tornam seguro executar um pacote
 hostil contra o kernel do host. Imagem e pacote devem ser confiaveis. O volume de
 evidencias e somente um canal de saida do teste, nao um local para dados pessoais.
 Nenhuma permissao de portal/TCC e simulada como consentimento real.
+No cenario com compositor, o desktop descartavel fornece um mock local de
+`org.freedesktop.portal.Screenshot`, que responde com uma captura PNG do Xvfb.
+Isso exercita a chamada D-Bus, o recorte por monitor e a composicao do produto;
+nao comprova a captura composta de janelas pelo portal real do GNOME nem o fluxo
+de autorizacao do sistema.
 
 O prazo cooperativo e 120 segundos; SIGALRM em 150 segundos levanta erro para
 finalizar evidencias; o orquestrador mata o container em 180 segundos. SIGKILL ou

@@ -61,7 +61,7 @@ tabla de comandos siguiente.
 | `pixelpointer probe` | Diagnóstico: SO, sesión, monitores, versiones de los portales |
 | `pixelpointer install-desktop-file` | Linux: instala el `.desktop` con el app id `io.github.lzocateli.PixelPointer` |
 | `pixelpointer uninstall-desktop-file` | Linux: elimina recursos del usuario solo si no se modificaron; conserva los archivos cambiados |
-| `pixelpointer grant` | GNOME/Wayland: pide el permiso de captura desde una ventana enfocada |
+| `pixelpointer grant` | Linux: pide el permiso de captura del portal desde una ventana enfocada |
 | `pixelpointer setup` | Primer uso opcional con diagnóstico, registro, solicitud de captura e inicio del daemon explícitos |
 | `pixelpointer selftest` | Verifica las bibliotecas nativas sin pantalla (lo usan las pruebas de paquete) |
 | `pixelpointer --version` / `--help` | Versión y ayuda |
@@ -90,6 +90,63 @@ el grosor (Ctrl+rueda antes de pulsar T). Mientras escribes, las teclas se
 vuelven texto: Enter añade una línea, Backspace borra, Esc o un clic termina.
 Ctrl+Z después de terminar elimina el texto completo.
 
+## Diagnóstico de teclas, mouse y guardado
+
+Al ejecutar `pixelpointer daemon` en una terminal, PixelPointer imprime eventos
+de diagnóstico con secuencia creciente y hora local, por ejemplo:
+
+```text
+[DIAG #000123 2026-11-04T08:04:23.659-03:00] INPUT key-down key=S modifiers=SDL_KMOD_LCTRL
+[DIAG #000124 2026-11-04T08:04:23.701-03:00] SNAPSHOT saved
+```
+
+El log incluye atajos globales recibidos, envío o descarte de comandos,
+inicio/fin de la superposición, teclas pulsadas/soltadas mientras está activa,
+botones y rueda del mouse, foco/visibilidad de la ventana y etapas/errores de
+Ctrl+S. No registra movimientos individuales del mouse ni escritura fuera de
+la superposición, no crea archivos de log ni envía eventos por la red. Registra
+los nombres de las teclas, incluso en modo de texto; no escribas contraseñas,
+tokens ni otro contenido sensible mientras el log esté visible. La secuencia se
+reinicia al iniciar el daemon. Los atajos globales aparecen como comandos
+recibidos con el identificador de la combinación, no como captura general del
+teclado del sistema.
+El contexto `DISPLAY` registra la posición global del cursor y los límites del
+monitor bajo él y del monitor de la ventana al abrir la superposición y antes/
+después de Ctrl+S.
+
+### Pasos para diagnosticar Ctrl+S y los atajos
+
+Usa una ventana sin contenido sensible y ejecuta el mismo binario que deseas
+probar. En Linux, desde la raíz del repositorio, por ejemplo:
+
+```bash
+./artifacts/package/linux-x64/pixelpointer quit
+./artifacts/package/linux-x64/pixelpointer daemon
+```
+
+Si `quit` indica que no hay un daemon en ejecución, continúa. Mantén el segundo
+comando en primer plano para ver el log. En otra ventana:
+
+1. Pulsa `Ctrl+2`; confirma `COMMAND received ... id=draw` y
+   `OVERLAY start mode=Draw`.
+2. Dibuja un trazo con el botón izquierdo y suéltalo. Confirma
+   `mouse-button-down` y `mouse-button-up` en el log.
+3. Pulsa `Ctrl+S` una vez y espera el mensaje `Salvo:`. Confirma
+   `key-down key=S`, `SNAPSHOT start` y `SNAPSHOT saved`; si falla, anota la línea
+   `SNAPSHOT failed`.
+4. Pulsa `Esc` y espera `OVERLAY finish mode=Draw reason=closed` y el resumen
+   `--- sessão draw ---`.
+5. Pulsa `Ctrl+1`, espera `OVERLAY start mode=Zoom`, pulsa `Esc` y espera el
+   cierre. Repite con `Ctrl+3` para Timer.
+6. Detén el daemon con `pixelpointer quit` desde otra terminal; no pulses
+   `Ctrl+C` antes de completar los pasos.
+
+Envía las líneas `[DIAG ...]` junto con el resultado de cada paso y cualquier
+error visible. Si no aparece el comando global, revisa la asignación del atajo
+en el escritorio. Si aparece como recibido pero no se envía, busca
+`COMMAND discarded`. Si `SNAPSHOT start` no muestra ni `saved` ni `failed`,
+envía el fragmento desde la tecla `S` hasta el final de la sesión.
+
 ## Dónde guarda Ctrl+S
 
 | Sistema | Destino |
@@ -113,11 +170,18 @@ Linux y macOS, los PNG nuevos solo permiten lectura y escritura al usuario
 disponible, en la terminal. Si falla, no guarda silenciosamente en el directorio
 actual ni en otra carpeta.
 
-El PNG contiene la escena y las anotaciones de la superposición, sin cursor ni
-mensaje de guardado. En el dibujo transparente X11, el fondo del PNG también es
-transparente: exporta las anotaciones sin volver a capturar el escritorio. Para
-guardar la pantalla congelada con anotaciones, usa el zoom; W/K exportan
-explícitamente la pizarra blanca/negra.
+El PNG contiene la pantalla y las anotaciones de la superposición, sin cursor ni
+mensaje de guardado. En el dibujo transparente X11, Ctrl+S oculta brevemente la
+superposición, espera a que el compositor actualice la pantalla y captura la
+imagen compuesta mediante el portal Screenshot; después recorta solo el monitor
+de la superposición, con los trazos alineados. Así se incluyen ventanas como
+VS Code en lugar de solo el fondo del escritorio. El portal puede pedir
+autorización en la primera captura; ejecuta `pixelpointer grant` para autorizarla
+antes de dibujar. Si el portal no está disponible o se rechaza la autorización,
+el guardado muestra un error en lugar de crear una imagen incompleta. La
+transparencia en vivo sigue activa mientras dibujas. En el modo zoom, el PNG
+contiene la captura congelada con las anotaciones; W/K exportan explícitamente
+la pizarra blanca/negra.
 
 ## Configuración
 
@@ -263,12 +327,14 @@ meta de rendimiento de tu escritorio.
 
 ### Linux con X11
 
-Los atajos y la captura funcionan sin permisos adicionales (XGrabKey y XGetImage).
-En X11 no hace falta ejecutar `pixelpointer grant`. Si otra aplicación ya
+Los atajos globales usan XGrabKey y no necesitan permiso. Si otra aplicación ya
 registró Ctrl+1 o Ctrl+2, el daemon informa el conflicto y no anuncia ese atajo
-como disponible. En el modo de dibujo, un compositor X11 detectado permite
-anotaciones transparentes sobre el contenido actual. Sin compositor, la
-aplicación avisa y usa una captura congelada; eso no es transparencia en vivo.
+como disponible. En el modo de dibujo, un compositor X11 permite anotaciones
+transparentes sobre el contenido actual. Para incluir las ventanas compuestas
+en Ctrl+S, el guardado usa el portal Screenshot y recorta solo el monitor de la
+superposición; ejecuta `pixelpointer grant` antes si el portal pide autorización.
+Sin compositor, la aplicación avisa y usa una captura congelada, no transparencia
+en vivo.
 
 ### Ejecución en segundo plano y salida
 
@@ -426,8 +492,8 @@ generado, sin `sudo`:
 ```
 
 1. **Diagnóstico:** `probe` debe identificar X11 e informar si hay compositor.
-  `grant` debe explicar que la captura nativa X11 no necesita permiso del
-  portal. La ausencia de Registry no debe recomendar reinstalar la entrada del
+  `grant` debe pedir permiso del portal para Ctrl+S; los atajos X11 no necesitan
+  ese permiso. La ausencia de Registry no debe recomendar reinstalar la entrada del
   escritorio; los errores reales de registro deben seguir distinguiéndose.
 2. **Atajos y captura:** pulsa Ctrl+1, anota sobre una imagen conocida, amplía y
   cierra con Esc. El daemon debe seguir activo. Compara con
@@ -437,11 +503,14 @@ generado, sin `sudo`:
   Ctrl+2. El contenido debe seguir moviéndose bajo los trazos, sin fondo opaco.
   W/K solo deben cambiar las pizarras seleccionadas explícitamente. Sin
   compositor, espera un aviso y una captura congelada, no transparencia.
-4. **PNG:** pulsa Ctrl+S dos veces y comprueba el mensaje, dos archivos distintos
-  y el destino XDG. En el zoom, el PNG debe incluir la captura y los trazos; en
-  el dibujo transparente debe conservar el alfa. Si el destino no permite
-  escritura, espera un error en la superposición y ningún archivo en otra
-  carpeta. Usa una cuenta sin privilegios para esta prueba.
+4. **PNG:** en el dibujo transparente X11, deja una ventana de prueba visible en
+   el monitor del cursor, pulsa Ctrl+S dos veces y comprueba que cada PNG contiene
+   solo ese monitor, el contenido de la ventana y los trazos alineados. En el modo
+   zoom, el PNG debe contener la captura congelada y los trazos. Comprueba el
+   mensaje, los dos archivos distintos y el destino XDG. Si el portal pide
+   autorización, concédela o ejecuta `grant` antes. Si el destino no permite
+   escritura, espera un error en la superposición y ningún archivo en otra
+   carpeta. Usa una cuenta sin privilegios para esta prueba.
 5. **Bandeja y salida:** abre y cierra Zoom/Desenhar desde la bandeja. Elige
   **Sair** con y sin una superposición abierta. Si la bandeja no está disponible,
   confirma el aviso y ejecuta `./artifacts/publish/linux-x64/pixelpointer quit`
