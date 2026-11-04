@@ -13,5 +13,6 @@ applyTo: "src/**, tools/**, install/**, .github/workflows/**"
 - Injeção de teclas (DemoType) só envia texto de scripts escolhidos pelo usuário.
 - Instaladores conferem SHA-256 com o `SHA256SUMS` da release, não se autoelevam, não alteram PATH nem perfis e recusam substituir arquivos que não criaram.
 - Releases publicam `SHA256SUMS`, SBOM e atestações Sigstore keyless de proveniência e SBOM; não há Authenticode nem Developer ID na v1 (D5).
+- O atualizador (`pixelpointer update`, [ADR 2026-0001](../../docs/adr/2026-0001-atualizacao-opt-in.md)) é opt-in, só substitui instalações de usuário com `install-receipt.json`, gravação do usuário e processo não elevado, e só executa o pacote depois de SHA-256 e proveniência Sigstore verificados nativamente contra a identidade de `gw-github-assets.yml`. Mudar essa identidade, o recibo ou o material de `SigstoreTrustRoot` exige atualizar a política, os testes e a documentação juntos; nunca relaxe a verificação para aceitar pacotes sem atestação.
 - Logs não incluem conteúdo capturado, tokens de portal ou caminhos privados além do necessário.
 - Dependências novas exigem licença compatível registrada em `Directory.Packages.props` e em `THIRD-PARTY-NOTICES.md` quando redistribuídas.

@@ -8,6 +8,7 @@ using PixelPointer.App.Linux;
 using PixelPointer.App.MacOS;
 using PixelPointer.App.Overlay;
 using PixelPointer.App.Recording;
+using PixelPointer.App.Updates;
 using PixelPointer.App.Windows;
 using SDL;
 using SkiaSharp;
@@ -32,6 +33,7 @@ try
         "zoom" or "draw" or "timer" or "snip" => SendOrRun(command),
         "record" or "livezoom" => SendToDaemon(command),
         "status" => Status(),
+        "update" => UpdateCommand.Run(args[1..], () => IpcChannel.SendControlCommandAsync("status").GetAwaiter().GetResult() == "running"),
         "quit" => Quit(),
         "install-desktop-file" => InstallDesktopFile(),
         "uninstall-desktop-file" => InstallDesktopFile(remove: true),
@@ -103,6 +105,8 @@ static int Help(TextWriter writer)
           grant                    pede permissão de captura via portal (Linux)
           setup                    primeiro uso com ações explícitas, sem autorização automática
           selftest                 valida as bibliotecas nativas sem tela (Skia e SDL com driver dummy)
+          update [status|check|install|apply|auto-check on|off|auto-install on|off]
+                                   atualizações opt-in; 'pixelpointer update help' detalha
           --version | --help
 
         Na sobreposição: roda/setas = zoom, clique = desenhar, R G B Y O P = cor,
@@ -233,10 +237,23 @@ static int Overlay(string? image, OverlayMode mode)
 static int Daemon()
 {
     using var cancellation = new CancellationTokenSource();
+    // Só um encerramento pedido pelo usuário (Sair, 'quit', Ctrl+C) aplica uma atualização preparada; logout não.
+    var naturalExit = false;
+    void RequestQuit()
+    {
+        naturalExit = true;
+        cancellation.Cancel();
+    }
+
     void Stop(PosixSignalContext context)
     {
         DiagnosticLog.Write("DAEMON", $"stopping signal={context.Signal}");
         context.Cancel = true;
+        if (context.Signal == PosixSignal.SIGINT)
+        {
+            naturalExit = true;
+        }
+
         cancellation.Cancel();
     }
 
@@ -260,7 +277,7 @@ static int Daemon()
         }
     }
 
-    var ipc = IpcChannel.ServeAsync(Enqueue, () => "running", cancellation.Cancel, cancellation.Token);
+    var ipc = IpcChannel.ServeAsync(Enqueue, () => "running", RequestQuit, cancellation.Token);
     if (ipc.IsCompleted)
     {
         ipc.GetAwaiter().GetResult();
@@ -268,6 +285,10 @@ static int Daemon()
 
     Console.WriteLine("IPC ............. ativo");
     DiagnosticLog.Write("DAEMON", "started");
+    if (UpdateService.OnDaemonStart() is { } updateNotice)
+    {
+        Console.WriteLine($"Atualização ...... {updateNotice}");
+    }
 
     try
     {
@@ -296,11 +317,15 @@ static int Daemon()
             }
         }
 
+        using var updates = new UpdateWorker();
+        var updateStatusVersion = updates.StatusVersion;
+        Console.WriteLine($"Atualizações .... {(updates.Preferences.CheckAutomatically ? "verificação automática ativada" : "verificação automática desativada")}; {updates.Status}");
+
         InitSdl();
-        using var tray = TrayController.TryCreate(Enqueue, cancellation.Cancel, out var trayUnavailableReason);
+        using var tray = TrayController.TryCreate(Enqueue, RequestQuit, updates, out var trayUnavailableReason);
         Console.WriteLine(tray is null
             ? $"Tray ............. indisponível ({trayUnavailableReason}); use 'pixelpointer status' e 'pixelpointer quit'."
-            : "Tray ............. registrada (Zoom, Desenhar, Timer, Live Zoom, Recorte, Gravar, Sobre e atalhos, Sair); a visibilidade depende do desktop.");
+            : "Tray ............. registrada (Zoom, Desenhar, Timer, Live Zoom, Recorte, Gravar, Sobre e atalhos, Atualizações, Sair); a visibilidade depende do desktop.");
 
         ScreenRecorder? recorder = null;
         LiveZoom? liveZoom = null;
@@ -364,6 +389,13 @@ static int Daemon()
             {
                 ipc.GetAwaiter().GetResult();
                 throw new InvalidOperationException("O serviço IPC encerrou inesperadamente.");
+            }
+
+            if (updates.StatusVersion != updateStatusVersion)
+            {
+                updateStatusVersion = updates.StatusVersion;
+                Console.WriteLine($"Atualizações .... {updates.Status}");
+                tray?.RefreshUpdates();
             }
 
             if (!queue.TryTake(out var item))
@@ -449,7 +481,28 @@ static int Daemon()
         ipc.GetAwaiter().GetResult();
     }
 
+    if (naturalExit)
+    {
+        ApplyPreparedUpdateOnExit();
+    }
+
     return 0;
+}
+
+static void ApplyPreparedUpdateOnExit()
+{
+    try
+    {
+        if (InstallOriginDetector.Detect().CanSelfUpdate && InstallOriginDetector.ApplicationDirectory is { } directory
+            && UpdateInstaller.FindStaged(directory) is not null)
+        {
+            Console.WriteLine($"Atualização ...... {UpdateService.ApplyStaged()}");
+        }
+    }
+    catch (Exception ex) when (UpdateService.IsUpdateFailure(ex))
+    {
+        Console.Error.WriteLine($"Atualização não aplicada; a versão atual foi preservada: {ex.Message}");
+    }
 }
 
 static int SendToDaemon(string command)

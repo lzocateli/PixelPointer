@@ -64,6 +64,7 @@ Without a tray, use `pixelpointer --version` and the command table below.
 | `pixelpointer grant` | Linux: requests portal capture permission from a focused window |
 | `pixelpointer setup` | Optional first use with explicit diagnostics, desktop registration, capture request and daemon start actions |
 | `pixelpointer selftest` | Checks the native libraries without a display (used by package tests) |
+| `pixelpointer update [status\|check\|install\|apply\|auto-check on\|off\|auto-install on\|off]` | Opt-in updates; see [Updating](#updating) |
 | `pixelpointer --version` / `--help` | Version and help |
 
 Overlay keys: mouse wheel or arrows to zoom, click and drag to draw,
@@ -373,6 +374,79 @@ gh attestation verify pixelpointer-linux-x64.tar.gz --repo lzocateli/PixelPointe
   --predicate-type https://spdx.dev/Document/v2.2
 ```
 
+## Updating
+
+PixelPointer only contacts the network when you ask it to or after you enable
+automatic checking; it sends no telemetry or personal identifiers.
+
+| Installation | How to update |
+| --- | --- |
+| `install.sh` or `install.ps1` in the user's directory | `pixelpointer update install` or optional automatic installation |
+| `install.sh --global` or `install.ps1` in an elevated session | Run the installer again with the same privileges |
+| `.deb` | Download the new `.deb` from the release and run `sudo apt install ./pixelpointer-<rid>.deb` |
+| Homebrew | `brew upgrade pixelpointer` |
+| winget | `winget upgrade lzocateli.PixelPointer` |
+| Portable copy or unknown origin | Reinstall with `install.sh`/`install.ps1` or update the same way you installed it |
+
+The commands work from any directory and need HTTPS access to `api.github.com`
+and `github.com`:
+
+```bash
+pixelpointer update status            # version, detected origin, preferences and prepared update
+pixelpointer update check             # query the latest stable release now
+pixelpointer update install           # download, validate, prepare and apply (or defer until the daemon exits)
+pixelpointer update apply             # apply an already prepared update while the daemon is stopped
+pixelpointer update auto-check on     # automatic checking in the daemon (default: off)
+pixelpointer update auto-install on   # automatic installation; requires auto-check on (default: off)
+```
+
+Expected result of `update install` on a user installation: download, Sigstore
+verification and `selftest` messages, followed by
+`PixelPointer atualizado para X.Y.Z` and exit code 0. With the daemon running,
+the message says the swap will happen when it exits. Errors return 1; invalid
+usage, 2. Application messages are in Brazilian Portuguese.
+
+- **Origin:** `install.sh` and `install.ps1` write `install-receipt.json` next to
+  the executable. The updater only replaces an installation with this receipt,
+  user scope, writable by the current user, not writable by group or others,
+  outside the `.deb`, Homebrew and winget directories, and with a process that is
+  not elevated. Otherwise it notifies and shows the channel's command.
+  Installations made before this feature have no receipt: run the installer once
+  more.
+- **Validation:** the tag comes from `releases/latest` (stable only); the package
+  is downloaded from the tag path and must match the published size, the SHA-256
+  in `SHA256SUMS` and a Sigstore provenance attestation verified by the
+  application itself: Fulcio chain, SCT, Rekor SET and inclusion proof, DSSE
+  signature and the identity of this repository's `gw-github-assets.yml`
+  workflow on `main` or a `v*` tag. No remote script runs and `gh` is not used.
+- **Staging and swap:** files are placed in `<parent>/.pixelpointer.update`, on
+  the same volume as the installation, and the new version runs `--version` and
+  `selftest` before the swap. On Linux and macOS the swap is an atomic rename; on
+  Windows, the new version completes the swap after the previous process exits.
+  If the check fails after the swap, the previous version is restored.
+- **When it applies:** immediately with `update install` or `update apply` if the
+  daemon is not running; with the daemon, when you exit from the tray, with
+  `pixelpointer quit` or Ctrl+C. Logout and `SIGTERM` do not apply it. Nothing is
+  restarted automatically; the next daemon start reports the result.
+- **Automatic:** with automatic checking, the daemon checks 5 minutes after it
+  starts and then every 24 hours (or 1 hour after a failure). With automatic
+  installation, it also downloads and prepares the version without interrupting
+  overlays, recording or Live Zoom. Disabling checking also disables
+  installation. The tray's **Atualizações** (Updates) submenu shows the status,
+  both options and **Verificar agora** (Check now); **Instalar automaticamente**
+  (Install automatically) is unavailable when the origin does not allow it.
+- **Preferences:** `update.json`, next to `settings.json`; `pixelpointer update
+  status` shows the path. The application writes this file with an atomic swap
+  and never overwrites an invalid file or one changed by another process.
+
+Limitations: only the stable channel is queried; GitHub's anonymous API limits
+requests per IP (HTTP 403 or 429 results in "tente mais tarde", try again later);
+Sigstore trust material (Fulcio, Rekor v1 and the CT log) is embedded in the
+binary, so a rotation of those keys, a move of the attestation to Rekor v2 or a
+change in the release workflow identity makes verification fail closed until
+you update with the installer. The swap was validated end to end only on Linux
+x64; Windows and macOS have not been validated yet.
+
 ## Uninstalling
 
 | Installed with | Removal |
@@ -401,7 +475,9 @@ line from `$PROFILE.CurrentUserAllHosts`. On Linux, remove the desktop
 integration before the executable with `pixelpointer uninstall-desktop-file`,
 using the same `XDG_DATA_HOME`; the command preserves modified files. Uninstalling
 does not delete PNG captures. The `.deb` package separately manages resources
-installed under `/usr/share`. On GNOME, bound hotkeys can be removed in Settings;
+installed under `/usr/share`. If you used the updater, also remove the
+`.pixelpointer.update` directory next to the application directory, if present,
+and optionally the `update.json` shown by `pixelpointer update status`. On GNOME, bound hotkeys can be removed in Settings;
 the capture permission with:
 
 ```bash

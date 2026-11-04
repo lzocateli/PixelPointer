@@ -81,6 +81,21 @@ Every package ships an SPDX SBOM and provenance attestations:
 `gh attestation verify <file> --repo lzocateli/PixelPointer`
 ([verification](docs/en/usage.md#verifying-downloads)).
 
+## Updating
+
+PixelPointer does not contact the network by default. On installations made by
+`install.sh` or `install.ps1` in the user's directory, `pixelpointer update install`
+downloads the latest stable release, verifies the SHA-256 and the Sigstore
+provenance inside the application, runs the new version (`--version` and
+`selftest`) and only then swaps the files, keeping the previous version on
+failure. With the daemon running, the swap happens when it exits. Automatic
+checking and installation are optional and start disabled
+(`pixelpointer update auto-check on`, `pixelpointer update auto-install on` or
+the tray's **Atualizações** submenu). `.deb`, Homebrew, winget, global
+installations and portable copies only notify and show the command for their
+channel. Installations made before this feature need to run the installer once
+more. Details and limitations are in the [usage guide](docs/en/usage.md#updating).
+
 ## Uninstall
 
 If the daemon is running, stop it first with `pixelpointer quit`. Then remove

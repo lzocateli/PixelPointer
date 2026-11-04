@@ -13,6 +13,10 @@ estiver no PATH, ele mostra os comandos a executar, um que grava o PATH do
 usuario no registro e outro, para ambientes que bloqueiam o registro, que so
 acrescenta o diretorio ao perfil do PowerShell.
 
+Grava install-receipt.json ao lado do executavel. O comando
+'pixelpointer update' usa esse recibo para reconhecer uma instalacao de usuario
+sem elevacao, a unica que o proprio aplicativo pode atualizar.
+
 .PARAMETER Version
 Versao a instalar (X.Y.Z ou X.Y.Z-sufixo). Padrao: latest.
 
@@ -231,6 +235,12 @@ try {
     foreach ($name in $packageFiles) {
         Copy-Item -LiteralPath (Join-Path $extractDirectory $name) -Destination (Join-Path $stagedDirectory $name) -Force
     }
+
+    # Recibo lido pelo atualizador do aplicativo: so instalacoes de usuario sem elevacao aceitam autoatualizacao.
+    $principal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
+    $receiptScope = if ($principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { 'global' } else { 'user' }
+    $receipt = "{`"version`": 1, `"installer`": `"install.ps1`", `"scope`": `"$receiptScope`", `"rid`": `"$rid`"}`n"
+    [IO.File]::WriteAllText((Join-Path $stagedDirectory 'install-receipt.json'), $receipt, [Text.UTF8Encoding]::new($false))
 
     $stagedBinary = Join-Path $stagedDirectory 'pixelpointer.exe'
     try {

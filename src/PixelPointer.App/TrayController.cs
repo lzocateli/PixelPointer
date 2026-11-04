@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using PixelPointer.App.Hotkeys;
+using PixelPointer.App.Updates;
 using SDL;
 using SkiaSharp;
 using static SDL.SDL3;
@@ -9,7 +10,9 @@ namespace PixelPointer.App;
 internal sealed unsafe partial class TrayController : IDisposable
 {
     private const uint TrayEntryButton = 1;
+    private const uint TrayEntryCheckbox = 2;
     private const uint TrayEntrySubmenu = 4;
+    private const uint TrayEntryChecked = 0x40000000;
     private const uint TrayEntryDisabled = 0x80000000;
     private static readonly TrayCallback Callback = OnTrayCallback;
 
@@ -18,6 +21,11 @@ internal sealed unsafe partial class TrayController : IDisposable
     private readonly nint _tray;
     private readonly List<GCHandle> _callbacks;
     private readonly List<TrayLabel> _labels = [];
+    private UpdateWorker? _updates;
+    private nint _updateStatusEntry;
+    private nint _checkEntry;
+    private nint _installEntry;
+    private string? _updateStatus;
     private int _disposed;
 
     private TrayController(SKBitmap iconBitmap, nint iconSurface, nint tray, List<GCHandle> callbacks)
@@ -31,6 +39,7 @@ internal sealed unsafe partial class TrayController : IDisposable
     internal static TrayController? TryCreate(
         Action<HotkeyCommand> onCommand,
         Action onQuit,
+        UpdateWorker? updates,
         out string? unavailableReason)
     {
         var bitmap = AppIcon.CreateBitmap();
@@ -82,6 +91,11 @@ internal sealed unsafe partial class TrayController : IDisposable
                 controller.AddEntry(aboutMenu, label, null, TrayEntryButton | TrayEntryDisabled);
             }
 
+            if (updates is not null)
+            {
+                controller.AddUpdateMenu(menu, updates);
+            }
+
             controller.AddEntry(menu, "Sair", () =>
             {
                 DiagnosticLog.Write("TRAY", "action=quit");
@@ -123,6 +137,65 @@ internal sealed unsafe partial class TrayController : IDisposable
 
         AppIcon.DestroySurface(_iconSurface);
         _iconBitmap.Dispose();
+    }
+
+    /// <summary>Sincroniza o submenu Atualizações com o worker; chamado na thread principal.</summary>
+    internal void RefreshUpdates()
+    {
+        if (_updates is not { } updates || _disposed != 0)
+        {
+            return;
+        }
+
+        var status = updates.Status;
+        if (status != _updateStatus)
+        {
+            _updateStatus = status;
+            var label = new TrayLabel(status);
+            _labels.Add(label);
+            SdlTrayNative.SetTrayEntryLabel(_updateStatusEntry, label);
+        }
+
+        var preferences = updates.Preferences;
+        SdlTrayNative.SetTrayEntryChecked(_checkEntry, preferences.CheckAutomatically);
+        SdlTrayNative.SetTrayEntryChecked(_installEntry, preferences.EffectiveInstallAutomatically);
+        SdlTrayNative.SetTrayEntryEnabled(_installEntry, updates.Origin.CanSelfUpdate && preferences.CheckAutomatically);
+    }
+
+    private void AddUpdateMenu(nint menu, UpdateWorker updates)
+    {
+        var submenu = SdlTrayNative.CreateTraySubmenu(AddEntry(menu, "Atualizações", null, TrayEntrySubmenu));
+        if (submenu == 0)
+        {
+            throw new InvalidOperationException($"SDL não criou o submenu de atualizações: {SDL_GetError()}");
+        }
+
+        _updates = updates;
+        _updateStatus = updates.Status;
+        _updateStatusEntry = AddEntry(submenu, _updateStatus, null, TrayEntryButton | TrayEntryDisabled);
+        var preferences = updates.Preferences;
+        _checkEntry = AddEntry(submenu, "Verificar automaticamente", () =>
+        {
+            DiagnosticLog.Write("TRAY", "action=update-auto-check");
+            updates.Change(current => current.WithCheckAutomatically(!current.CheckAutomatically));
+            RefreshUpdates();
+        }, TrayEntryCheckbox | (preferences.CheckAutomatically ? TrayEntryChecked : 0));
+        _installEntry = AddEntry(submenu, "Instalar automaticamente", () =>
+        {
+            DiagnosticLog.Write("TRAY", "action=update-auto-install");
+            if (updates.Origin.CanSelfUpdate)
+            {
+                updates.Change(current => current.WithInstallAutomatically(!current.InstallAutomatically));
+            }
+
+            RefreshUpdates();
+        }, TrayEntryCheckbox | (preferences.EffectiveInstallAutomatically ? TrayEntryChecked : 0));
+        AddEntry(submenu, "Verificar agora", () =>
+        {
+            DiagnosticLog.Write("TRAY", "action=update-check-now");
+            updates.RequestCheck();
+        });
+        SdlTrayNative.SetTrayEntryEnabled(_installEntry, updates.Origin.CanSelfUpdate && preferences.CheckAutomatically);
     }
 
     internal static IReadOnlyList<string> AboutEntries =>
@@ -192,6 +265,14 @@ internal sealed unsafe partial class TrayController : IDisposable
         [LibraryImport("SDL3", EntryPoint = "SDL_SetTrayEntryEnabled")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
         internal static partial void SetTrayEntryEnabled(nint entry, [MarshalAs(UnmanagedType.U1)] bool enabled);
+
+        [LibraryImport("SDL3", EntryPoint = "SDL_SetTrayEntryChecked")]
+        [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
+        internal static partial void SetTrayEntryChecked(nint entry, [MarshalAs(UnmanagedType.U1)] bool isChecked);
+
+        [LibraryImport("SDL3", EntryPoint = "SDL_SetTrayEntryLabel")]
+        [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
+        internal static partial void SetTrayEntryLabel(nint entry, TrayLabel label);
 
         [LibraryImport("SDL3", EntryPoint = "SDL_SetTrayEntryCallback")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
