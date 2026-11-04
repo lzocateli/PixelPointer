@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/lzocateli/PixelPointer/compare/v0.3.0...v0.3.1) (2026-11-04)
+
+
+### Corrigido
+
+* **capture:** capture a tela composta do monitor sem escurecimento ([#55](https://github.com/lzocateli/PixelPointer/issues/55)) ([bd9ec2c](https://github.com/lzocateli/PixelPointer/commit/bd9ec2c504edaa9e965daaff7c625882eec3cda5))
+
 ## [0.3.0](https://github.com/lzocateli/PixelPointer/compare/v0.2.1...v0.3.0) (2026-11-03)
 
 
