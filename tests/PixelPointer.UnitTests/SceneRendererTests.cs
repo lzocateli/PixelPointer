@@ -1,5 +1,5 @@
-using PixelPointer.Core.Annotations;
 using PixelPointer.App.Overlay;
+using PixelPointer.Core.Annotations;
 using PixelPointer.Rendering;
 using SkiaSharp;
 
