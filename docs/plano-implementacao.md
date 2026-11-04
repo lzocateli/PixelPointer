@@ -5,7 +5,8 @@
 | Campo | Valor |
 | --- | --- |
 | Status inicial | aprovado para F0 (decisões de 2026-10-29) |
-| Estado de entrega | F0 validada no Linux/GNOME Wayland, inclusive Native AOT; Windows com evidência manual parcial em 2026-10-31 e macOS pendente do roteiro manual ([relatório](f0-relatorio.md), [pendências](#8-pendências-consolidadas)). F1 (fundação: repositório, governança, CI/CD e distribuição) entregue em 2026-10-30 |
+| Status do plano (2026-11-04) | **Ativo**. A seção 8 é a fonte única das pendências de implementação, validação, decisão e documentação |
+| Estado de entrega (2026-11-04) | v0.3.1 é a última versão estável publicada. F0/F1 entregues; zoom, anotação, timer, recorte, Live Zoom e GIF estão implementados. O aceite GNOME/X11 de 2026-11-04 cobre manualmente as funcionalidades disponíveis no pacote local, mas não representa release publicada nem validação multiplataforma. Veja as [pendências consolidadas](#8-pendências-consolidadas) |
 | Primeira versão funcional | v0.1.2, aceita como estável pelo mantenedor em 2026-10-30 no Ubuntu 24.04.5/GNOME X11 e Ubuntu 26.04/GNOME Wayland; aceite manual limitado aos fluxos e ambientes registrados, sem concluir F2/F3 ou validar Windows/macOS |
 | Origem | IA assistida |
 | Revisor humano | Lincoln Zocateli |
@@ -16,10 +17,10 @@
 transparente, zoom, exportação PNG com alfa, CapsLock/NumLock e uso nos dois
 monitores 1920×1080 em escala 1 no Ubuntu 24.04.5/GNOME X11, autorizando considerar
 esses testes concluídos. O [registro de evidências e limites](plano-e2e-grafico-uv.md#aceite-manual-do-desenho-transparente-em-gnome-x11)
-separa esse aceite manual do E2E automatizado. Não conclui a fase F3 inteira:
-formas, texto, blur, HiDPI e paridade entre plataformas continuam no escopo futuro,
-assim como o aceite real de Zoom/Desenhar pela tray, do launcher e a
-revisão dos vídeos automatizados. Prints complementares do solicitante, na mesma
+separa esse aceite manual do E2E automatizado. Na data daquele aceite, F3 ainda
+estava incompleta; formas, texto e blur foram implementados depois. As lacunas
+atuais de F3 são multi-monitor Wayland e validação por plataforma/topologia,
+conforme a seção 8. Prints complementares do solicitante, na mesma
 data, registram anotações no monitor 1 e comprovam o ícone da tray GNOME visível
 com o menu Zoom/Desenhar/Sair aberto; esse recorte visual está verificado.
 O solicitante também confirmou o encerramento por Sair e forneceu print com
@@ -94,6 +95,11 @@ pode servir de referência de comportamento, com atribuição quando algo for ad
 
 ## 3. Arquitetura
 
+O diagrama a seguir registra a arquitetura-alvo. Na implementação atual, os
+projetos existentes são `PixelPointer.App`, `PixelPointer.Core` e
+`PixelPointer.Rendering`; as abstrações e projetos `PixelPointer.Platform*`
+listados abaixo ainda não foram extraídos do aplicativo.
+
 ```text
 src/
   PixelPointer.Core/              modelo de anotações, ferramentas, undo/redo, configurações (JSON source-gen), comandos
@@ -108,7 +114,7 @@ tests/
   PixelPointer.IntegrationTests/  renderização determinística comparada com imagens de referência
 ```
 
-**F2 em andamento (2026-10-31):** `src/PixelPointer.Core` já contém o modelo de
+**Estado F2 (2026-11-04):** `src/PixelPointer.Core` contém o modelo de
 anotações (`AnnotationDocument`: traços, cor, espessura, quadro, desfazer e limpar),
 sem SDL nem Skia, coberto por testes unitários. A sobreposição usa esse modelo sem
 mudar atalhos nem aparência. Configurações somente leitura em `settings.json`
@@ -120,14 +126,15 @@ Renderização em GPU (Skia sobre OpenGL do SDL) existe como opt-in experimental
 (`rendering.gpu`), com retorno automático à CPU. Em container com Xvfb e Mesa
 llvmpipe (GLX), o zoom em OpenGL produziu pixels idênticos aos da CPU; a interface
 OpenGL nativa do Skia pode não estar disponível com EGL (Wayland), caso em que a
-CPU é usada. Falta aceite manual em hardware real e medição em 4K antes de
-torná-la padrão. No Wayland com um monitor, a captura usa ScreenCast + PipeWire sob
-demanda (D13): 36 ms no Wayland isolado com sway, contra ~550 ms do Screenshot no
-GNOME da F0. A preview teve aceite de captura, zoom e desenho no GNOME real
+CPU é usada. No Wayland fora do GNOME, a captura usa ScreenCast + PipeWire sob
+demanda (D13): 36 ms no Wayland isolado com sway, contra ~550 ms
+do Screenshot no GNOME da F0. A preview teve aceite de captura, zoom e desenho no GNOME real
 em 2026-10-31; o primeiro quadro levou 122 ms, mas o tempo do portal incluiu
-consentimento humano. Falta medir a latência de atalho até quadro sem esse
-diálogo; os números não são um benchmark equivalente. Formas, texto, atalhos
-configuráveis e os demais módulos acima continuam pendentes.
+consentimento humano. Esses números não são benchmarks equivalentes. Os recursos principais de
+captura, configuração, modelo, renderização e ferramentas de anotação estão
+implementados;
+os critérios residuais de F2 e a decisão sobre as abstrações de plataforma estão
+centralizados na [seção 8](#8-pendências-consolidadas).
 
 **Incremento de diagnóstico F2 (2026-10-31):** a captura agora informa tempos de
 criação da sessão, seleção, início, persistência da autorização, abertura do
@@ -178,83 +185,64 @@ O mesmo binário é app e CLI: `pixelpointer zoom|draw|timer <min>|snip` envia o
 | Capacidade | Windows | macOS | Linux X11 | Linux Wayland |
 | --- | --- | --- | --- | --- |
 | Atalho global | RegisterHotKey | RegisterEventHotKey | XGrabKey | Portal GlobalShortcuts (**validado no GNOME 50**); fallback atalho do desktop + IPC |
-| Captura estática | DXGI/WGC | ScreenCaptureKit (permissão Gravação de Tela) | XShm | ScreenCast/PipeWire sob demanda com um monitor (aceite manual da preview); fallback Screenshot |
+| Captura estática | GDI | ScreenCaptureKit (permissão Gravação de Tela) | XGetImage/XShm | Screenshot no GNOME; ScreenCast/PipeWire nos demais compositores quando há um monitor; Screenshot para múltiplos monitores ou fallback |
 | Sobreposição em tela cheia | SDL3 | SDL3 + nível de janela | SDL3 | SDL3 Wayland nativo (**validado**, escala fracionada ok) |
-| Live Zoom | Magnification API ou WGC | ScreenCaptureKit excluindo a própria janela | XComposite (trabalhoso) | ScreenCast com cursor metadata e lupa fullscreen transparente; um monitor e portal com `cursor_mode=metadata`; GNOME desabilitado por D13 |
-| Gravação | Media Foundation | AVFoundation | ffmpeg do sistema / GIF | ScreenCast + ffmpeg / GIF |
-| DemoType | SendInput | CGEventPost (Acessibilidade) | XTest | Portal RemoteDesktop/libei, best effort |
+| Live Zoom | Implementado pela Magnification API | Implementado via ScreenCaptureKit | Implementado como lupa em janela | Best effort via ScreenCast e cursor metadata; um monitor, portal compatível e GNOME desabilitado por D13 |
+| Gravação | GIF implementado | Não implementada | GIF implementado | GIF implementado via sessão ScreenCast |
+| DemoType | Não implementado | Não implementado | Não implementado | Não implementado; portal RemoteDesktop/libei continua como possibilidade, não como suporte existente |
 
 ## 5. Fases
 
-| Fase | Entrega | Critério de saída |
+As fases abaixo resumem o estado; tarefas executáveis e critérios de validação
+ficam exclusivamente na [seção 8](#8-pendências-consolidadas).
+
+| Fase | Estado | Resumo |
 | --- | --- | --- |
-| **F0 — Spike** | SDL3+Skia+AOT, captura, atalhos, IPC por plataforma | Relatório com go/no-go ([f0-relatorio.md](f0-relatorio.md)) |
-| F1 — Fundação | Repositório público, Altivy.Groundwork (governança, release-please, gitleaks, política), CI matriz, publish dos 6 RIDs com SBOM e atestação, `.deb`, instaladores, Homebrew e winget, documentação pt/en/es; o spike vira `src/PixelPointer.App` | CI verde nos 3 SOs |
-| F2 — Core + captura rápida | Modelo de anotações, renderização Skia em **GPU**, configurações, abstrações de plataforma, IPC/CLI, **ScreenCast/PipeWire no Wayland** (meta: atalho → 1º quadro < 150 ms), ScreenCaptureKit no macOS, janela de boas-vindas (D9) | Testes unitários e de imagem; latência medida |
-| F3 — Zoom + Desenho | Ctrl+1/Ctrl+2 completos: formas (linha, seta, retângulo, elipse), marca-texto, blur, texto, multi-monitor, HiDPI, copiar/salvar | Paridade funcional validada manualmente |
-| F4 — Timer + Recorte | Ctrl+3 e Ctrl+6 (área de transferência e arquivo) | — |
-| F5 — Live Zoom | Windows → macOS → X11; Wayland best effort | Matriz documentada |
-| F6 — Gravação | GIF nativo; MP4 por plataforma; ffmpeg opcional no Linux; áudio | — |
-| F7 — DemoType | Windows, macOS, X11; Wayland pelo portal | — |
-| F8 — Distribuição | winget/zip, `.dmg` (não assinado na v1) + Homebrew cask, `.deb`/AppImage/Flatpak, início automático, `.desktop` | Instalação limpa nos 3 SOs |
-| F9 — i18n e documentação | pt-BR e en, guia de permissões por SO | — |
+| **F0 — Spike** | Concluída | Relatório go/no-go ([f0-relatorio.md](f0-relatorio.md)) |
+| F1 — Fundação | Concluída | Governança, CI, releases e documentação inicial entregues |
+| F2 — Core + captura rápida | Parcial | Core, captura e configuração implementados; critérios residuais estão na seção 8 |
+| F3 — Zoom + Desenho | Parcial | Ferramentas principais implementadas; cobertura Wayland/plataformas ainda incompleta |
+| F4 — Timer + Recorte | Implementada | Aceite manual local GNOME/X11 em 2026-11-04 |
+| F5 — Live Zoom | Parcial | Windows/macOS/X11 implementados; Wayland é best effort |
+| F6 — Gravação | Parcial | GIF implementado em Windows e Linux X11/Wayland |
+| F7 — DemoType | Não iniciada | Ainda sem implementação |
+| F8 — Distribuição | Parcial | Canais atuais implementados; formatos adicionais aguardam decisão de escopo |
+| F9 — i18n e documentação | Parcial | Documentação corrente pt-BR/en/es; faltam traduções de documentos legados |
 
 ## 6. Riscos
 
-| Risco | Mitigação |
-| --- | --- |
-| Latência da captura no Wayland (~550 ms pelo portal Screenshot) | ScreenCast com PipeWire e restore token na F2 |
-| Desenho em CPU insuficiente em 4K | Skia sobre OpenGL (GRContext) na F2; CPU fica como fallback |
-| GNOME exige janela focada para diálogos de permissão | Janela de boas-vindas (D9) |
-| macOS sem assinatura: permissões TCC se perdem entre versões | Documentar; assinar quando houver Developer ID (D5) |
-| KDE/Hyprland/Sway com comportamentos diferentes de portal | Testar na F2; fallback por IPC sempre disponível |
-| Pacotes nativos (SDL3, libSkiaSharp) ao lado do executável | Empacotar junto; avaliar link estático na F8 |
+Os riscos ativos e suas próximas ações estão registrados na tabela única da
+[seção 8](#8-pendências-consolidadas); este plano não mantém uma lista paralela.
 
 ## 7. Questões em aberto
 
-1. Multi-monitor no Wayland: a captura cobre a área de trabalho inteira e o compositor decide em que monitor a
-   janela em tela cheia abre; escolher o monitor do cursor exige o ScreenCast por monitor (F2).
-2. Tamanho do AOT em Windows e macOS (no Linux: 19,2 MB com SDL3 e Skia; inicialização < 10 ms).
-3. Comportamento de Windows e macOS (aguarda o roteiro manual da seção 6 do relatório).
+Decisões de escopo e tarefas em aberto são acompanhadas somente na
+[seção 8](#8-pendências-consolidadas).
 
 ## 8. Pendências consolidadas
 
-**Sequência de execução solicitada em 2026-11-01:** cada etapa deve ter branch
-própria, testes antes do commit, push e PR; nenhuma aprovação humana ou
-validação nativa é substituída por resultados de container. A primeira entrega
-consolida os incrementos locais na branch `perf/f2-wayland-capture`.
+Esta é a fonte única de status e próxima ação para pendências de implementação,
+validação, decisão e documentação. Os planos de E2E e os registros de aceite
+mantêm evidências e limites históricos, sem manter outro backlog. Atualizado em
+2026-11-04; os históricos de PR estão no repositório e os resultados gráficos no
+[plano E2E](plano-e2e-grafico-uv.md).
 
-| Etapa | Estado de execução |
-| --- | --- |
-| 1. Consolidar diagnóstico, capacidades e testes Wayland | [PR #21](https://github.com/lzocateli/PixelPointer/pull/21) integrado em `df252e6`, com `Result` aprovado |
-| 2. Nova preview e aceite GNOME real | [Preview #16](https://github.com/lzocateli/PixelPointer/actions/runs/41308984865) publicada e aceita manualmente pelo mantenedor em 2026-11-01 numa segunda máquina GNOME Wayland (1920×1080, escala 1,25): `install-desktop-file`, `grant`, daemon, Ctrl+1/Ctrl+2 pelo GlobalShortcuts, zoom, desenho, quadros branco/preto, PNG, menu da tray e Sair em duas execuções. Preview `v0.1.3-preview.17` (PRs #27 e #28) aceita pelo mantenedor na mesma máquina em 2026-11-01: instalação da entrada desktop, daemon, atalhos, zoom, desenho, quadros branco/preto e PNG, captura pelo portal Screenshot sem indicador de compartilhamento e aviso de ícone único por processo |
-| 3. Ciclo de vida completo e interação física | [PR #22](https://github.com/lzocateli/PixelPointer/pull/22) integrado em `0ad417f`, com `Result` aprovado; atalhos físicos, Esc, tray e launcher continuam pendentes |
-| 4. Matriz de compatibilidade | [PR #23](https://github.com/lzocateli/PixelPointer/pull/23) integrado em `05b0c40`. Branch `test/wayland-output-scale`: correção de janela e escalas 1/1,5/2 passaram no cenário isolado; [PR #24](https://github.com/lzocateli/PixelPointer/pull/24) integrado. Ambientes reais, hardware e arquiteturas pendentes |
-| 5. Fechamento F2 | [PR #25](https://github.com/lzocateli/PixelPointer/pull/25) integrado. Recorte `feat/first-use-setup`: 178 testes/AOT e fechamento gráfico sem efeitos passaram; [PR #26](https://github.com/lzocateli/PixelPointer/pull/26) integrado e aceito nas previews .16 a .18. GPU/4K, abstrações restantes, aceite manual da captura ScreenCaptureKit no macOS e a meta de latência no GNOME (Screenshot, opção A da D13) pendentes |
-| 6. Ferramentas avançadas F3 | [PR #30](https://github.com/lzocateli/PixelPointer/pull/30) integrado: linha, seta, retângulo e elipse com modificadores do ZoomIt (Shift, Ctrl+Shift, Ctrl, Tab), no modelo do Core, no renderer e na sobreposição, com testes de modelo e de imagem. Aceite manual na preview `v0.1.3-preview.18` em 2026-11-01 no GNOME Wayland: as quatro formas, traço livre, cores e Ctrl+S. Marca-texto ([PR #32](https://github.com/lzocateli/PixelPointer/pull/32)) e desfoque ([PR #33](https://github.com/lzocateli/PixelPointer/pull/33)) integrados, com aceite manual pendente. Branch `feat/f3-copy`: Ctrl+C copia a imagem como PNG. Branch `feat/f3-text`: texto com T, quebra de linha, Backspace e Esc. Multi-monitor continua pendente |
-| 7. F4–F7 | Branch `feat/f4-timer`: timer de intervalo com Ctrl+3, comando `timer`, IPC e tray (10 min, setas/roda ajustam e reiniciam, pisca ao terminar). Branch `feat/f4-snip`: recorte com Ctrl+6, comando `snip`, IPC e tray (copia a área; com Shift, salva PNG). Branch `feat/f6-gif-recording` ([PR #39](https://github.com/lzocateli/PixelPointer/pull/39), integrado): gravação GIF com Ctrl+5, comando `record`, IPC e tray, no X11 e no Windows (encoder GIF próprio no Core). Branch `feat/f6-wayland-recording`: gravação no Wayland por sessão ScreenCast contínua (PipeWire guarda o quadro mais recente), aprovada no Sway isolado com `-CheckRecording`; ffmpeg descartado para captura e para distribuição (LGPL/GPL). Branch `feat/f5-livezoom-windows`: Live Zoom com Ctrl+4, comando `livezoom`, IPC e tray, pela lupa de tela cheia do Windows (Magnification API), seguindo o cursor ([PR #41](https://github.com/lzocateli/PixelPointer/pull/41), integrado). [PR #42](https://github.com/lzocateli/PixelPointer/pull/42), integrado em `f7df20e`, entrega Live Zoom no X11 como lupa em janela (opção C). [PR #44](https://github.com/lzocateli/PixelPointer/pull/44), integrado em `a03bfbc`, adiciona Live Zoom macOS com ScreenCaptureKit; CI Native AOT e smoke macOS passaram, aceite gráfico manual pendente. Branch `feat/f5-livezoom-wayland`: implementação best effort com ScreenCast cursor metadata, fullscreen transparente e região de input vazia; exige um monitor e portal que anuncie `cursor_mode=metadata`, GNOME desabilitado por D13. O E2E Sway/wlr anuncia `AvailableCursorModes=0x3`, valida recusa controlada e daemon ativo; aceite visual positivo em compositor compatível pendente. MP4, áudio, gravação no macOS e DemoType ainda não implementados |
-| 8. F8–F9 | Distribuição adicional e traduções legadas ainda pendentes |
-
-**Teste manual em X11 com a preview `v0.1.3-preview.25` (2026-11-03):** foram exercitados desenho, zoom, timer, recorte, Live Zoom e gravação GIF (evidências anexadas pelo mantenedor). O mantenedor esclareceu que a expectativa de iniciar o Live Zoom na posição do mouse já está atendida pela região capturada centrada no cursor; o feedback não requer mudança de comportamento. O teste da gravação não representa aceite formal.
-
-Atualizado em 2026-11-03. O [plano da issue #3](plano-correcao-issue-3.md) foi
-encerrado com a issue e permanece como registro histórico. Os itens abertos dele
-e do [plano de E2E](plano-e2e-grafico-uv.md) são acompanhados aqui, além das
-fases F2 a F9 da seção 5.
-
-| Pendência | Origem | Situação |
-| --- | --- | --- |
-| Aceite manual de Zoom e Desenhar acionados pela tray no GNOME X11 | Issue #3, 3.5 | Ícone, menu e Sair aceitos; as duas ações ainda sem confirmação no X11. No GNOME Wayland, Zoom e Desenhar pela tray foram aceitos com a preview.16 em 2026-11-01 |
-| Abertura pelo menu de aplicativos GNOME sem terminal | Issue #3, 3.6 | Aceite real no GNOME Wayland com a preview.16 em 2026-11-01: o ícone em Programas iniciou o daemon com tray; GNOME X11 sem confirmação |
-| Indicador de compartilhamento de tela permanece ativo no GNOME Wayland | Aceite da preview.16 | Resolvido pela opção A da D13 (Screenshot no GNOME) e aceito na preview.17 em 2026-11-01: indicador não aparece. Custo medido: captura de 520–531 ms e 1º quadro 585–635 ms após o comando, contra ~160–176 ms com ScreenCast na preview.16. Diagnóstico anterior sem sessões Mutter ScreenCast remanescentes (GNOME Shell 46.0, mutter 46.2, xdg-desktop-portal-gnome 46.2); reavaliar ScreenCast em versões futuras do GNOME |
-| Matriz Wayland por compositor: portais com e sem Registry, recusa de permissões, tray e E2E isolado com libei/EIS | Issue #3, 3.1, 3.3 e 5; E2E, 8 | ScreenCast/PipeWire passou em Sway isolado e captura, zoom e desenho tiveram aceite manual nas previews v0.1.3-preview.14 e v0.1.3-preview.16 no GNOME Wayland. Na preview.16, sessões repetidas reutilizaram o token sem diálogo (portal ~20 ms; 1º quadro ~160–176 ms após o comando). Duração do indicador, multi-monitor e outros compositores continuam pendentes |
-| Ctrl+S nativo: Known Folder no Windows, inclusive OneDrive, e preferência do macOS, com filesystem real por SO | Issue #3, 3.7 | Encerrado por decisão do mantenedor em 2026-10-31; lógica coberta por testes, sem validação nativa registrada |
-| Roteiro manual completo no Windows | F0; issue #3 | Evidência parcial em 2026-10-31, descrita abaixo |
-| Roteiro manual completo no macOS | F0; issue #3 | Sem evidência nativa |
-| Revisão humana dos vídeos e referências do E2E X11 | E2E, 6 e 8 | Encerrado por decisão do mantenedor em 2026-10-31, sem revisão registrada |
-| Conflito físico de atalhos com outro aplicativo, escala fracionária, outras topologias e GPUs, caneta | Issue #3, 3.2 e 3.3; E2E, 8 | Pendente. Branch `feat/overlay-cursor-display`: no X11 e no Windows a sobreposição abre no monitor do cursor, e o recorte da captura passa a medir a partir do canto da área de trabalho (monitores com coordenadas negativas no Windows); falta validação em hardware real |
-| Linux arm64 em arquitetura apropriada | E2E, 8 | Pendente |
-| Completar traduções dos documentos autorais legados | F9; regra de documentação multilíngue | [Relatório F0](f0-relatorio.md) e plano histórico da issue #3 ainda sem versões en/es; README e guias atuais já traduzidos não encerram essa cobertura |
+| ID | Tipo | Status | Pendência e critério de conclusão |
+| --- | --- | --- | --- |
+| IMPL-01 | Implementação | Parcial | Implementar captura/seleção de monitor no Wayland, preservando a política Screenshot do GNOME; validar a saída escolhida e o recorte em compositor real |
+| IMPL-02 | Implementação | Pendente | Tornar assíncrono o início da gravação Wayland; consentimento, espera do portal e falhas não podem bloquear callbacks do daemon |
+| IMPL-03 | Implementação | Não implementada | Definir e implementar gravação GIF no macOS, MP4 e áudio somente após selecionar componentes com licença permissiva verificada; FFmpeg não é opção aprovada |
+| IMPL-04 | Implementação | Não iniciada | Projetar e implementar DemoType por plataforma, incluindo autorização/limites de injeção de entrada no Wayland |
+| IMPL-05 | Implementação/arquitetura | Não extraída | Decidir se as abstrações `PixelPointer.Platform*` continuam necessárias; se sim, extraí-las de `PixelPointer.App` sem duplicar os adaptadores atuais |
+| DEC-01 | Decisão de escopo | Pendente | Decidir se `.zip`, `.dmg`, AppImage e Flatpak seguem no escopo; não implementar início automático sem decisão explícita |
+| DOC-01 | Documentação | Pendente | Criar traduções en/es do relatório F0 e do plano histórico da issue #3 |
+| VAL-01 | Validação/desempenho | Meta não atingida | Medir e tratar a latência GNOME: captura observada em 520–531 ms e primeiro quadro em 585–635 ms, contra meta < 150 ms; registrar decisão se a meta mudar |
+| VAL-02 | Validação/desempenho | Pendente | Medir renderer GPU em hardware real e 4K; decidir, com os resultados, se deixa de ser opt-in |
+| VAL-03 | Validação nativa | Pendente | Definir execução compatível com as regras de containers (ou obter autorização explícita para exceção) e completar o roteiro Windows de captura, atalhos, GIF, Ctrl+S, tray e encerramento; registrar SO/arquitetura e evidências |
+| VAL-04 | Validação nativa | Pendente | Definir execução compatível com as regras de containers (ou obter autorização explícita para exceção) e validar no macOS captura, Live Zoom, permissões, instalação e atalhos; gravação não entra como critério até ser implementada |
+| VAL-05 | Compatibilidade/E2E | Parcial | Executar matriz Wayland em GNOME/KDE e outros compositores: portais naturalmente incompatíveis, consentimento real, atalhos físicos e tray; Sway isolado já cobre ScreenCast, gravação, ciclo de vida, recusa controlada de `GetAll` e escalas 1/1,5/2 |
+| VAL-06 | Hardware/E2E | Parcial | Validar conflitos de atalho, caneta/pressão, múltiplos monitores, escalas e GPUs em hardware real; X11/Windows e a configuração GNOME/X11 de dois monitores têm evidência local, sem equivaler à matriz completa |
+| VAL-07 | Compatibilidade | Pendente | Executar e registrar testes em Linux arm64 em hardware apropriado |
 
 **Evidência parcial no Windows em 2026-10-31:** o solicitante anexou quatro
 prints nesta conversa. Eles mostram a instalação por `install.ps1` com conferência

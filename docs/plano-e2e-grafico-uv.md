@@ -7,7 +7,7 @@
 | Data | 2026-10-30 |
 | Autorização humana | Solicitante, nesta conversa: “Eu autorizo os E2E gráficos isolados nas regras do projeto” |
 | Decisão autorizada | Permitir uma suíte gráfica automatizada separada e isolada |
-| Estado de execução | X11 executado com estabilidade 10/10; revisão humana dos vídeos encerrada por decisão do mantenedor em 2026-10-31, sem revisão registrada. ScreenCast/PipeWire validado em Sway isolado com render node e caminho sem GPU tratado. Captura, zoom e desenho da preview v0.1.3-preview.14 aceitos manualmente no Ubuntu 26.04.1/GNOME Wayland em 2026-10-31; token, indicador, latência sem diálogo e matriz adicional continuam pendentes |
+| Estado de execução (2026-11-04) | X11 virtual passou 10/10; revisão humana de vídeos foi encerrada por decisão do mantenedor sem revisão registrada. O pacote local recebeu aceite GNOME/X11 em dois monitores. Sway isolado valida ScreenCast/PipeWire, gravação, ciclo de vida, recusa controlada de `GetAll`, repetição na conexão e escalas 1/1,5/2. Captura/zoom/desenho foram aceitos manualmente no GNOME Wayland; Screenshot evita o indicador, mas a latência observada não atende < 150 ms. As pendências atuais de implementação e validação estão centralizadas no [plano de implementação, seção 8](plano-implementacao.md#8-pendências-consolidadas) |
 | Versão funcional de referência | v0.1.2, primeira versão funcional aceita como estável pelo mantenedor em 2026-10-30 nos ambientes GNOME X11 e Wayland registrados; não é aprovação da matriz multiplataforma completa |
 | Primeiro alvo | Linux x64, X11 em desktop descartável |
 | Expansão | GNOME X11, Wayland por compositor e demais sistemas após viabilidade comprovada |
@@ -184,16 +184,20 @@ Não editar workflows `gw-*` nem `tools/scripts/ci/`; mudanças
 nessas superfícies pertencem ao catálogo Groundwork. A integração CI deve usar
 somente superfícies do projeto autorizadas, após a prova local em containers.
 
-## 8. Compatibilidade, riscos e aceite pendente
+## 8. Cobertura, limites e aceite
 
-| Ambiente | Plano e limite |
+Esta seção registra evidências e limites das execuções, não é uma lista de
+trabalho. O estado atual e as próximas ações de implementação/validação ficam
+somente no [plano de implementação, seção 8](plano-implementacao.md#8-pendências-consolidadas).
+
+| Ambiente | Cobertura registrada e limite |
 | --- | --- |
 | Linux x64, X11 mínimo virtual | Executado: 10/10 consecutivos com compositor/tray; variantes sem compositor e sem tray passaram |
 | GNOME X11 | Funcionalidades locais aprovadas pelo mantenedor em 2026-11-04 no pacote `0.3.0-local.cursor-monitor.5`, com dois monitores 1920×1080 em escala 1; ver o registro de aceite abaixo. A aprovação não encerra a matriz multiplataforma |
-| Wayland | ScreenCast/PipeWire passou em Sway isolado; indisponibilidade sem GPU tratada. Preview v0.1.3-preview.14 aceita manualmente para captura, zoom e desenho no Ubuntu 26.04.1/GNOME Wayland, com consentimento observado. Reutilização do token, duração do indicador, latência sem diálogo, multi-monitor e outros compositores pendentes; sem mock de consentimento ou XTEST via XWayland como prova nativa |
-| Linux arm64 | Executar em arquitetura apropriada antes de declarar cobertura |
-| Windows/macOS | Backends nativos e sessão gráfica descartável próprios; estratégia depende de compatibilidade com a regra de containers e autorização específica se exigir exceção |
-| Caneta/GPU/monitores físicos | Uso nos dois monitores 1920×1080 em escala 1 confirmado manualmente; caneta, outras GPUs, escalas e topologias continuam pendentes |
+| Wayland | Sway isolado valida ScreenCast/PipeWire, gravação, ciclo de vida, recusa controlada de `GetAll`, repetição na conexão e escalas 1/1,5/2; reuso de token também exercitado. GNOME Wayland tem aceite manual de captura/zoom/desenho; Screenshot evita o indicador, com captura observada de 520–531 ms e primeiro quadro de 585–635 ms. Consentimento real segue obrigatório; mocks/XTEST via XWayland não contam como prova nativa |
+| Linux arm64 | Este registro não contém execução nessa arquitetura |
+| Windows/macOS | Este registro não contém E2E nativo nesses sistemas. Qualquer estratégia de runner/exceção precisa seguir as regras do projeto |
+| Caneta/GPU/monitores físicos | Uso nos dois monitores 1920×1080 em escala 1 foi confirmado manualmente; este registro não comprova cobertura de caneta ou matriz completa de GPU, escalas e topologias |
 
 Riscos principais: diferenças de renderização, foco e temporização, painel sem SNI,
 compositor virtual sem recursos, vídeo incompleto e dependências incompatíveis.
@@ -201,10 +205,11 @@ Falha de infraestrutura deve ser distinguida de falha do produto, mas ambas impe
 aprovação do cenário obrigatório. Não desabilitar transparência para fazer passar
 um cenário que promete validá-la.
 
-O aceite final exige a matriz executada com limites explícitos, evidências
-reproduzíveis e revisão humana dos primeiros vídeos/referências. A autorização
-registrada permite construir a suíte; não aprova antecipadamente ferramentas,
-exceções de segurança, suporte multiplataforma ou resultados ainda inexistentes.
+O aceite de cada cenário depende dos limites explícitos e das evidências
+reproduzíveis. A revisão inicial dos vídeos X11 foi encerrada por decisão do
+mantenedor em 2026-10-31, sem revisão registrada. A autorização permite construir
+a suíte; não aprova ferramentas, exceções de segurança, suporte multiplataforma
+ou resultados ainda inexistentes. Pendências atuais ficam no rastreador central.
 
 ### Aceite funcional do pacote local no GNOME X11
 
