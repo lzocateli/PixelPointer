@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/lzocateli/PixelPointer/compare/v0.3.1...v0.3.2) (2026-11-04)
+
+
+### Corrigido
+
+* **app:** corrija captura por monitor e distribuição ([#57](https://github.com/lzocateli/PixelPointer/issues/57)) ([d540eb0](https://github.com/lzocateli/PixelPointer/commit/d540eb0e2549bfa4f3c39cba7a12a3cdff102f93))
+
 ## [0.3.1](https://github.com/lzocateli/PixelPointer/compare/v0.3.0...v0.3.1) (2026-11-04)
 
 
