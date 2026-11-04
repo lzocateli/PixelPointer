@@ -81,6 +81,21 @@ Cada pacote traz o SBOM SPDX e atestações de proveniência:
 `gh attestation verify <arquivo> --repo lzocateli/PixelPointer`
 ([verificação](docs/release.md#verificação-pelo-usuário)).
 
+## Atualizar
+
+O PixelPointer não consulta a rede por padrão. Em instalações feitas por
+`install.sh` ou `install.ps1` no diretório do usuário, `pixelpointer update install`
+baixa a release estável mais recente, confere o SHA-256 e a proveniência Sigstore
+no próprio aplicativo, executa a versão nova (`--version` e `selftest`) e só então
+troca os arquivos, preservando a versão anterior em falha. Com o daemon em
+execução, a troca ocorre quando ele encerra. Verificação e instalação automáticas
+são opcionais e começam desativadas (`pixelpointer update auto-check on`,
+`pixelpointer update auto-install on` ou o submenu **Atualizações** da tray).
+`.deb`, Homebrew, winget, instalações globais e cópias portáteis apenas avisam e
+indicam o comando do respectivo canal. Instalações anteriores a este recurso
+precisam reexecutar o instalador uma vez. Detalhes e limitações no
+[guia de uso](docs/uso.md#atualizar).
+
 ## Desinstalar
 
 Se estiver em execução, encerre primeiro o daemon com `pixelpointer quit`. Depois,

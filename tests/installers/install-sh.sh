@@ -65,6 +65,10 @@ expect_code 0 "instalacao em prefixo explicito" sh "$installer" --base-url "$bas
 [ -s "$prefix/lib/pixelpointer/pixelpointer.svg" ] || fail "icone SVG ausente da instalacao"
 [ -h "$prefix/bin/pixelpointer" ] || fail "link do comando ausente"
 grep -q 'nao esta no PATH' "$work/out" || fail "aviso de PATH ausente"
+receipt="$prefix/lib/pixelpointer/install-receipt.json"
+[ -f "$receipt" ] || fail "recibo da instalacao ausente"
+if [ "$(id -u)" -eq 0 ]; then expected_scope="global"; else expected_scope="user"; fi
+grep -q "\"installer\": \"install.sh\", \"scope\": \"$expected_scope\"" "$receipt" || fail "recibo sem instalador ou escopo esperado: $(cat "$receipt")"
 "$prefix/bin/pixelpointer" --version > /dev/null || fail "comando instalado nao executa"
 "$prefix/bin/pixelpointer" selftest > /dev/null || fail "bibliotecas nativas nao carregam pelo link"
 if [ "$(uname -s)" = "Linux" ]; then
@@ -109,6 +113,7 @@ if [ "$(id -u)" -eq 0 ]; then
     expect_code 0 "--global como root" sh "$installer" --base-url "$base_url" --global
     [ -x /usr/local/lib/pixelpointer/pixelpointer ] || fail "--global nao instalou em /usr/local/lib/pixelpointer"
     [ -h /usr/local/bin/pixelpointer ] || fail "--global nao criou /usr/local/bin/pixelpointer"
+    grep -q '"scope": "global"' /usr/local/lib/pixelpointer/install-receipt.json || fail "--global sem recibo de escopo global"
     pass "--global como root"
 
     mkdir -p "$work/owned/lib" "$work/shared/lib"
@@ -130,6 +135,8 @@ else
     expect_code 0 "prefixo padrao" sh "$installer" --base-url "$base_url"
     [ -x "$HOME/.local/lib/pixelpointer/pixelpointer" ] || fail "aplicativo ausente em \$HOME/.local/lib/pixelpointer"
     [ -h "$HOME/.local/bin/pixelpointer" ] || fail "link ausente em \$HOME/.local/bin"
+    expect_code 0 "origem detectada pelo aplicativo" "$HOME/.local/bin/pixelpointer" update status
+    grep -q 'Autoatualização ... disponível' "$work/out" || fail "aplicativo nao reconheceu a instalacao de usuario"
     pass "prefixo padrao \$HOME/.local"
 fi
 

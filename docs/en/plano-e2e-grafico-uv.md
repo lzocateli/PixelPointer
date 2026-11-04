@@ -7,7 +7,7 @@
 | Date | 2026-10-30 |
 | Human authorization | Requester, in this conversation: authorization for isolated graphical E2E under the project rules |
 | Authorized decision | Allow a separate, isolated automated graphical suite |
-| Execution status | X11 executed with 10/10 stability; human video review closed by maintainer decision on 2026-10-31, with no recorded review. ScreenCast/PipeWire validated on isolated Sway with a render node; no-GPU path handled. Capture, zoom and drawing of v0.1.3-preview.14 manually accepted on Ubuntu 26.04.1/GNOME Wayland on 2026-10-31; token, indicator, latency without the dialog and additional matrix remain pending |
+| Execution status (2026-11-04) | Virtual X11 passed 10/10; human video review was closed by maintainer decision without a recorded review. A local package received GNOME/X11 acceptance on two monitors. Isolated Sway validates ScreenCast/PipeWire, recording, lifecycle, controlled `GetAll` denial, repeated calls on one connection and scales 1/1.5/2. Capture/zoom/drawing were manually accepted on GNOME Wayland; Screenshot avoids the indicator, but observed latency misses the < 150 ms target. Current implementation and validation backlog is centralized in the [implementation plan, section 8](plano-implementacao.md#8-consolidated-pending-items) |
 | Functional reference version | v0.1.2, first functional version accepted as stable by the maintainer on 2026-10-30 on recorded GNOME X11/Wayland environments; not approval of the complete cross-platform matrix |
 | First target | Linux x64, X11 in a disposable desktop |
 | Expansion | GNOME X11, per-compositor Wayland and other systems after feasibility is established |
@@ -174,26 +174,31 @@ Commands, image preparation, locked execution and result inspection are in the
 those changes belong to the Groundwork catalog. CI integration uses authorized
 project-owned surfaces only after local container proof.
 
-## 8. Compatibility, Risks and Pending Acceptance
+## 8. Coverage, Limits and Acceptance
 
-| Environment | Plan and limit |
+This section records execution evidence and limits; it is not a task list.
+Current implementation/validation status and next actions are maintained only
+in the [implementation plan, section 8](plano-implementacao.md#8-consolidated-pending-items).
+
+| Environment | Recorded coverage and limit |
 | --- | --- |
 | Linux x64, minimum virtual X11 | Executed: 10/10 consecutive with compositor/tray; variants without compositor and without tray passed |
 | GNOME X11 | Local features accepted by the maintainer on 2026-11-04 in package `0.3.0-local.cursor-monitor.5`, with two 1920×1080 displays at scale 1; see the acceptance record below. This approval does not complete the cross-platform matrix |
-| Wayland | ScreenCast/PipeWire passed on isolated Sway; no-GPU unavailability handled. v0.1.3-preview.14 manually accepted for capture, zoom and drawing on Ubuntu 26.04.1/GNOME Wayland, with consent observed. Token reuse, indicator duration, latency without the dialog, multi-monitor and other compositors remain pending; no consent mocks or XTEST via XWayland as native evidence |
-| Linux arm64 | Execute on appropriate architecture before claiming coverage |
-| Windows/macOS | Native backends and disposable graphical sessions; strategy depends on container compatibility and specific authorization for any exception |
-| Pen/GPU/physical monitors | Use on both 1920×1080 monitors at scale 1 manually confirmed; pen, other GPUs, scales/topologies pending |
+| Wayland | Isolated Sway validates ScreenCast/PipeWire, recording, lifecycle, controlled `GetAll` denial, repeated calls on one connection and scales 1/1.5/2; token reuse was also exercised. GNOME Wayland has manual acceptance for capture/zoom/drawing; Screenshot avoids the indicator, with observed capture at 520–531 ms and first frame at 585–635 ms. Real consent is still required; mocks/XTEST through XWayland are not native evidence |
+| Linux arm64 | This record contains no execution on this architecture |
+| Windows/macOS | This record contains no native E2E on these systems. Any runner strategy/exception must follow project rules |
+| Pen/GPU/physical monitors | Use on both 1920×1080 monitors at scale 1 was manually confirmed; this record does not establish pen or full GPU/scale/topology coverage |
 
 Main risks: rendering/focus/timing differences, panel without SNI, incomplete virtual
 compositor, incomplete video and incompatible dependencies. Distinguish infrastructure
 from product failure; both block required scenarios. Do not disable transparency
 to pass a scenario promising to verify it.
 
-Final acceptance requires the executed matrix with explicit limits, reproducible
-evidence and human review of initial videos/references. Authorization allows building
-the suite, not preapproval of tools, security exceptions, cross-platform support or
-results that do not exist yet.
+Acceptance for each scenario depends on its explicit limits and reproducible
+evidence. Initial X11 video review was closed by maintainer decision on
+2026-10-31, without a recorded review. Authorization allows building the suite,
+not approval of tools, security exceptions, cross-platform support or results
+that do not exist yet. Current open items remain in the central tracker.
 
 ### Functional acceptance of the local package on GNOME X11
 

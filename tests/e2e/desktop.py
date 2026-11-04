@@ -85,7 +85,7 @@ async def main():
     scene = desktop.window("E2E external focus", 0, 0, 800, 600)
     desktop.focus(scene)
     no_tray = os.environ.get("E2E_NO_TRAY") == "1"
-    panel = None if no_tray else desktop.window("E2E StatusNotifier panel", 580, 12, 210, 330)
+    panel = None if no_tray else desktop.window("E2E StatusNotifier panel", 580, 12, 210, 380)
     bus = await MessageBus().connect()
     watcher = Watcher()
     screenshot_portal = ScreenshotPortal(desktop)
@@ -172,8 +172,14 @@ async def main():
             about = next(child.value for child in layout[2] if child.value[1]["label"].value == "Sobre e atalhos")
             details = [(child.value[1]["label"].value, child.value[1].get("enabled", Variant("b", True)).value)
                        for child in about[2]]
-            Path("/tmp/panel.json").write_text(json.dumps({"entries": entries, "icon": bool(icon), "about": details}))
-        desktop.fill(panel, 0x303030, 0, 0, 210, 330)
+            updates_menu = next(child.value for child in layout[2] if child.value[1]["label"].value == "Atualizações")
+            updates = [(child.value[1]["label"].value, child.value[1].get("enabled", Variant("b", True)).value,
+                        child.value[1].get("toggle-type", Variant("s", "")).value,
+                        child.value[1].get("toggle-state", Variant("i", -1)).value)
+                       for child in updates_menu[2]]
+            Path("/tmp/panel.json").write_text(json.dumps({"entries": entries, "icon": bool(icon), "about": details,
+                                                           "updates": updates}))
+        desktop.fill(panel, 0x303030, 0, 0, 210, 380)
         if icon:
             width, height, pixels = min(icon, key=lambda value: abs(value[0] - 32))
             for row in range(min(height, 40)):
@@ -190,7 +196,7 @@ async def main():
         if previous_down and not down and 580 <= pointer_x < 790:
             if 12 <= pointer_y < 55 and menu:
                 opened = not opened
-            elif opened and 55 <= pointer_y < 342:
+            elif opened and 55 <= pointer_y < 392:
                 index = (pointer_y - 55) // 36
                 if index < len(entries):
                     await menu.call_event(entries[index][0], "clicked", Variant("i", 0), 0)

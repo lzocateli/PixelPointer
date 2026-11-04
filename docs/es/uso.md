@@ -64,6 +64,7 @@ tabla de comandos siguiente.
 | `pixelpointer grant` | Linux: pide el permiso de captura del portal desde una ventana enfocada |
 | `pixelpointer setup` | Primer uso opcional con diagnóstico, registro, solicitud de captura e inicio del daemon explícitos |
 | `pixelpointer selftest` | Verifica las bibliotecas nativas sin pantalla (lo usan las pruebas de paquete) |
+| `pixelpointer update [status\|check\|install\|apply\|auto-check on\|off\|auto-install on\|off]` | Actualización opt-in; ver [Actualizar](#actualizar) |
 | `pixelpointer --version` / `--help` | Versión y ayuda |
 
 Teclas en la superposición: rueda del mouse o flechas para el zoom, clic y
@@ -383,6 +384,83 @@ gh attestation verify pixelpointer-linux-x64.tar.gz --repo lzocateli/PixelPointe
   --predicate-type https://spdx.dev/Document/v2.2
 ```
 
+## Actualizar
+
+PixelPointer solo accede a la red cuando lo pides o después de activar la
+verificación automática; no envía telemetría ni identificadores personales.
+
+| Instalación | Cómo actualizar |
+| --- | --- |
+| `install.sh` o `install.ps1` en el directorio del usuario | `pixelpointer update install` o instalación automática opcional |
+| `install.sh --global` o `install.ps1` en una sesión elevada | Vuelve a ejecutar el instalador con los mismos privilegios |
+| `.deb` | Descarga el nuevo `.deb` de la release y usa `sudo apt install ./pixelpointer-<rid>.deb` |
+| Homebrew | `brew upgrade pixelpointer` |
+| winget | `winget upgrade lzocateli.PixelPointer` |
+| Copia portátil u origen desconocido | Reinstala con `install.sh`/`install.ps1` o actualiza por el mismo medio de la instalación |
+
+Los comandos funcionan en cualquier directorio y requieren HTTPS hacia
+`api.github.com` y `github.com`:
+
+```bash
+pixelpointer update status            # versión, origen detectado, preferencias y actualización preparada
+pixelpointer update check             # consulta ahora la release estable más reciente
+pixelpointer update install           # descarga, valida, prepara y aplica (o lo deja para cuando el daemon termine)
+pixelpointer update apply             # aplica una actualización ya preparada, con el daemon detenido
+pixelpointer update auto-check on     # verificación automática en el daemon (predeterminado: off)
+pixelpointer update auto-install on   # instalación automática; requiere auto-check on (predeterminado: off)
+```
+
+Resultado esperado de `update install` en una instalación de usuario: mensajes
+de descarga, verificación Sigstore y `selftest`, seguidos de
+`PixelPointer atualizado para X.Y.Z` y código 0. Con el daemon en ejecución, el
+mensaje indica que el reemplazo ocurrirá cuando termine. Los errores devuelven 1;
+el uso inválido, 2. Los mensajes de la aplicación están en portugués de Brasil.
+
+- **Origen:** `install.sh` e `install.ps1` escriben `install-receipt.json` junto al
+  ejecutable. El actualizador solo reemplaza una instalación con ese recibo, de
+  alcance de usuario, con escritura para el usuario actual, sin escritura de
+  grupo u otros, fuera de los directorios de `.deb`, Homebrew y winget y con el
+  proceso sin privilegios elevados. En los demás casos, avisa e indica el comando
+  del canal. Las instalaciones anteriores a esta función no tienen recibo:
+  vuelve a ejecutar el instalador una vez.
+- **Validación:** la tag sale de `releases/latest` (solo estables); el paquete se
+  descarga desde la ruta de la tag y debe coincidir con el tamaño publicado, el
+  SHA-256 de `SHA256SUMS` y una atestación de procedencia Sigstore verificada por
+  la propia aplicación: cadena Fulcio, SCT, SET y prueba de inclusión de Rekor,
+  firma DSSE e identidad del workflow `gw-github-assets.yml` de este repositorio,
+  en `main` o en una tag `v*`. No se ejecuta ningún script remoto ni se usa `gh`.
+- **Staging y reemplazo:** los archivos quedan en `<padre>/.pixelpointer.update`,
+  en el mismo volumen de la instalación, y la versión nueva ejecuta `--version` y
+  `selftest` antes del reemplazo. En Linux y macOS el reemplazo es un renombrado
+  atómico; en Windows, la versión nueva completa el reemplazo cuando el proceso
+  anterior termina. Si la comprobación falla después del reemplazo, se restaura
+  la versión anterior.
+- **Cuándo se aplica:** de inmediato con `update install` o `update apply` si el
+  daemon no está en ejecución; con el daemon, al salir desde la bandeja, con
+  `pixelpointer quit` o Ctrl+C. El cierre de sesión y `SIGTERM` no la aplican.
+  Nada se reinicia automáticamente; el próximo inicio del daemon informa el
+  resultado.
+- **Automático:** con la verificación automática, el daemon consulta 5 minutos
+  después de iniciar y luego cada 24 horas (o 1 hora después de un fallo). Con la
+  instalación automática, también descarga y prepara la versión sin interrumpir
+  superposiciones, grabación ni Live Zoom. Desactivar la verificación desactiva
+  la instalación. El submenú **Atualizações** (Actualizaciones) de la bandeja
+  muestra el estado, las dos opciones y **Verificar agora** (Verificar ahora);
+  **Instalar automaticamente** (Instalar automáticamente) no está disponible
+  cuando el origen no lo permite.
+- **Preferencias:** `update.json`, junto a `settings.json`; `pixelpointer update
+  status` muestra la ruta. La aplicación escribe este archivo con un reemplazo
+  atómico y nunca sobrescribe un archivo inválido o modificado por otro proceso.
+
+Limitaciones: solo se consulta el canal estable; la API anónima de GitHub limita
+las consultas por IP (HTTP 403 o 429 produce "tente mais tarde", inténtalo más
+tarde); el material de confianza de Sigstore (Fulcio, Rekor v1 y el log CT) está
+incorporado al binario, así que una rotación de esas claves, el paso de la
+atestación a Rekor v2 o un cambio en la identidad del workflow de release hacen
+que la verificación falle cerrada hasta actualizar con el instalador. El
+reemplazo se validó de extremo a extremo solo en Linux x64; Windows y macOS
+todavía no se han validado.
+
 ## Desinstalar
 
 | Instalado con | Eliminación |
@@ -411,7 +489,9 @@ de `$PROFILE.CurrentUserAllHosts`. En Linux, elimina la integración del escrito
 antes del ejecutable con `pixelpointer uninstall-desktop-file`, usando el mismo
 `XDG_DATA_HOME`; el comando conserva los archivos modificados. La desinstalación
 no borra las capturas PNG. El paquete `.deb` administra por separado los recursos
-instalados en `/usr/share`. En GNOME, los atajos vinculados se eliminan en
+instalados en `/usr/share`. Si usaste el actualizador, elimina también, si existe,
+el directorio `.pixelpointer.update` junto al directorio de la aplicación y,
+si quieres, el `update.json` que indica `pixelpointer update status`. En GNOME, los atajos vinculados se eliminan en
 Configuración; el permiso de captura, con:
 
 En Linux, elimina también `~/.local/share/applications/io.github.lzocateli.PixelPointer.desktop`

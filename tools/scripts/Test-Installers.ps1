@@ -17,7 +17,8 @@ servido em http://127.0.0.1:<porta> (python -m http.server), com duas variantes:
   LOCALAPPDATA temporario.
 
 Cenarios: ajuda, erros de uso, checksum adulterado sem efeitos, download falho,
-instalacao do diretorio do aplicativo e do link do comando, selftest das
+instalacao do diretorio do aplicativo e do link do comando, recibo
+install-receipt.json lido por 'pixelpointer update status', selftest das
 bibliotecas nativas, reinstalacao sem residuos, recusa de arquivos de outros
 aplicativos, aviso de PATH, destino padrao e --global.
 
@@ -301,13 +302,16 @@ exec setpriv --reuid "${TEST_USER%%:*}" --regid "${TEST_USER##*:}" --clear-group
             $runs = Test-Runs -Path $installed
             Assert-Case -Name 'instalacao em diretorio explicito' -Condition ($result.Code -eq 0 -and $runs -and $result.Output -match 'nao esta no PATH') -Result $result
             Assert-Case -Name 'icone SVG instalado' -Condition ($result.Code -eq 0 -and (Test-Path -LiteralPath (Join-Path $binDir 'pixelpointer.svg') -PathType Leaf)) -Result $result
+            $receiptPath = Join-Path $binDir 'install-receipt.json'
+            $receiptText = if (Test-Path -LiteralPath $receiptPath -PathType Leaf) { Get-Content -Raw -LiteralPath $receiptPath } else { '' }
+            Assert-Case -Name 'recibo da instalacao' -Condition ($result.Code -eq 0 -and $receiptText -match '"installer": "install.ps1"' -and $receiptText -match '"scope": "(user|global)"') -Result $result
 
             Set-Content -LiteralPath $installed -Value 'versao anterior'
             Set-Content -LiteralPath (Join-Path $binDir 'arquivo-antigo') -Value 'residuo'
             $result = Invoke-Installer @('-BaseUrl', $baseUrl, '-InstallDir', $binDir)
             $runs = Test-Runs -Path $installed
             $entries = @(Get-ChildItem -LiteralPath $binDir -Force | ForEach-Object Name | Sort-Object)
-            $expectedEntries = @('LICENSE', 'libSkiaSharp.dll', 'pixelpointer.exe', 'pixelpointer.svg', 'SDL3.dll', 'THIRD-PARTY-NOTICES.md') | Sort-Object
+            $expectedEntries = @('install-receipt.json', 'LICENSE', 'libSkiaSharp.dll', 'pixelpointer.exe', 'pixelpointer.svg', 'SDL3.dll', 'THIRD-PARTY-NOTICES.md') | Sort-Object
             $siblings = @(Get-ChildItem -LiteralPath $scratch -Force -Filter '.pixelpointer.*')
             Assert-Case -Name 'reinstalacao sem residuos' -Condition ($result.Code -eq 0 -and $runs -and (-not (Compare-Object $expectedEntries $entries)) -and $siblings.Count -eq 0) -Result $result
 

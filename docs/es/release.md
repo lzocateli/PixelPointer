@@ -340,10 +340,21 @@ gh attestation verify pixelpointer-linux-x64.tar.gz --repo lzocateli/PixelPointe
 
 | Canal | Comando | Actualización |
 | --- | --- | --- |
-| Instaladores | `install.sh` / `install.ps1` (consulta el [README](../../README.es.md#instalación)) | `releases/latest` |
+| Instaladores | `install.sh` / `install.ps1` (consulta el [README](../../README.es.md#instalación)) | `releases/latest`; `pixelpointer update` opt-in en instalaciones de usuario ([guía](uso.md#actualizar)) |
 | `.deb` (asset de release, sin repositorio APT) | `sudo apt install ./pixelpointer-linux-x64.deb` | Manual, descargando la nueva release |
 | Homebrew (macOS y Linux) | `brew install lzocateli/tap/pixelpointer` | `brew upgrade`; fórmula actualizada por `post-release.yml` |
 | winget (Windows) | `winget install lzocateli.PixelPointer` | `winget upgrade`; `post-release.yml` abre un PR en `microsoft/winget-pkgs`, publicado tras la moderación de Microsoft |
+
+El actualizador de la aplicación solo acepta paquetes de release estable cuya
+atestación de procedencia SLSA v1 fue emitida por el workflow
+`gw-github-assets.yml` de este repositorio (identificadores numéricos del
+repositorio y del dueño, runner alojado por GitHub, ref `main` o tag `v*`).
+Cambiar el workflow que atesta los assets, la ref de ejecución, el repositorio o
+dejar de adjuntar `SHA256SUMS` hace que las versiones ya instaladas rechacen la
+actualización: publica antes una versión que acepte la nueva identidad y orienta
+la actualización mediante el instalador. Las rotaciones de la instancia pública
+de Sigstore (Fulcio, Rekor v1, log CT) tienen el mismo efecto, porque el material
+de confianza está incorporado en el binario.
 
 La fórmula vive en [`lzocateli/homebrew-tap`](https://github.com/lzocateli/homebrew-tap)
 y se genera desde `SHA256SUMS` mediante

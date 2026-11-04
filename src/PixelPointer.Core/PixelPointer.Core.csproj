@@ -4,4 +4,8 @@
     <RootNamespace>PixelPointer.Core</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="PixelPointer.UnitTests" />
+  </ItemGroup>
+
 </Project>

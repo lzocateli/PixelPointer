@@ -39,6 +39,10 @@ Requisitos: curl ou wget, tar com gzip e sha256sum ou shasum.
 Plataformas: linux-x64 e linux-arm64 (glibc 2.34+ e libfontconfig),
 osx-arm64 e osx-x64.
 
+Grava <prefixo>/lib/pixelpointer/install-receipt.json. O comando
+'pixelpointer update' usa esse recibo para reconhecer uma instalacao de usuario,
+a unica que o proprio aplicativo pode atualizar.
+
 O instalador nao altera perfis de shell nem o PATH: se <prefixo>/bin nao
 estiver no PATH, ele mostra a linha a adicionar. No Linux, rode depois
 'pixelpointer install-desktop-file' e, no GNOME, 'pixelpointer grant'.
@@ -319,6 +323,14 @@ for name in pixelpointer $libraries pixelpointer.svg LICENSE THIRD-PARTY-NOTICES
     cp "$work_dir/extract/$name" "$staged_dir/$name" || die "falha ao copiar para $lib_root"
     chmod 0644 "$staged_dir/$name"
 done
+# Recibo lido pelo atualizador do aplicativo: so instalacoes de usuario aceitam autoatualizacao.
+receipt_scope="user"
+if [ "$global" -eq 1 ] || [ "$(id -u)" -eq 0 ]; then
+    receipt_scope="global"
+fi
+printf '{"version": 1, "installer": "install.sh", "scope": "%s", "rid": "%s"}\n' "$receipt_scope" "$rid" > "$staged_dir/install-receipt.json" \
+    || die "falha ao gravar o recibo da instalacao"
+chmod 0644 "$staged_dir/install-receipt.json"
 chmod 0755 "$staged_dir" "$staged_dir/pixelpointer"
 
 # Executa no destino (nao em /tmp, que pode ser noexec) antes de substituir a versao atual.

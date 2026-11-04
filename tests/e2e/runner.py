@@ -15,7 +15,8 @@ from PIL import Image, ImageChops
 from evidence import AviWriter, Timeline, read_avi, report
 from x11 import X11
 
-TRAY_ENTRIES = ["Zoom", "Desenhar", "Timer", "Live Zoom", "Recorte", "Gravar / parar gravação", "Sobre e atalhos", "Sair"]
+TRAY_ENTRIES = ["Zoom", "Desenhar", "Timer", "Live Zoom", "Recorte", "Gravar / parar gravação", "Sobre e atalhos",
+                "Atualizações", "Sair"]
 
 
 class Recorder:
@@ -189,6 +190,14 @@ class Scenario:
                 "Disponibilidade depende da plataforma e das permissões.",
             ]
             assert all(not item[1] for item in about), "Informacoes devem ser somente leitura"
+            # Pacote sem recibo do instalador: so verificacao; instalacao automatica indisponivel e tudo desligado.
+            updates = panel["updates"]
+            assert [item[0] for item in updates[1:]] == [
+                "Verificar automaticamente", "Instalar automaticamente", "Verificar agora"], updates
+            assert updates[0][0].startswith("Versão ") and not updates[0][1], updates
+            assert updates[1][1:] == [True, "checkmark", 0], updates
+            assert updates[2][1:] == [False, "checkmark", 0], updates
+            assert updates[3][1], updates
             # O painel publica panel.json antes de repintar o icone.
             self.wait("icone renderizado", lambda: len(
                 self.display.screenshot().crop((588, 16, 628, 56)).getcolors(1601) or []) > 4)
