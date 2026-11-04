@@ -3,7 +3,7 @@ using SkiaSharp;
 
 namespace PixelPointer.App.Linux;
 
-/// <summary>Captura pelo portal org.freedesktop.portal.Screenshot (Wayland).</summary>
+/// <summary>Captura pelo portal org.freedesktop.portal.Screenshot.</summary>
 internal sealed class PortalScreenCapture(PortalClient portal) : IScreenCapture
 {
     public string Name => "xdg-desktop-portal Screenshot";

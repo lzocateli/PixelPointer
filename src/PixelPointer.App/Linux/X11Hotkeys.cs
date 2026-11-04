@@ -106,7 +106,7 @@ internal sealed class X11Hotkeys : IHotkeyService
                     if (eventType == KeyPress
                         && _keycodes.TryGetValue(Marshal.ReadInt32(buffer, X11EventLayout.KeycodeOffset), out var id))
                     {
-                        onActivated(new HotkeyCommand(id));
+                        onActivated(new HotkeyCommand(id, Source: "global-hotkey"));
                     }
                 }
             }

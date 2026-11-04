@@ -38,7 +38,36 @@ public sealed class DisplayLayoutTests
     }
 
     [Fact]
-    public void Crop_FallsBackToTheWholeCaptureWithoutUsableBounds() =>
-        Assert.Equal(new SKRect(0, 0, 3840, 1080),
+    public void Crop_ExtractsOnlyTheSelectedMonitor()
+    {
+        var desktopInfo = new SKImageInfo(200, 100, SKColorType.Bgra8888, SKAlphaType.Opaque);
+        using var desktop = new SKBitmap(desktopInfo);
+        using (var canvas = new SKCanvas(desktop))
+        using (var paint = new SKPaint())
+        {
+            paint.Color = SKColors.Lime;
+            canvas.DrawRect(SKRect.Create(0, 0, 100, 100), paint);
+            paint.Color = SKColors.Blue;
+            canvas.DrawRect(SKRect.Create(100, 0, 100, 100), paint);
+        }
+
+        using var monitor = DisplayLayout.Crop(desktop, SKRect.Create(100, 0, 100, 100));
+
+        Assert.Equal((100, 100), (monitor.Width, monitor.Height));
+        Assert.Equal(SKColors.Blue, monitor.GetPixel(0, 50));
+        Assert.Equal(SKColors.Blue, monitor.GetPixel(99, 50));
+    }
+
+    [Fact]
+    public void Crop_RejectsBoundsOutsideTheDesktop()
+    {
+        using var desktop = new SKBitmap(new SKImageInfo(200, 100));
+
+        Assert.Throws<InvalidOperationException>(() => DisplayLayout.Crop(desktop, SKRect.Create(100, 0, 200, 100)));
+    }
+
+    [Fact]
+    public void Crop_RejectsUnknownTargetOnAFullDesktopCapture() =>
+        Assert.Throws<InvalidOperationException>(() =>
             DisplayLayout.Crop(new DisplayBounds(0, 0, 0, 0), [], 3840, 1080, 1920, 1080));
 }

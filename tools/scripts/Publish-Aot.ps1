@@ -147,7 +147,7 @@ if ($ChecksumsOnly) {
 }
 
 # Imagem oficial de cross-build (tag legivel + digest imutavel) e sysroot por RID.
-$sdkImage = 'mcr.microsoft.com/dotnet/sdk:10.0.402@sha256:0d99ebf1ccad15037b5c98c9fe8979d6b8dbac23812feae2277a0b277b5c5ffa'
+$sdkImage = 'mcr.microsoft.com/dotnet/sdk:10.0.403-noble@sha256:9c7b6b263d9d4c2e4718e16dae6d75cd8f4b5ccf206f1e7d48a98eb429981b03'
 $crossImages = @{
     'linux-x64'      = @('mcr.microsoft.com/dotnet-buildtools/prereqs:azurelinux-3.0-net10.0-cross-amd64-ecafe28@sha256:a851d98c330f4e5eaa32f694f29bfed82e8047cf90bfb8a5000aa3fbdda47b4a', '/crossrootfs/x64')
     'linux-arm64'    = @('mcr.microsoft.com/dotnet-buildtools/prereqs:azurelinux-3.0-net10.0-cross-arm64-ecafe28@sha256:e8ec62a221b9e1a07abb73eb1ddd3b86802fd50a14462142e9b13f2bf9208cd8', '/crossrootfs/arm64')

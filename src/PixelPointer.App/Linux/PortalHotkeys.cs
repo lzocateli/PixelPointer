@@ -16,7 +16,8 @@ internal sealed class PortalHotkeys(PortalClient portal) : IHotkeyService
             throw new NotSupportedException("O desktop não oferece o portal GlobalShortcuts; use 'pixelpointer zoom' num atalho do desktop.");
         }
 
-        _watch = await portal.WatchShortcutActivatedAsync((id, token) => onActivated(new HotkeyCommand(id, token))).ConfigureAwait(false);
+        _watch = await portal.WatchShortcutActivatedAsync(
+            (id, token) => onActivated(new HotkeyCommand(id, token, "global-hotkey"))).ConfigureAwait(false);
         var session = await portal.CreateShortcutSessionAsync(cancellationToken).ConfigureAwait(false);
         var bound = await portal.BindShortcutsAsync(session,
             [.. HotkeyDefaults.Shortcuts.Select(s => (s.Id, s.Description, s.Trigger))], cancellationToken).ConfigureAwait(false);

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using PixelPointer.App.Capture;
 using PixelPointer.Core.Annotations;
 using PixelPointer.Core.Settings;
 using PixelPointer.Core.Snip;
@@ -40,8 +41,11 @@ internal sealed record OverlayMetrics(string VideoDriver, string Renderer, bool 
 /// </summary>
 internal sealed unsafe partial class OverlaySession
 {
+    private const uint SnapshotOverlaySettleDelayMs = 250;
+
     private readonly SKBitmap? _screenshot;
     private readonly SKImage? _image;
+    private readonly IScreenCapture? _snapshotCapture;
     private readonly AnnotationDocument _annotations;
     private readonly List<double> _frameTimes = [];
     private OverlayMode _mode;
@@ -54,6 +58,7 @@ internal sealed unsafe partial class OverlaySession
     private int _height;
     private SKRect _view;
     private SKRect _crop;
+    private SKRect _snapshotOverlayBounds;
     private readonly bool _transparentBackground;
     private readonly bool _gpuRequested;
     private bool _penDown;
@@ -62,6 +67,7 @@ internal sealed unsafe partial class OverlaySession
     private float _pressure = 1f;
     private int _penEvents;
     private float _maxPressure;
+    private DisplayBounds? _targetDisplayBounds;
     private string? _saveMessage;
     private bool _saveFailed;
     private readonly Stopwatch _clock = Stopwatch.StartNew();
@@ -70,7 +76,7 @@ internal sealed unsafe partial class OverlaySession
     private SKPoint? _snipStart;
 
     internal OverlaySession(SKBitmap? screenshot, OverlayMode mode, bool transparentBackground = false,
-        AppSettings? settings = null)
+        AppSettings? settings = null, IScreenCapture? snapshotCapture = null)
     {
         if (screenshot is null && (!transparentBackground || mode != OverlayMode.Draw))
         {
@@ -80,6 +86,7 @@ internal sealed unsafe partial class OverlaySession
         settings ??= AppSettings.Default;
         _screenshot = screenshot;
         _image = screenshot is null ? null : SKImage.FromBitmap(screenshot);
+        _snapshotCapture = snapshotCapture;
         _mode = mode;
         _transparentBackground = transparentBackground;
         _annotations = new AnnotationDocument(settings.PenColor, settings.PenWidth);
@@ -176,6 +183,7 @@ internal sealed unsafe partial class OverlaySession
 
         SDL_RaiseWindow(window);
         _window = window;
+        LogDisplayContext("overlay-start", window);
 
         SDL_Texture* texture = null;
         SKSurface? surface = null;
@@ -183,9 +191,16 @@ internal sealed unsafe partial class OverlaySession
         double firstFrameMs = 0;
         var running = true;
         var dirty = true;
+        var completed = false;
 
         try
         {
+            if (string.Equals(SDL_GetCurrentVideoDriver(), "x11", StringComparison.Ordinal))
+            {
+                CaptureTargetDisplay();
+            }
+
+            DiagnosticLog.Write("OVERLAY", $"start mode={_mode} transparent={_transparentBackground}");
             AppIcon.SetWindowIcon(window);
             if (string.Equals(SDL_GetCurrentVideoDriver(), "wayland", StringComparison.Ordinal)
                 && (SDL_GetWindowFlags(window) & SDL_WindowFlags.SDL_WINDOW_FULLSCREEN) == 0
@@ -289,6 +304,7 @@ internal sealed unsafe partial class OverlaySession
                 dirty = false;
             }
 
+            completed = true;
             var sorted = _frameTimes.Order().ToArray();
             return new OverlayMetrics(SDL_GetCurrentVideoDriver() ?? "?",
                 gl is not null ? GlOverlayTarget.Name : SDL_GetRendererName(renderer) ?? "?", gl is not null, width, height,
@@ -297,6 +313,8 @@ internal sealed unsafe partial class OverlaySession
         }
         finally
         {
+            DiagnosticLog.Write("OVERLAY",
+                $"finish mode={_mode} reason={(cancellationToken.IsCancellationRequested ? "cancelled" : completed ? "closed" : "error")}");
             _image?.Dispose();
             surface?.Dispose();
             if (texture is not null)
@@ -324,24 +342,72 @@ internal sealed unsafe partial class OverlaySession
         var point = new SDL_Point { x = (int)x, y = (int)y };
         var display = SDL_GetDisplayForPoint(&point);
         SDL_Rect bounds;
-        return display == default || display == SDL_GetPrimaryDisplay() || !SDL_GetDisplayBounds(display, &bounds)
-            ? null
-            : bounds;
+        if (display == default || display == SDL_GetPrimaryDisplay())
+        {
+            DiagnosticLog.Write("DISPLAY",
+                FormattableString.Invariant($"selection=primary cursor-global=({x:0.##},{y:0.##})"));
+            return null;
+        }
+
+        if (!SDL_GetDisplayBounds(display, &bounds))
+        {
+            DiagnosticLog.Write("DISPLAY",
+                FormattableString.Invariant($"selection=primary cursor-global=({x:0.##},{y:0.##}) secondary-bounds=unavailable"));
+            return null;
+        }
+
+        DiagnosticLog.Write("DISPLAY", FormattableString.Invariant(
+            $"selection=secondary cursor-global=({x:0.##},{y:0.##}) bounds=({bounds.x},{bounds.y},{bounds.w},{bounds.h})"));
+        return bounds;
+    }
+
+    private static void LogDisplayContext(string stage, SDL_Window* window)
+    {
+        float x, y;
+        SDL_GetGlobalMouseState(&x, &y);
+        var point = new SDL_Point { x = (int)x, y = (int)y };
+        var cursorDisplay = SDL_GetDisplayForPoint(&point);
+        var windowDisplay = SDL_GetDisplayForWindow(window);
+        DiagnosticLog.Write("DISPLAY", FormattableString.Invariant(
+            $"stage={stage} cursor-global=({x:0.##},{y:0.##}) cursor-bounds={DisplayBounds(cursorDisplay)} window-bounds={DisplayBounds(windowDisplay)}"));
+    }
+
+    private static string DisplayBounds(SDL_DisplayID display)
+    {
+        if (display == default)
+        {
+            return "unknown";
+        }
+
+        SDL_Rect bounds;
+        return SDL_GetDisplayBounds(display, &bounds)
+            ? FormattableString.Invariant($"({bounds.x},{bounds.y},{bounds.w},{bounds.h})")
+            : "unavailable";
     }
 
     /// <summary>A captura cobre a área de trabalho inteira; recorta o monitor onde a janela está.</summary>
     private SKRect ComputeCrop(SDL_Window* window, int width, int height)
     {
-        if (_transparentBackground)
+        if (_screenshot is null && _transparentBackground)
         {
             return SKRect.Create(0, 0, width, height);
         }
 
         var screenshot = _screenshot ?? throw new InvalidOperationException("A captura não está disponível nesta sobreposição.");
+        return ComputeCrop(window, width, height, screenshot);
+    }
+
+    private static SKRect ComputeCrop(SDL_Window* window, int width, int height, SKBitmap screenshot)
+    {
         SDL_Rect bounds;
         if (!SDL_GetDisplayBounds(SDL_GetDisplayForWindow(window), &bounds))
         {
-            return new SKRect(0, 0, screenshot.Width, screenshot.Height);
+            if (screenshot.Width == width && screenshot.Height == height)
+            {
+                return new SKRect(0, 0, screenshot.Width, screenshot.Height);
+            }
+
+            throw new InvalidOperationException($"Não foi possível identificar o monitor da captura: {SDL_GetError()}");
         }
 
         var displays = new List<DisplayBounds>();
@@ -363,10 +429,12 @@ internal sealed unsafe partial class OverlaySession
 
     private bool Handle(SDL_Event e)
     {
+        LogInput(e);
         switch (e.Type)
         {
             case SDL_EventType.SDL_EVENT_QUIT:
             case SDL_EventType.SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+                DiagnosticLog.Write("OVERLAY", "close reason=window-request");
                 return false;
 
             case SDL_EventType.SDL_EVENT_KEY_DOWN when _annotations.IsTyping:
@@ -568,6 +636,7 @@ internal sealed unsafe partial class OverlaySession
         switch (key.key)
         {
             case SDL_Keycode.SDLK_ESCAPE:
+                DiagnosticLog.Write("OVERLAY", "close reason=escape");
                 return false;
             case SDL_Keycode.SDLK_T when !ctrl:
                 BeginText();
@@ -624,6 +693,58 @@ internal sealed unsafe partial class OverlaySession
 
         return true;
     }
+
+    private static void LogInput(SDL_Event e)
+    {
+        switch (e.Type)
+        {
+            case SDL_EventType.SDL_EVENT_KEY_DOWN:
+            case SDL_EventType.SDL_EVENT_KEY_UP:
+                DiagnosticLog.Write("INPUT",
+                    $"key-{(e.Type == SDL_EventType.SDL_EVENT_KEY_DOWN ? "down" : "up")} key={FormatKey(e.key.key)} modifiers={e.key.mod}");
+                break;
+
+            case SDL_EventType.SDL_EVENT_MOUSE_BUTTON_DOWN:
+            case SDL_EventType.SDL_EVENT_MOUSE_BUTTON_UP:
+                DiagnosticLog.Write("INPUT", FormattableString.Invariant(
+                    $"mouse-button-{(e.Type == SDL_EventType.SDL_EVENT_MOUSE_BUTTON_DOWN ? "down" : "up")} button={FormatMouseButton(e.button.button)} x={e.button.x:0.##} y={e.button.y:0.##} synthetic={IsSynthetic(e.button.which)}"));
+                break;
+
+            case SDL_EventType.SDL_EVENT_MOUSE_WHEEL:
+                DiagnosticLog.Write("INPUT",
+                    FormattableString.Invariant($"mouse-wheel x={e.wheel.x:0.##} y={e.wheel.y:0.##} modifiers={SDL_GetModState()}"));
+                break;
+
+            case SDL_EventType.SDL_EVENT_WINDOW_FOCUS_GAINED:
+                DiagnosticLog.Write("WINDOW", "focus=gained");
+                break;
+
+            case SDL_EventType.SDL_EVENT_WINDOW_FOCUS_LOST:
+                DiagnosticLog.Write("WINDOW", "focus=lost");
+                break;
+
+            case SDL_EventType.SDL_EVENT_WINDOW_HIDDEN:
+                DiagnosticLog.Write("WINDOW", "visibility=hidden");
+                break;
+
+            case SDL_EventType.SDL_EVENT_WINDOW_SHOWN:
+                DiagnosticLog.Write("WINDOW", "visibility=shown");
+                break;
+        }
+    }
+
+    private static string FormatKey(SDL_Keycode key) =>
+        Enum.GetName(key)?.Replace("SDLK_", string.Empty, StringComparison.Ordinal) ?? $"0x{(int)key:X}";
+
+    private static string FormatMouseButton(byte button) => button switch
+    {
+        1 => "left",
+        2 => "middle",
+        3 => "right",
+        4 => "x1",
+        5 => "x2",
+        _ => button.ToString(System.Globalization.CultureInfo.InvariantCulture),
+    };
 
     /// <summary>Ponteiros sintéticos (caneta e toque emulando mouse) já chegam pelos eventos próprios.</summary>
     private static bool IsSynthetic(SDL_MouseID which) => (uint)which >= (uint)SDL_PEN_MOUSEID;
@@ -835,10 +956,22 @@ internal sealed unsafe partial class OverlaySession
         SceneRenderer.Draw(canvas, _annotations, _image, _crop, view, outputWidth, _transparentBackground);
 
     private SKData EncodeSnapshot()
+        => EncodeSnapshot(null);
+
+    private SKData EncodeSnapshot(SKBitmap? capturedBackground)
     {
-        using var surface = SKSurface.Create(new SKImageInfo(_width, _height, SKColorType.Bgra8888, SKAlphaType.Premul))
+        var outputWidth = capturedBackground?.Width ?? _width;
+        var outputHeight = capturedBackground?.Height ?? _height;
+        using var surface = SKSurface.Create(new SKImageInfo(outputWidth, outputHeight, SKColorType.Bgra8888, SKAlphaType.Premul))
             ?? throw new InvalidOperationException("Não foi possível preparar a imagem da captura.");
-        DrawScene(surface.Canvas, _view, _width);
+        using var capturedImage = capturedBackground is null ? null : SKImage.FromBitmap(capturedBackground);
+        var crop = capturedBackground is null
+            ? _crop
+            : _snapshotOverlayBounds;
+        var view = capturedBackground is null ? _view : SKRect.Create(0, 0, outputWidth, outputHeight);
+        SceneRenderer.Draw(surface.Canvas, _annotations, capturedImage ?? _image, crop, view, outputWidth,
+            transparent: _transparentBackground && capturedBackground is null,
+            annotationOffset: capturedBackground is null ? SKPoint.Empty : new SKPoint(crop.Left, crop.Top));
         return surface.Snapshot().Encode(SKEncodedImageFormat.Png, 100)
             ?? throw new InvalidOperationException("Não foi possível codificar a captura como PNG.");
     }
@@ -863,22 +996,119 @@ internal sealed unsafe partial class OverlaySession
 
     private void SaveSnapshot()
     {
+        DiagnosticLog.Write("SNAPSHOT", "start");
         try
         {
             var directory = SnapshotStorage.GetDirectory();
-            using var data = EncodeSnapshot();
+            using var capturedBackground = _snapshotCapture is null ? null : CaptureSnapshotBackground();
+            using var data = EncodeSnapshot(capturedBackground);
             var path = SnapshotStorage.Save(directory, data.SaveTo);
             _saveMessage = $"Salvo: {path}";
             _saveFailed = false;
+            DiagnosticLog.Write("SNAPSHOT", "saved");
+        }
+        catch (OperationCanceledException)
+        {
+            _saveMessage = "Captura cancelada.";
+            _saveFailed = true;
+            DiagnosticLog.Write("SNAPSHOT", "cancelled");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException
             or NotSupportedException or ArgumentException)
         {
             _saveMessage = $"Não foi possível salvar a captura: {ex.Message}";
             _saveFailed = true;
+            DiagnosticLog.Write("SNAPSHOT", $"failed error={ex.GetType().Name} message={ex.Message}");
         }
 
         Console.Error.WriteLine(_saveMessage);
+    }
+
+    private SKBitmap CaptureSnapshotBackground()
+    {
+        LogDisplayContext("before-snapshot", _window);
+        DiagnosticLog.Write("SNAPSHOT", "hide-overlay");
+        SDL_HideWindow(_window);
+        SKBitmap? monitorCapture = null;
+        try
+        {
+            DiagnosticLog.Write("SNAPSHOT", $"compositor-settle ms={SnapshotOverlaySettleDelayMs}");
+            SDL_Delay(SnapshotOverlaySettleDelayMs);
+            using var desktop = _snapshotCapture!.CaptureAsync(CancellationToken.None).GetAwaiter().GetResult();
+            var monitorBounds = ComputeCrop(_window, _width, _height, desktop);
+            monitorCapture = DisplayLayout.Crop(desktop, monitorBounds);
+            _snapshotOverlayBounds = SKRect.Create(0, 0, monitorCapture.Width, monitorCapture.Height);
+            DiagnosticLog.Write("SNAPSHOT", FormattableString.Invariant(
+                $"background-captured source={_snapshotCapture.Name} desktop={desktop.Width}x{desktop.Height} monitor-bounds=({monitorBounds.Left:0.##},{monitorBounds.Top:0.##},{monitorBounds.Width:0.##},{monitorBounds.Height:0.##}) monitor={monitorCapture.Width}x{monitorCapture.Height}"));
+        }
+        catch
+        {
+            monitorCapture?.Dispose();
+            throw;
+        }
+        finally
+        {
+            try
+            {
+                RestoreOverlayWindow();
+                if (!SDL_RaiseWindow(_window))
+                {
+                    DiagnosticLog.Write("SNAPSHOT", $"raise-failed error={SDL_GetError()}");
+                    throw new InvalidOperationException($"SDL_RaiseWindow: {SDL_GetError()}");
+                }
+
+                DiagnosticLog.Write("SNAPSHOT", "overlay-raised");
+                LogDisplayContext("after-snapshot", _window);
+            }
+            catch
+            {
+                monitorCapture?.Dispose();
+                throw;
+            }
+        }
+
+        return monitorCapture ?? throw new InvalidOperationException("A captura do monitor não foi produzida.");
+    }
+
+    private void RestoreOverlayWindow()
+    {
+        try
+        {
+            if (_targetDisplayBounds is { } target)
+            {
+                DiagnosticLog.Write("SNAPSHOT", FormattableString.Invariant(
+                    $"restore-display bounds=({target.X},{target.Y},{target.Width},{target.Height})"));
+                if (!SDL_SetWindowFullscreen(_window, false))
+                {
+                    throw new InvalidOperationException($"SDL_SetWindowFullscreen(false): {SDL_GetError()}");
+                }
+
+                SDL_SetWindowPosition(_window, target.X, target.Y);
+                if (!SDL_SetWindowFullscreen(_window, true))
+                {
+                    throw new InvalidOperationException($"SDL_SetWindowFullscreen(true): {SDL_GetError()}");
+                }
+            }
+        }
+        finally
+        {
+            SDL_ShowWindow(_window);
+            DiagnosticLog.Write("SNAPSHOT", "show-overlay");
+        }
+    }
+
+    private void CaptureTargetDisplay()
+    {
+        var display = SDL_GetDisplayForWindow(_window);
+        SDL_Rect bounds;
+        if (display == default || !SDL_GetDisplayBounds(display, &bounds))
+        {
+            throw new InvalidOperationException($"Não foi possível identificar o monitor da sobreposição: {SDL_GetError()}");
+        }
+
+        _targetDisplayBounds = new DisplayBounds(bounds.x, bounds.y, bounds.w, bounds.h);
+        DiagnosticLog.Write("DISPLAY", FormattableString.Invariant(
+            $"restore-target bounds=({bounds.x},{bounds.y},{bounds.w},{bounds.h})"));
     }
 
     private static partial class OverlayNative

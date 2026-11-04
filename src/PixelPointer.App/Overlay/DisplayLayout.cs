@@ -14,14 +14,43 @@ internal static class DisplayLayout
     internal static SKRect Crop(DisplayBounds target, IReadOnlyList<DisplayBounds> displays, int captureWidth,
         int captureHeight, int windowWidth, int windowHeight)
     {
-        if ((captureWidth == windowWidth && captureHeight == windowHeight) || target.Width <= 0 || displays.Count == 0)
+        if (captureWidth == windowWidth && captureHeight == windowHeight)
         {
             return new SKRect(0, 0, captureWidth, captureHeight);
+        }
+
+        if (target.Width <= 0 || target.Height <= 0 || displays.Count == 0)
+        {
+            throw new InvalidOperationException("Não foi possível determinar o monitor na captura da área de trabalho.");
         }
 
         var left = displays.Min(display => display.X);
         var top = displays.Min(display => display.Y);
         var scale = (float)windowWidth / target.Width;
         return SKRect.Create((target.X - left) * scale, (target.Y - top) * scale, windowWidth, windowHeight);
+    }
+
+    internal static SKBitmap Crop(SKBitmap source, SKRect bounds)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        if (!(bounds.Width > 0) || !(bounds.Height > 0)
+            || bounds.Left < 0 || bounds.Top < 0 || bounds.Right > source.Width || bounds.Bottom > source.Height)
+        {
+            throw new InvalidOperationException("Os limites do monitor não correspondem à captura da área de trabalho.");
+        }
+
+        var width = (int)MathF.Round(bounds.Width);
+        var height = (int)MathF.Round(bounds.Height);
+        if (width <= 0 || height <= 0)
+        {
+            throw new InvalidOperationException("A captura do monitor não tem dimensões válidas.");
+        }
+
+        var cropped = new SKBitmap(new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul));
+        using var image = SKImage.FromBitmap(source);
+        using var canvas = new SKCanvas(cropped);
+        canvas.DrawImage(image, bounds, SKRect.Create(0, 0, width, height),
+            new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None));
+        return cropped;
     }
 }

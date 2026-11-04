@@ -15,7 +15,7 @@ internal readonly record struct SetupPolicy(bool Linux, bool Wayland, bool Daemo
     {
         SetupAction.Close or SetupAction.Diagnose => true,
         SetupAction.RegisterDesktop => Linux,
-        SetupAction.RequestCapture => Linux && Wayland,
+        SetupAction.RequestCapture => Linux,
         SetupAction.StartDaemon => !DaemonRunning,
         _ => false,
     };

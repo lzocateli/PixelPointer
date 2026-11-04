@@ -1,7 +1,7 @@
 namespace PixelPointer.App.Hotkeys;
 
 /// <summary>Comando acionado por atalho global, CLI ou IPC.</summary>
-internal sealed record HotkeyCommand(string Id, string? ActivationToken = null);
+internal sealed record HotkeyCommand(string Id, string? ActivationToken = null, string Source = "unknown");
 
 internal interface IHotkeyService : IDisposable
 {

@@ -4,7 +4,7 @@ Valida o PixelPointer em container (ou no host com -Native): restore, formatacao
 
 .DESCRIPTION
 Executa a mesma validacao usada no CI dentro da imagem fixada
-docker.io/lzocateli/dotnet-sdk:10.0.402-noble-v1, montando o repositorio em
+mcr.microsoft.com/dotnet/sdk:10.0.403-noble, montando o repositorio em
 /workspace. Instala libfontconfig1 para os testes de PNG/Skia em CPU.
 Etapas: dotnet restore, dotnet format --verify-no-changes,
 dotnet build -c Release, dotnet test --solution PixelPointer.slnx -c Release
@@ -79,7 +79,7 @@ if ($RemainingArguments.Count -gt 0) {
     exit 2
 }
 
-$image = 'docker.io/lzocateli/dotnet-sdk:10.0.402-noble-v1'
+$image = 'mcr.microsoft.com/dotnet/sdk:10.0.403-noble@sha256:9c7b6b263d9d4c2e4718e16dae6d75cd8f4b5ccf206f1e7d48a98eb429981b03'
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 
 if ($Native) {

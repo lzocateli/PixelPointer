@@ -11,10 +11,11 @@ public static class SceneRenderer
 
     /// <summary>
     /// Desenha a cena; <paramref name="view"/> é a região da imagem exibida e <paramref name="outputWidth"/>
-    /// a largura de saída em pixels. Com <paramref name="transparent"/>, o fundo sem imagem fica com alfa zero.
+    /// a largura de saída em pixels. <paramref name="annotationOffset"/> posiciona as anotações sobre fundos
+    /// maiores que a sobreposição. Com <paramref name="transparent"/>, o fundo sem imagem fica com alfa zero.
     /// </summary>
     public static void Draw(SKCanvas canvas, AnnotationDocument annotations, SKImage? background, SKRect crop,
-        SKRect view, int outputWidth, bool transparent)
+        SKRect view, int outputWidth, bool transparent, SKPoint annotationOffset = default)
     {
         ArgumentNullException.ThrowIfNull(canvas);
         ArgumentNullException.ThrowIfNull(annotations);
@@ -37,11 +38,14 @@ public static class SceneRenderer
             canvas.DrawImage(background, 0, 0, new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None));
         }
 
+        canvas.Save();
+        canvas.Translate(annotationOffset);
         foreach (var stroke in annotations.Strokes)
         {
             DrawStroke(canvas, stroke);
         }
 
+        canvas.Restore();
         canvas.Restore();
     }
 

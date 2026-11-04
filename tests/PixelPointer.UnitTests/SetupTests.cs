@@ -6,7 +6,7 @@ public sealed class SetupTests
 {
     [Theory]
     [InlineData(true, true, false, true, true, true)]
-    [InlineData(true, false, false, true, false, true)]
+    [InlineData(true, false, false, true, true, true)]
     [InlineData(false, false, false, false, false, true)]
     [InlineData(true, true, true, true, true, false)]
     public void Policy_OnlyOffersValidExplicitActions(bool linux, bool wayland, bool running,

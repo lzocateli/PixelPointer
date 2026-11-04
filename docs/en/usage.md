@@ -61,7 +61,7 @@ Without a tray, use `pixelpointer --version` and the command table below.
 | `pixelpointer probe` | Diagnostics: OS, session, monitors, portal versions |
 | `pixelpointer install-desktop-file` | Linux: installs the `.desktop` file with the app id `io.github.lzocateli.PixelPointer` |
 | `pixelpointer uninstall-desktop-file` | Linux: removes per-user resources only when unchanged; preserves modified files |
-| `pixelpointer grant` | GNOME/Wayland: requests the capture permission from a focused window |
+| `pixelpointer grant` | Linux: requests portal capture permission from a focused window |
 | `pixelpointer setup` | Optional first use with explicit diagnostics, desktop registration, capture request and daemon start actions |
 | `pixelpointer selftest` | Checks the native libraries without a display (used by package tests) |
 | `pixelpointer --version` / `--help` | Version and help |
@@ -89,6 +89,60 @@ pen width (Ctrl+wheel before pressing T). While typing, keys become text: Enter
 adds a line, Backspace deletes, Esc or a click finishes. Ctrl+Z after finishing
 removes the whole text.
 
+## Diagnosing Keys, Mouse and Saving
+
+When `pixelpointer daemon` runs in a terminal, PixelPointer prints diagnostic
+events with an increasing sequence number and local timestamp, for example:
+
+```text
+[DIAG #000123 2026-11-04T08:04:23.659-03:00] INPUT key-down key=S modifiers=SDL_KMOD_LCTRL
+[DIAG #000124 2026-11-04T08:04:23.701-03:00] SNAPSHOT saved
+```
+
+The log includes received global shortcuts, command dispatch or discard,
+overlay start/end, key down/up while the overlay is active, mouse buttons and
+wheel, window focus/visibility, and Ctrl+S stages/errors. It does not record
+individual mouse movement or typing outside the overlay, write a log file, or
+send events over the network. Key names are logged, including in text mode; do
+not type passwords, tokens or other sensitive content while the log is visible.
+The sequence resets when the daemon starts. Global hotkeys appear as received
+commands with their shortcut identifier, not as system-wide keyboard capture.
+`DISPLAY` context logs the global cursor position and the bounds of the monitor
+under it and the window's monitor when opening the overlay and before/after Ctrl+S.
+
+### Steps to Diagnose Ctrl+S and Hotkeys
+
+Use a window without sensitive content and run the exact binary under test. On
+Linux, from the repository root, for example:
+
+```bash
+./artifacts/package/linux-x64/pixelpointer quit
+./artifacts/package/linux-x64/pixelpointer daemon
+```
+
+If `quit` says no daemon is running, continue. Keep the second command in the
+foreground to watch its log. In another window:
+
+1. Press `Ctrl+2`; confirm `COMMAND received ... id=draw` and
+   `OVERLAY start mode=Draw`.
+2. Draw a stroke with the left mouse button and release it. Confirm
+   `mouse-button-down` and `mouse-button-up` in the log.
+3. Press `Ctrl+S` once and wait for `Salvo:`. Confirm `key-down key=S`,
+   `SNAPSHOT start` and `SNAPSHOT saved`; if it fails, note the `SNAPSHOT failed`
+   line.
+4. Press `Esc` and wait for `OVERLAY finish mode=Draw reason=closed` and the
+   `--- sessão draw ---` summary.
+5. Press `Ctrl+1`, wait for `OVERLAY start mode=Zoom`, press `Esc` and wait for
+   it to end. Repeat with `Ctrl+3` for Timer.
+6. Stop the daemon with `pixelpointer quit` from another terminal; do not press
+   `Ctrl+C` until the steps are complete.
+
+Send the `[DIAG ...]` lines with the result of each step and any visible error.
+If the global command is missing, investigate the desktop hotkey binding. If it
+is received but not dispatched, look for `COMMAND discarded`. If `SNAPSHOT
+start` has neither `saved` nor `failed`, provide the excerpt from the `S` key
+through the end of the session.
+
 ## Where Ctrl+S saves
 
 | System | Destination |
@@ -110,10 +164,17 @@ macOS, new PNGs are readable and writable only by the user (0600). The final pat
 or error appears in the overlay and, when available, in the terminal. On error,
 the app does not silently save to the working directory or another folder.
 
-The PNG contains the overlay scene and annotations, without the cursor or save
-message. In transparent X11 draw mode, the PNG background is transparent and
-exports annotations without recapturing the desktop. To save the frozen screen
-with annotations, use zoom; W/K explicitly export a white or black board.
+The PNG contains the screen and overlay annotations, without the cursor or save
+message. In transparent X11 draw mode, Ctrl+S briefly hides the overlay, waits
+for the compositor to update the screen, then captures the composited image
+through the Screenshot portal and crops only the monitor containing the overlay,
+with the strokes aligned. This includes windows such as VS Code instead of only
+the desktop background. The portal may request authorization on the first
+capture; run `pixelpointer grant` to authorize it before drawing. If the portal
+is unavailable or authorization is denied, saving reports an error instead of
+producing an incomplete image. Live transparency remains active while drawing.
+In zoom mode, the PNG contains the frozen capture with annotations; W/K
+explicitly export a white or black board.
 
 ## Settings
 
@@ -258,12 +319,13 @@ alone do not prove a noticeable improvement or your desktop's performance target
 
 ### Linux on X11
 
-Hotkeys and capture work without extra permissions (XGrabKey and XGetImage).
-The `pixelpointer grant` command is not needed on X11. If another app already
+Global hotkeys use XGrabKey and need no permission. If another app already
 registered Ctrl+1 or Ctrl+2, the daemon reports the conflict and does not claim
-that hotkey is available. In draw mode, a detected X11 compositor enables
-transparent annotations over current content. Without a compositor, the app
-warns and uses a frozen capture; this is not live transparency.
+that hotkey is available. In draw mode, an X11 compositor enables transparent
+annotations over current content. To include composited windows in Ctrl+S, saving
+uses the Screenshot portal and crops only the overlay's monitor; run
+`pixelpointer grant` first if the portal requests authorization. Without a
+compositor, the app warns and uses a frozen capture, not live transparency.
 
 ### Running in the background and exiting
 
@@ -416,8 +478,8 @@ package without `sudo`:
 ```
 
 1. **Diagnostics:** `probe` should identify X11 and report whether a compositor
-  is present. `grant` should explain that native X11 capture needs no portal
-  permission. Missing Registry must not recommend reinstalling the desktop
+  is present. `grant` should request portal permission for Ctrl+S; X11 hotkeys
+  themselves need no permission. Missing Registry must not recommend reinstalling the desktop
   entry; real registration errors must remain distinguishable.
 2. **Hotkeys and capture:** press Ctrl+1, annotate a known image, zoom and close
   with Esc. The daemon should remain active. Compare with
@@ -427,11 +489,13 @@ package without `sudo`:
   Ctrl+2. Content should continue moving under the strokes, without an opaque
   background. W/K should change only explicitly selected boards. Without a
   compositor, expect a warning and frozen capture, not transparency.
-4. **PNG:** press Ctrl+S twice; check the message, two distinct files and the XDG
-  destination. In zoom, the PNG should contain the capture and strokes; in
-  transparent draw mode, it should preserve alpha. With an unwritable
-  destination, expect an overlay error and no file in another folder. Use an
-  unprivileged user for this test.
+4. **PNG:** in transparent X11 draw mode, leave a test window visible on the
+  cursor's monitor, press Ctrl+S twice and check that each PNG contains only that
+  monitor, the window content and aligned strokes. In zoom, the PNG should
+  contain the frozen capture and strokes. Check the message, two distinct files
+  and the XDG destination. If the portal requests authorization, grant it or run
+  `grant` first. With an unwritable destination, expect an overlay error and no
+  file in another folder. Use an unprivileged user for this test.
 5. **Tray and exit:** open and close Zoom/Desenhar from the tray. Choose **Sair**
   with and without an overlay open. If the tray is unavailable, confirm the
   warning and run `./artifacts/publish/linux-x64/pixelpointer quit` in another

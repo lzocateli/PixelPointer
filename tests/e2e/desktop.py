@@ -4,6 +4,7 @@ import json
 import os
 import shlex
 import subprocess
+import uuid
 from pathlib import Path
 
 from dbus_fast import Message, MessageType, Variant
@@ -48,6 +49,37 @@ class Watcher(ServiceInterface):
         return service
 
 
+class ScreenshotPortal(ServiceInterface):
+    def __init__(self, desktop):
+        super().__init__("org.freedesktop.portal.Screenshot")
+        self.desktop = desktop
+        self.bus = None
+        self.sender = None
+
+    @method()
+    def Screenshot(self, parent_window: "s", options: "a{sv}") -> "o":
+        token = options.get("handle_token")
+        if self.bus is None or self.sender is None or token is None:
+            raise RuntimeError("Solicitacao Screenshot sem contexto D-Bus")
+        sender = self.sender.removeprefix(":").replace(".", "_")
+        request = f"/org/freedesktop/portal/desktop/request/{sender}/{token.value}"
+        asyncio.get_running_loop().create_task(self.respond(request))
+        return request
+
+    async def respond(self, request):
+        await asyncio.sleep(0.05)
+        path = Path("/tmp", f"pixelpointer-portal-{uuid.uuid4().hex}.png")
+        self.desktop.screenshot().save(path)
+        self.bus.send(Message(
+            message_type=MessageType.SIGNAL,
+            path=request,
+            interface="org.freedesktop.portal.Request",
+            member="Response",
+            signature="ua{sv}",
+            body=[0, {"uri": Variant("s", path.as_uri())}],
+        ))
+
+
 async def main():
     desktop = X11()
     scene = desktop.window("E2E external focus", 0, 0, 800, 600)
@@ -56,8 +88,12 @@ async def main():
     panel = None if no_tray else desktop.window("E2E StatusNotifier panel", 580, 12, 210, 330)
     bus = await MessageBus().connect()
     watcher = Watcher()
+    screenshot_portal = ScreenshotPortal(desktop)
+    screenshot_portal.bus = bus
 
     def sender(message):
+        if message.interface == "org.freedesktop.portal.Screenshot" and message.member == "Screenshot":
+            screenshot_portal.sender = message.sender
         if message.member == "RegisterStatusNotifierItem":
             watcher.sender = message.sender
         if message.interface == "org.freedesktop.DBus" and message.member == "NameOwnerChanged":
@@ -72,6 +108,8 @@ async def main():
         await bus.call(Message(destination="org.freedesktop.DBus", path="/org/freedesktop/DBus",
                                interface="org.freedesktop.DBus", member="AddMatch", signature="s",
                                body=["type='signal',interface='org.freedesktop.DBus',member='NameOwnerChanged'"]))
+    bus.export("/org/freedesktop/portal/desktop", screenshot_portal)
+    await bus.request_name("org.freedesktop.portal.Desktop")
     menu = None
     active_item = None
     entries = []

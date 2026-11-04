@@ -64,12 +64,12 @@ internal sealed unsafe partial class TrayController : IDisposable
                 throw new InvalidOperationException($"SDL não criou o menu da tray: {SDL_GetError()}");
             }
 
-            controller.AddEntry(menu, "Zoom", () => onCommand(new HotkeyCommand("zoom")));
-            controller.AddEntry(menu, "Desenhar", () => onCommand(new HotkeyCommand("draw")));
-            controller.AddEntry(menu, "Timer", () => onCommand(new HotkeyCommand("timer")));
-            controller.AddEntry(menu, "Live Zoom", () => onCommand(new HotkeyCommand("livezoom")));
-            controller.AddEntry(menu, "Recorte", () => onCommand(new HotkeyCommand("snip")));
-            controller.AddEntry(menu, "Gravar / parar gravação", () => onCommand(new HotkeyCommand("record")));
+            controller.AddEntry(menu, "Zoom", () => onCommand(new HotkeyCommand("zoom", Source: "tray")));
+            controller.AddEntry(menu, "Desenhar", () => onCommand(new HotkeyCommand("draw", Source: "tray")));
+            controller.AddEntry(menu, "Timer", () => onCommand(new HotkeyCommand("timer", Source: "tray")));
+            controller.AddEntry(menu, "Live Zoom", () => onCommand(new HotkeyCommand("livezoom", Source: "tray")));
+            controller.AddEntry(menu, "Recorte", () => onCommand(new HotkeyCommand("snip", Source: "tray")));
+            controller.AddEntry(menu, "Gravar / parar gravação", () => onCommand(new HotkeyCommand("record", Source: "tray")));
             var about = controller.AddEntry(menu, "Sobre e atalhos", null, TrayEntrySubmenu);
             var aboutMenu = SdlTrayNative.CreateTraySubmenu(about);
             if (aboutMenu == 0)
@@ -82,7 +82,11 @@ internal sealed unsafe partial class TrayController : IDisposable
                 controller.AddEntry(aboutMenu, label, null, TrayEntryButton | TrayEntryDisabled);
             }
 
-            controller.AddEntry(menu, "Sair", onQuit);
+            controller.AddEntry(menu, "Sair", () =>
+            {
+                DiagnosticLog.Write("TRAY", "action=quit");
+                onQuit();
+            });
             unavailableReason = null;
             return controller;
         }
