@@ -23,7 +23,18 @@ public sealed class DesktopIntegrationTests
             Assert.Contains("%%", original);
             Assert.Contains("Terminal=false", original);
             Assert.Contains("NoDisplay=false", original);
+            Assert.Contains($"Icon={icon}\n", original);
             Assert.Equal("<svg/>", File.ReadAllText(icon));
+
+            File.WriteAllText(desktop, original.Replace($"Icon={icon}", "Icon=io.github.lzocateli.PixelPointer", StringComparison.Ordinal));
+            DesktopIntegration.Apply(data, executable, source, remove: false);
+            Assert.Equal(original, File.ReadAllText(desktop));
+
+            var customIcon = original.Replace($"Icon={icon}", "Icon=custom-user-icon", StringComparison.Ordinal);
+            File.WriteAllText(desktop, customIcon);
+            Assert.Throws<InvalidOperationException>(() => DesktopIntegration.Apply(data, executable, source, remove: false));
+            Assert.Throws<InvalidOperationException>(() => DesktopIntegration.Apply(data, executable, source, remove: true));
+            Assert.Equal(customIcon, File.ReadAllText(desktop));
 
             File.WriteAllText(desktop, "preserve");
             Assert.Throws<InvalidOperationException>(() => DesktopIntegration.Apply(data, executable, source, remove: false));

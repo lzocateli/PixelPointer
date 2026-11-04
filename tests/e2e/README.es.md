@@ -48,7 +48,11 @@ El runner comprueba foco externo, atajos, modificadores, conflictos reales de
 grab, zoom, colores, grosor, edición, pizarras, transparencia, guardado, errores
 visibles, orden de logs de diagnóstico de teclas/botones, bandeja, reinicio,
 cierre con ventana abierta e instalación/apertura/eliminación del lanzador del
-escritorio. El lanzador interpreta el archivo
+escritorio. También comprueba el recorte con Ctrl+6 y PNG de 160x100,
+y la grabación con Ctrl+5 y GIF de 800x600 con varios cuadros. El escritorio
+virtual tiene un monitor; la selección entre monitores requiere aceptación
+local en una topología real. La consulta X11 debe reflejar la nueva posición
+del cursor antes de cada operación. El lanzador interpreta el archivo
 desktop instalado, pero solo acepta `/package/pixelpointer daemon`, sin shell y
 con `Terminal=false`.
 

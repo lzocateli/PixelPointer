@@ -180,7 +180,7 @@ solo tras prueba local en contenedores.
 | Entorno | Plan y límite |
 | --- | --- |
 | Linux x64, X11 virtual mínimo | Ejecutado: 10/10 consecutivos con compositor/bandeja; variantes sin compositor y sin bandeja pasaron |
-| GNOME X11 | Aceptación manual de dibujo transparente, visual automático, zoom, PNG, CapsLock/NumLock, ambos monitores y cierre por Sair; capturas confirman monitor 1, icono/menú y status sin daemon; Zoom/Desenhar por bandeja, lanzador y matriz completa sin demostración individual |
+| GNOME X11 | Funcionalidades locales aceptadas por el mantenedor el 2026-11-04 en el paquete `0.3.0-local.cursor-monitor.5`, con dos monitores 1920×1080 a escala 1; ver el registro de aceptación abajo. La aprobación no completa la matriz multiplataforma |
 | Wayland | ScreenCast/PipeWire pasó en Sway aislado; indisponibilidad sin GPU tratada. v0.1.3-preview.14 aceptada manualmente para captura, zoom y dibujo en Ubuntu 26.04.1/GNOME Wayland, con consentimiento observado. Reutilización del token, duración del indicador, latencia sin diálogo, varios monitores y otros compositores pendientes; sin mocks de consentimiento ni XTEST vía XWayland como prueba nativa |
 | Linux arm64 | Ejecutar en arquitectura adecuada antes de declarar cobertura |
 | Windows/macOS | Backends nativos y sesiones gráficas desechables; estrategia depende de compatibilidad con contenedores y autorización específica para excepciones |
@@ -195,6 +195,34 @@ Aceptación final exige matriz ejecutada con límites, evidencias reproducibles 
 revisión humana de vídeos/referencias iniciales. Autorización permite construir
 suite, no aprueba herramientas, excepciones de seguridad, soporte multiplataforma
 ni resultados todavía inexistentes.
+
+### Aceptación funcional del paquete local en GNOME X11
+
+El 2026-11-04, después de probar el paquete
+`0.3.0-local.cursor-monitor.5+e59561699c47f75ecccfc5879fed1e7498d99a21`,
+el mantenedor declaró que todo funcionaba y autorizó explícitamente aprobar
+todas las funcionalidades. Esta es la aceptación humana de las funcionalidades
+implementadas y disponibles en el entorno local probado: zoom, dibujo/anotaciones,
+temporizador, Live Zoom, grabación GIF, recorte, portapapeles, guardado PNG
+e integración de escritorio/bandeja. La declaración humana es la fuente de
+la aprobación; los logs no se presentan como prueba individual de cada control.
+
+- Entorno: Linux x64, GNOME/X11, dos monitores 1920×1080, densidad 1,
+  escritorio 3840×1080. Ninguna automatización accedió a la sesión del usuario.
+- CTRL+5: los logs muestran capturas nativas separadas en `(0,0,1920,1080)` y
+  `(1920,0,1920,1080)`, con GIF guardados de 34 y 45 cuadros.
+- CTRL+6: la ventana y la captura de 1920×1080 corresponden al monitor bajo el cursor;
+  se copiaron recortes de 1715×960 y 1378×958 y el mantenedor confirmó el resultado.
+- CTRL+S: PNG guardados tras captura por el portal y restauración de la superposición
+  en ambos monitores; la ausencia de Registry siguió siendo informativa, sin bloquear el flujo.
+- Verificación complementaria aprobada: 314 tests, 28 verificaciones de preview,
+  formato, build, Native AOT/selftest y E2E X11 virtual.
+
+El paquete contiene cambios locales sin commit; el hash mostrado identifica la
+base, no una versión publicada con estas correcciones. Esta aceptación no aprueba
+tags, publicación ni despliegue, ni extiende la cobertura a Windows, macOS,
+Wayland, otras GPU, lápices, escalas o topologías. Las funcionalidades todavía
+no implementadas permanecen en el plan.
 
 ### Aceptación manual de preview en GNOME Wayland
 

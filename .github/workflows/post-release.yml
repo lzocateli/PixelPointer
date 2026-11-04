@@ -70,7 +70,7 @@ jobs:
     name: Verify Homebrew tap
     needs: homebrew
     if: ${{ needs.homebrew.outputs.formula == 'current' }}
-    runs-on: macos-15
+    runs-on: macos-15-intel
     timeout-minutes: 15
     permissions: {}
     steps:

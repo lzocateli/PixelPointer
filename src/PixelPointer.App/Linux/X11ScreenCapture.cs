@@ -1,13 +1,16 @@
 using System.Runtime.InteropServices;
 using PixelPointer.App.Capture;
+using PixelPointer.App.Overlay;
 using SkiaSharp;
 
 namespace PixelPointer.App.Linux;
 
 /// <summary>Captura da janela raiz com XGetImage (sessões X11).</summary>
-internal sealed partial class X11ScreenCapture : IScreenCapture
+internal sealed partial class X11ScreenCapture(DisplayBounds? region = null) : IScreenCapture
 {
-    public string Name => "X11 XGetImage";
+    private bool _loggedRegion;
+
+    public string Name => region is null ? "X11 XGetImage" : "X11 XGetImage (monitor sob o cursor)";
 
     public Task<SKBitmap> CaptureAsync(CancellationToken cancellationToken)
     {
@@ -21,9 +24,17 @@ internal sealed partial class X11ScreenCapture : IScreenCapture
         {
             var root = Xlib.XDefaultRootWindow(display);
             var screen = Xlib.XDefaultScreen(display);
-            var width = Xlib.XDisplayWidth(display, screen);
-            var height = Xlib.XDisplayHeight(display, screen);
-            var image = Xlib.XGetImage(display, root, 0, 0, (uint)width, (uint)height, ~0UL, Xlib.ZPixmap);
+            var desktopWidth = Xlib.XDisplayWidth(display, screen);
+            var desktopHeight = Xlib.XDisplayHeight(display, screen);
+            var bounds = CaptureBounds(region, desktopWidth, desktopHeight);
+            var width = bounds.Width;
+            var height = bounds.Height;
+            if (region is not null && !_loggedRegion)
+            {
+                DiagnosticLog.Write("RECORDING", $"source=XGetImage-region desktop={desktopWidth}x{desktopHeight} capture=({bounds.X},{bounds.Y},{width},{height})");
+                _loggedRegion = true;
+            }
+            var image = Xlib.XGetImage(display, root, bounds.X, bounds.Y, (uint)width, (uint)height, ~0UL, Xlib.ZPixmap);
             if (image == 0)
             {
                 throw new InvalidOperationException("XGetImage falhou.");
@@ -59,6 +70,18 @@ internal sealed partial class X11ScreenCapture : IScreenCapture
         {
             Xlib.XCloseDisplay(display);
         }
+    }
+
+    internal static DisplayBounds CaptureBounds(DisplayBounds? region, int desktopWidth, int desktopHeight)
+    {
+        var bounds = region ?? new DisplayBounds(0, 0, desktopWidth, desktopHeight);
+        if (bounds.X < 0 || bounds.Y < 0 || bounds.Width <= 0 || bounds.Height <= 0
+            || (long)bounds.X + bounds.Width > desktopWidth || (long)bounds.Y + bounds.Height > desktopHeight)
+        {
+            throw new InvalidOperationException("O monitor selecionado não corresponde à área de trabalho X11 atual.");
+        }
+
+        return bounds;
     }
 
     internal static void CopyOpaquePixels(ReadOnlySpan<byte> source, Span<byte> destination)
@@ -116,6 +139,10 @@ internal static partial class Xlib
 
     [LibraryImport(Lib)]
     internal static partial nint XDefaultRootWindow(nint display);
+
+    [LibraryImport(Lib)]
+    internal static partial int XQueryPointer(nint display, nint window, out nuint root, out nuint child,
+        out int rootX, out int rootY, out int windowX, out int windowY, out uint mask);
 
     [LibraryImport(Lib)]
     internal static partial int XDefaultScreen(nint display);

@@ -44,6 +44,10 @@ O runner verifica foco externo, atalhos, modificadores, conflito real de grab,
 zoom, cores, espessura, edicao, quadros, alfa, salvamento e erro visivel,
 ordem dos logs de diagnostico de teclas/botoes, tray, reinicio, quit com janela
 aberta e instalacao/abertura/remocao do launcher.
+Tambem verifica recorte por Ctrl+6 com PNG de 160x100 e gravacao por Ctrl+5
+com GIF de 800x600 e varios quadros. O desktop virtual tem um monitor;
+a consulta X11 deve refletir a nova posição do cursor antes de cada operação.
+a escolha entre monitores exige o aceite local em uma topologia real.
 O launcher interpreta o arquivo desktop instalado, mas aceita exclusivamente
 `/package/pixelpointer daemon`, sem shell e com `Terminal=false`.
 

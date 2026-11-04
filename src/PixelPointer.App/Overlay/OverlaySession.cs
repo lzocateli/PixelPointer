@@ -74,9 +74,10 @@ internal sealed unsafe partial class OverlaySession
     private readonly BreakTimer? _timer;
     private string? _timerText;
     private SKPoint? _snipStart;
+    private readonly DisplayBounds? _snipMonitor;
 
     internal OverlaySession(SKBitmap? screenshot, OverlayMode mode, bool transparentBackground = false,
-        AppSettings? settings = null, IScreenCapture? snapshotCapture = null)
+        AppSettings? settings = null, IScreenCapture? snapshotCapture = null, DisplayBounds? snipMonitor = null)
     {
         if (screenshot is null && (!transparentBackground || mode != OverlayMode.Draw))
         {
@@ -87,6 +88,7 @@ internal sealed unsafe partial class OverlaySession
         _screenshot = screenshot;
         _image = screenshot is null ? null : SKImage.FromBitmap(screenshot);
         _snapshotCapture = snapshotCapture;
+        _snipMonitor = mode == OverlayMode.Snip ? snipMonitor : null;
         _mode = mode;
         _transparentBackground = transparentBackground;
         _annotations = new AnnotationDocument(settings.PenColor, settings.PenWidth);
@@ -113,6 +115,15 @@ internal sealed unsafe partial class OverlaySession
         var wayland = string.Equals(SDL_GetCurrentVideoDriver(), "wayland", StringComparison.Ordinal);
         // O Wayland não expõe o cursor global nem posiciona janelas; o screencapture do macOS cobre só o monitor principal.
         var cursorDisplay = wayland || OperatingSystem.IsMacOS() ? null : SecondaryDisplayUnderCursor();
+        if (_snipMonitor is { } snipTarget)
+        {
+            SDL_Rect primaryBounds;
+            var primary = SDL_GetDisplayBounds(SDL_GetPrimaryDisplay(), &primaryBounds)
+                && snipTarget == new DisplayBounds(primaryBounds.x, primaryBounds.y, primaryBounds.w, primaryBounds.h);
+            cursorDisplay = primary ? null
+                : new SDL_Rect { x = snipTarget.X, y = snipTarget.Y, w = snipTarget.Width, h = snipTarget.Height };
+            DiagnosticLog.Write("DISPLAY", $"snip-placement={(primary ? "default-fullscreen" : "secondary-position")}");
+        }
         if (cursorDisplay is { } placed)
         {
             flags = (flags & ~SDL_WindowFlags.SDL_WINDOW_FULLSCREEN) | SDL_WindowFlags.SDL_WINDOW_HIDDEN;
@@ -149,6 +160,13 @@ internal sealed unsafe partial class OverlaySession
         if (cursorDisplay is { } target)
         {
             SDL_SetWindowPosition(window, target.x, target.y);
+            if (_mode == OverlayMode.Snip)
+            {
+                var targetPoint = new SDL_Point { x = target.x + target.w / 2, y = target.y + target.h / 2 };
+                var targetDisplay = SDL_GetDisplayForPoint(&targetPoint);
+                var centered = SDL_WINDOWPOS_CENTERED_DISPLAY(targetDisplay);
+                SDL_SetWindowPosition(window, centered, centered);
+            }
             if (!SDL_SetWindowFullscreen(window, true))
             {
                 SDL_DestroyWindow(window);

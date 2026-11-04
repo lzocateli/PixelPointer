@@ -189,7 +189,7 @@ somente superfícies do projeto autorizadas, após a prova local em containers.
 | Ambiente | Plano e limite |
 | --- | --- |
 | Linux x64, X11 mínimo virtual | Executado: 10/10 consecutivos com compositor/tray; variantes sem compositor e sem tray passaram |
-| GNOME X11 | Aceite manual concluído: desenho transparente, visual automático, zoom, PNG, CapsLock/NumLock, uso nos dois monitores e encerramento por Sair; prints confirmam monitor 1, ícone/menu da tray e status sem daemon após saída; Zoom/Desenhar pela tray, launcher e matriz completa ainda sem comprovação manual |
+| GNOME X11 | Funcionalidades locais aprovadas pelo mantenedor em 2026-11-04 no pacote `0.3.0-local.cursor-monitor.5`, com dois monitores 1920×1080 em escala 1; ver o registro de aceite abaixo. A aprovação não encerra a matriz multiplataforma |
 | Wayland | ScreenCast/PipeWire passou em Sway isolado; indisponibilidade sem GPU tratada. Preview v0.1.3-preview.14 aceita manualmente para captura, zoom e desenho no Ubuntu 26.04.1/GNOME Wayland, com consentimento observado. Reutilização do token, duração do indicador, latência sem diálogo, multi-monitor e outros compositores pendentes; sem mock de consentimento ou XTEST via XWayland como prova nativa |
 | Linux arm64 | Executar em arquitetura apropriada antes de declarar cobertura |
 | Windows/macOS | Backends nativos e sessão gráfica descartável próprios; estratégia depende de compatibilidade com a regra de containers e autorização específica se exigir exceção |
@@ -205,6 +205,34 @@ O aceite final exige a matriz executada com limites explícitos, evidências
 reproduzíveis e revisão humana dos primeiros vídeos/referências. A autorização
 registrada permite construir a suíte; não aprova antecipadamente ferramentas,
 exceções de segurança, suporte multiplataforma ou resultados ainda inexistentes.
+
+### Aceite funcional do pacote local no GNOME X11
+
+Em 2026-11-04, após testar o pacote
+`0.3.0-local.cursor-monitor.5+e59561699c47f75ecccfc5879fed1e7498d99a21`,
+o mantenedor declarou: “Agora ficou otimo, tudo funcionando” e autorizou
+“aprovar todas as funcionalidades”. Esse é o aceite humano das funcionalidades
+implementadas e disponíveis no ambiente local testado: zoom, desenho/anotações,
+timer, Live Zoom, gravação GIF, recorte, área de transferência, salvamento PNG
+e integração desktop/tray. A declaração humana é a fonte dessa aprovação;
+os logs não são apresentados como prova individual de cada controle.
+
+- Ambiente: Linux x64, GNOME/X11, dois monitores 1920×1080, densidade 1,
+  área de trabalho 3840×1080. Não houve automação acessando a sessão do usuário.
+- CTRL+5: logs mostram capturas nativas separadas em `(0,0,1920,1080)` e
+  `(1920,0,1920,1080)`, com GIFs salvos de 34 e 45 quadros.
+- CTRL+6: janela e captura de 1920×1080 correspondem ao monitor sob o cursor;
+  recortes de 1715×960 e 1378×958 foram copiados e o mantenedor confirmou o resultado.
+- CTRL+S: PNGs salvos após captura pelo portal e restauração da sobreposição
+  nos dois monitores; ausência de Registry continuou informativa, sem impedir o fluxo.
+- Verificação complementar do pacote: 314 testes, 28 verificações de preview,
+  formatação, build, Native AOT/selftest e E2E X11 virtual aprovados.
+
+O pacote contém alterações locais não commitadas; o hash exibido identifica a
+base, não uma release publicada com essas correções. Este aceite não aprova
+tags, publicação ou deploy, nem transfere cobertura para Windows, macOS,
+Wayland, outras GPUs, canetas, escalas ou topologias. Funcionalidades ainda
+não implementadas permanecem no plano.
 
 ### Aceite manual da preview no GNOME Wayland
 

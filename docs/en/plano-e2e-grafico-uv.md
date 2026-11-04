@@ -179,7 +179,7 @@ project-owned surfaces only after local container proof.
 | Environment | Plan and limit |
 | --- | --- |
 | Linux x64, minimum virtual X11 | Executed: 10/10 consecutive with compositor/tray; variants without compositor and without tray passed |
-| GNOME X11 | Manual acceptance: transparent drawing, automatic visual selection, zoom, PNG, CapsLock/NumLock, both monitors and Sair shutdown; screenshots confirm monitor 1, tray icon/menu and no-daemon status after exit; Zoom/Draw through tray, launcher and full matrix not individually proven |
+| GNOME X11 | Local features accepted by the maintainer on 2026-11-04 in package `0.3.0-local.cursor-monitor.5`, with two 1920×1080 displays at scale 1; see the acceptance record below. This approval does not complete the cross-platform matrix |
 | Wayland | ScreenCast/PipeWire passed on isolated Sway; no-GPU unavailability handled. v0.1.3-preview.14 manually accepted for capture, zoom and drawing on Ubuntu 26.04.1/GNOME Wayland, with consent observed. Token reuse, indicator duration, latency without the dialog, multi-monitor and other compositors remain pending; no consent mocks or XTEST via XWayland as native evidence |
 | Linux arm64 | Execute on appropriate architecture before claiming coverage |
 | Windows/macOS | Native backends and disposable graphical sessions; strategy depends on container compatibility and specific authorization for any exception |
@@ -194,6 +194,34 @@ Final acceptance requires the executed matrix with explicit limits, reproducible
 evidence and human review of initial videos/references. Authorization allows building
 the suite, not preapproval of tools, security exceptions, cross-platform support or
 results that do not exist yet.
+
+### Functional acceptance of the local package on GNOME X11
+
+On 2026-11-04, after testing package
+`0.3.0-local.cursor-monitor.5+e59561699c47f75ecccfc5879fed1e7498d99a21`,
+the maintainer stated that everything was working and explicitly authorized
+acceptance of all features. This is human acceptance of the implemented features
+available in the tested local environment: zoom, drawing/annotations, break timer,
+Live Zoom, GIF recording, snipping, clipboard, PNG saving and desktop/tray integration.
+The human statement is the source of this approval; logs are not presented as
+individual proof of every control.
+
+- Environment: Linux x64, GNOME/X11, two 1920×1080 displays, density 1,
+  3840×1080 desktop. No automation accessed the user's session.
+- CTRL+5: logs show separate native captures at `(0,0,1920,1080)` and
+  `(1920,0,1920,1080)`, with saved GIFs containing 34 and 45 frames.
+- CTRL+6: the window and 1920×1080 capture match the display under the cursor;
+  1715×960 and 1378×958 snips were copied and the maintainer confirmed the result.
+- CTRL+S: PNGs saved after portal capture and overlay restoration on both displays;
+  the missing Registry remained informational and did not block the workflow.
+- Complementary package checks passed: 314 tests, 28 preview checks,
+  formatting, build, Native AOT/selftest and virtual X11 E2E.
+
+The package contains uncommitted local changes; the displayed hash identifies
+the base, not a published release containing these fixes. This acceptance does
+not approve tags, publication or deployment, nor extend coverage to Windows,
+macOS, Wayland, other GPUs, pens, scales or topologies. Features not yet
+implemented remain in the plan.
 
 ### Manual preview acceptance on GNOME Wayland
 

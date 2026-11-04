@@ -7,6 +7,24 @@ internal readonly record struct DisplayBounds(int X, int Y, int Width, int Heigh
 
 internal static class DisplayLayout
 {
+    internal static SKRect RecordingCrop(DisplayBounds target, IReadOnlyList<DisplayBounds> displays,
+        int captureWidth, int captureHeight)
+    {
+        if (target.Width <= 0 || target.Height <= 0 || displays.Count == 0)
+        {
+            throw new InvalidOperationException("Não foi possível determinar o monitor da gravação.");
+        }
+
+        var left = displays.Min(display => display.X);
+        var top = displays.Min(display => display.Y);
+        var right = displays.Max(display => display.X + display.Width);
+        var bottom = displays.Max(display => display.Y + display.Height);
+        var scaleX = (float)captureWidth / (right - left);
+        var scaleY = (float)captureHeight / (bottom - top);
+        return SKRect.Create((target.X - left) * scaleX, (target.Y - top) * scaleY,
+            target.Width * scaleX, target.Height * scaleY);
+    }
+
     /// <summary>
     /// Região do monitor <paramref name="target"/> numa captura da área de trabalho inteira, cuja origem é o canto
     /// superior esquerdo da união dos monitores (que pode ter coordenadas negativas no Windows).
