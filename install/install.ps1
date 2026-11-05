@@ -248,8 +248,15 @@ if ($Uninstall) {
     if ($versionExitCode -ne 0 -or $versionOutput -notmatch '^\d+\.\d+\.\d+') {
         Exit-Install 1 'o executavel nao confirmou ser o PixelPointer; nada foi removido'
     }
-    $statusOutput = & $target status 2>$null
-    $statusExitCode = $LASTEXITCODE
+    $previousErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $statusOutput = & $target status 2>$null
+        $statusExitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
     if ($statusExitCode -eq 0) {
         $null = & $target quit
         if ($LASTEXITCODE -ne 0) {
