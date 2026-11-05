@@ -34,6 +34,20 @@ comandos, identificadores, caminhos e marcadores literais exigidos pelas ferrame
 - Mudanças incompatíveis usam `!` no cabeçalho e o rodapé `BREAKING CHANGE:` com impacto e migração.
 - Não faça commit sem solicitação explícita. Push, publicação e deploy sempre exigem solicitação explícita.
 
+## Ferramentas Git e GitHub no VS Code
+
+O projeto usa apenas ferramentas gratuitas, combinando duas extensões recomendadas em `.vscode/extensions.json`:
+
+- **GitLens Community** (`eamodio.gitlens`) para entender o código: blame inline, hovers, CodeLens, histórico de arquivo/linha, comparação de revisões e links de commits para PRs e issues. Como o repositório é público, o Commit Graph também é gratuito.
+- **GitHub Pull Requests** (`github.vscode-pull-request-github`) para colaborar: criar, revisar, comentar, aprovar e fazer merge de PRs, além de listar e abrir issues, tudo sem custo.
+
+Regras para agentes:
+
+- Para operações em PRs, issues e workflows, use o `gh` CLI ou a extensão GitHub Pull Requests. Não use recursos pagos do GitLens/GitKraken.
+- Não use ferramentas MCP que dependam do GitLens Pro ou de conta GitKraken, como `gitlens_launchpad`, `gitlens_start_review`, `gitlens_start_work`, `git_commit_composer` ou GitKraken AI. Não sugira trial, assinatura ou login GitKraken como requisito.
+- Ferramentas MCP do GitKraken equivalentes a comandos Git locais (`git_status`, `git_log_or_diff`, `git_blame`) são aceitáveis, mas o Git CLI é preferível.
+- Se um colaborador quiser ocultar avisos Pro, recomende `"gitlens.plusFeatures.enabled": false` nas configurações de **usuário**, nunca no workspace, porque isso também esconde o Commit Graph gratuito.
+
 ## Regras invariáveis
 
 - Preserve conteúdo do usuário; conflitos nunca podem causar sobrescrita silenciosa.
