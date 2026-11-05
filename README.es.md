@@ -100,24 +100,55 @@ y limitaciones en la [guía de uso](docs/es/uso.md#actualizar).
 
 ## Desinstalar
 
-Si el daemon está en ejecución, detenlo primero con `pixelpointer quit`. Después,
-desinstala PixelPointer con el mismo método que usaste para instalarlo:
+Para la eliminación manual, detén primero el daemon con `pixelpointer quit`. Los
+modos `--uninstall` y `-Uninstall` de los instaladores intentan detenerlo
+automáticamente. Después, desinstala PixelPointer con el mismo método que usaste
+para instalarlo:
 
 | Instalación | Comando o acción |
 | --- | --- |
-| `install.sh` (Linux/macOS, prefijo predeterminado) | En Linux, ejecuta `pixelpointer uninstall-desktop-file` si registraste la entrada del menú; luego ejecuta `rm -f -- "$HOME/.local/bin/pixelpointer" && rm -r -- "$HOME/.local/lib/pixelpointer"` |
+| `install.sh` (Linux/macOS, prefijo predeterminado) | Ejecuta `sh install.sh --uninstall`; para una instalación global, detén el daemon y elimina la integración del escritorio como usuario antes de ejecutar `sudo sh install.sh --uninstall --global` |
 | `install.sh --prefix <dir>` | Elimina `<dir>/bin/pixelpointer` y `<dir>/lib/pixelpointer`, sustituyendo `<dir>` por el prefijo usado durante la instalación |
 | `install.sh --global` | Ejecuta `sudo rm -f -- /usr/local/bin/pixelpointer` y `sudo rm -r -- /usr/local/lib/pixelpointer`; en Linux, elimina primero la entrada del escritorio con el binario instalado |
-| `install.ps1` | En PowerShell, ejecuta `Remove-Item -LiteralPath "$env:LOCALAPPDATA\Programs\pixelpointer" -Recurse` |
+| `install.ps1` | En PowerShell, ejecuta `install.ps1 -Uninstall` |
 | `.deb` | `sudo apt remove pixelpointer` |
 | Homebrew | `brew uninstall lzocateli/tap/pixelpointer` |
 | winget | `winget uninstall lzocateli.PixelPointer` |
+
+### Limpieza completa opcional
+
+Para instalaciones de usuario hechas con `install.sh` o `install.ps1`, ejecuta
+el instalador de la release con la opción explícita de limpieza completa:
+
+```bash
+# Linux
+curl -fsSL https://github.com/lzocateli/PixelPointer/releases/latest/download/install.sh | sh -s -- --uninstall --purge
+```
+
+```powershell
+# Windows PowerShell 5.1+
+[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor 3072
+& ([scriptblock]::Create((Invoke-RestMethod https://github.com/lzocateli/PixelPointer/releases/latest/download/install.ps1))) -Uninstall -Purge
+```
+
+El purge elimina la configuración, la caché y todos los archivos de
+`Screenshots`; en Linux también elimina solo los elementos de la Papelera cuyo
+nombre contenga `pixelpointer`. En Windows, la Papelera se conserva. El script
+detiene el daemon si está en ejecución. La operación es permanente: revisa
+primero la carpeta de capturas. El purge requiere una instalación de usuario sin
+elevación y un recibo válido; para instalaciones anteriores al recibo, ejecuta
+primero el instalador una vez. En macOS, usa `--uninstall` sin `--purge`, ya que
+las capturas pueden estar en una carpeta elegida por el usuario. Para
+instalaciones globales, `.deb`, Homebrew o winget, usa el método correspondiente
+de la tabla.
 
 Si agregaste manualmente la línea de inicio de PowerShell al perfil, elimínala
 de `$PROFILE.CurrentUserAllHosts`. En Linux, elimina la integración del escritorio
 antes del ejecutable con `pixelpointer uninstall-desktop-file`, usando el mismo
 `XDG_DATA_HOME`; el comando conserva los archivos modificados. La desinstalación
-no borra las capturas PNG. Consulta la [guía de uso](docs/es/uso.md#desinstalar)
+estándar no borra las capturas PNG o GIF; la limpieza opcional puede eliminarlas.
+No elimina adjuntos de VS Code ni cachés de compilación y pruebas de .NET.
+Consulta la [guía de uso](docs/es/uso.md#desinstalar)
 para ver detalles y límites de cada método.
 
 ## Primeros pasos

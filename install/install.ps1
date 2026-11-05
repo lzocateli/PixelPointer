@@ -1,12 +1,11 @@
 <#
 .SYNOPSIS
-Instala o pixelpointer no Windows a partir das releases do GitHub.
+Instala ou remove o pixelpointer no Windows.
 
 .DESCRIPTION
-Baixa pixelpointer-win-<arch>.zip e SHA256SUMS da release, confere o SHA-256,
-testa o aplicativo (pixelpointer.exe, SDL3.dll e libSkiaSharp.dll) ao lado do
-destino e o instala em -InstallDir, substituindo a versao anterior somente
-depois que a nova executa. Compativel com Windows PowerShell 5.1 e PowerShell 7.
+Instala pixelpointer-win-<arch>.zip da release ou remove a instalacao em
+-InstallDir. -Purge tambem apaga configuracoes, cache IPC e capturas do usuario;
+a Lixeira do Windows e preservada. Compativel com Windows PowerShell 5.1 e 7.
 
 O instalador nao altera o PATH nem o registro: se o diretorio de destino nao
 estiver no PATH, ele mostra os comandos a executar, um que grava o PATH do
@@ -27,11 +26,21 @@ Diretorio absoluto de destino. Padrao: %LOCALAPPDATA%\Programs\pixelpointer.
 Diretorio com os pacotes e o SHA256SUMS (espelho ou testes). Exige https://,
 exceto http://127.0.0.1 e http://localhost. Nao combina com -Version.
 
+.PARAMETER Uninstall
+Remove a instalacao em -InstallDir (padrao: LOCALAPPDATA\Programs\pixelpointer).
+
+.PARAMETER Purge
+Com -Uninstall, remove tambem configuracoes, cache IPC e capturas do usuario.
+Exige execucao sem elevacao. A Lixeira do Windows nao e alterada.
+
 .PARAMETER Help
 Mostra esta ajuda (equivalente a --help).
 
 .EXAMPLE
 powershell -ExecutionPolicy Bypass -File install.ps1
+
+.EXAMPLE
+powershell -ExecutionPolicy Bypass -File install.ps1 -Uninstall -Purge
 
 .EXAMPLE
 [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor 3072
@@ -52,6 +61,10 @@ param(
     [string] $InstallDir,
 
     [string] $BaseUrl,
+
+    [switch] $Uninstall,
+
+    [switch] $Purge,
 
     [switch] $Help,
 
@@ -102,13 +115,19 @@ if ($Help -or ($null -ne $RemainingArguments -and ($RemainingArguments -contains
         Get-Help $PSCommandPath -Full
     }
     else {
-        Write-Output 'Uso: install.ps1 [-Version <X.Y.Z|latest>] [-InstallDir <dir>] [-BaseUrl <url>] [-Help]'
+        Write-Output 'Uso: install.ps1 [-Version <X.Y.Z|latest>] [-InstallDir <dir>] [-Uninstall [-Purge]] [-BaseUrl <url>] [-Help]'
     }
     return
 }
 
 if ($null -ne $RemainingArguments -and $RemainingArguments.Count -gt 0) {
     Exit-Install 2 "argumento desconhecido: $($RemainingArguments -join ' ')"
+}
+if ($Purge -and -not $Uninstall) {
+    Exit-Install 2 '-Purge exige -Uninstall'
+}
+if ($Uninstall -and ($PSBoundParameters.ContainsKey('Version') -or -not [string]::IsNullOrEmpty($BaseUrl))) {
+    Exit-Install 2 '-Uninstall nao combina com -Version ou -BaseUrl'
 }
 
 $onWindows = ($PSVersionTable.PSEdition -ne 'Core') -or ((Get-Variable -Name IsWindows -ValueOnly -ErrorAction SilentlyContinue) -eq $true)
@@ -158,6 +177,112 @@ if ($InstallDir -notmatch '^([A-Za-z]:\\|\\\\[^\\]+\\[^\\]+)') {
     Exit-Install 2 '-InstallDir deve ser um caminho absoluto'
 }
 $InstallDir = [IO.Path]::GetFullPath($InstallDir).TrimEnd('\')
+
+if ($Uninstall) {
+    $installRoot = [IO.Path]::GetPathRoot($InstallDir).TrimEnd('\')
+    if ([string]::IsNullOrEmpty($installRoot) -or $InstallDir -eq $installRoot) {
+        Exit-Install 2 '-InstallDir nao pode ser a raiz de uma unidade'
+    }
+
+    $target = Join-Path $InstallDir 'pixelpointer.exe'
+    if (-not (Test-Path -LiteralPath $InstallDir -PathType Container) -or
+        -not (Test-Path -LiteralPath $target -PathType Leaf)) {
+        Exit-Install 1 "instalacao PixelPointer nao encontrada em $InstallDir"
+    }
+    $installItem = Get-Item -LiteralPath $InstallDir -Force
+    $binaryItem = Get-Item -LiteralPath $target -Force
+    if (($installItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
+        ($binaryItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+        Exit-Install 1 'o diretorio ou executavel da instalacao e um link; nada foi removido'
+    }
+
+    $receiptPath = Join-Path $InstallDir 'install-receipt.json'
+    if (-not (Test-Path -LiteralPath $receiptPath -PathType Leaf)) {
+        Exit-Install 1 'recibo install.ps1 ausente; reinstale pelo instalador antes de remover'
+    }
+    $receiptItem = Get-Item -LiteralPath $receiptPath -Force
+    if (($receiptItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+        Exit-Install 1 'recibo da instalacao e um link; nada foi removido'
+    }
+    try {
+        $receipt = Get-Content -LiteralPath $receiptPath -Raw | ConvertFrom-Json
+    }
+    catch {
+        Exit-Install 1 'recibo da instalacao invalido; nada foi removido'
+    }
+    if ($receipt.version -ne 1 -or $receipt.installer -ne 'install.ps1' -or $receipt.scope -notin @('user', 'global')) {
+        Exit-Install 1 'recibo da instalacao nao corresponde ao install.ps1; nada foi removido'
+    }
+
+    $purgeDirectories = @()
+    if ($Purge) {
+        $principal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
+        if ($principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+            Exit-Install 1 '-Purge deve ser executado pelo usuario, sem elevacao'
+        }
+        if ([string]::IsNullOrWhiteSpace($env:APPDATA) -or [string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)) {
+            Exit-Install 1 'APPDATA e LOCALAPPDATA precisam estar definidos para -Purge'
+        }
+        $pictures = [Environment]::GetFolderPath([Environment+SpecialFolder]::MyPictures,
+            [Environment+SpecialFolderOption]::DoNotVerify)
+        if ([string]::IsNullOrWhiteSpace($pictures) -or -not [IO.Path]::IsPathRooted($pictures)) {
+            Exit-Install 1 'nao foi possivel resolver a pasta de capturas'
+        }
+        $purgeDirectories = @(
+            (Join-Path $env:APPDATA 'PixelPointer'),
+            (Join-Path $env:LOCALAPPDATA 'PixelPointer'),
+            (Join-Path (Join-Path $pictures 'Imagens') 'Screenshots')
+        )
+        foreach ($directory in $purgeDirectories) {
+            if (Test-Path -LiteralPath $directory) {
+                $item = Get-Item -LiteralPath $directory -Force
+                if (-not $item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+                    Exit-Install 1 "caminho de dados inseguro: $directory; nada foi removido"
+                }
+            }
+        }
+    }
+
+    $versionOutput = & $target --version
+    $versionExitCode = $LASTEXITCODE
+    if ($versionExitCode -ne 0 -or $versionOutput -notmatch '^\d+\.\d+\.\d+') {
+        Exit-Install 1 'o executavel nao confirmou ser o PixelPointer; nada foi removido'
+    }
+    $statusOutput = & $target status 2>$null
+    $statusExitCode = $LASTEXITCODE
+    if ($statusExitCode -eq 0) {
+        $null = & $target quit
+        if ($LASTEXITCODE -ne 0) {
+            Exit-Install 1 'nao foi possivel encerrar o daemon; nada foi removido'
+        }
+        $processes = @(Get-Process -Name pixelpointer -ErrorAction SilentlyContinue)
+        foreach ($process in $processes) {
+            try {
+                Wait-Process -Id $process.Id -Timeout 10 -ErrorAction Stop
+            }
+            catch {
+                if (Get-Process -Id $process.Id -ErrorAction SilentlyContinue) {
+                    Exit-Install 1 'o daemon nao encerrou a tempo; nada foi removido'
+                }
+            }
+        }
+    }
+
+    Remove-Item -LiteralPath $InstallDir -Recurse -Force -ErrorAction Stop
+    if ($Purge) {
+        foreach ($directory in $purgeDirectories) {
+            if (Test-Path -LiteralPath $directory -PathType Container) {
+                Remove-Item -LiteralPath $directory -Recurse -Force -ErrorAction Stop
+            }
+        }
+    }
+    Write-Output "PixelPointer removido de $InstallDir"
+    if ($Purge) {
+        Write-Output 'Configuracoes, cache IPC e capturas removidos; a Lixeira do Windows foi preservada.'
+    }
+    $global:LASTEXITCODE = 0
+    return
+}
 
 # Valor nativo do registro: nao e afetado pela emulacao x64/x86 em Windows ARM64.
 $nativeArchitecture = (Get-ItemProperty -LiteralPath 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment' -Name PROCESSOR_ARCHITECTURE).PROCESSOR_ARCHITECTURE

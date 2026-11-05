@@ -277,11 +277,13 @@ exec setpriv --reuid "${TEST_USER%%:*}" --regid "${TEST_USER##*:}" --clear-group
             }
 
             $result = Invoke-Installer @('-Help')
-            Assert-Case -Name '-Help' -Condition ($result.Code -eq 0 -and $result.Output -match 'InstallDir') -Result $result
+            Assert-Case -Name '-Help' -Condition ($result.Code -eq 0 -and $result.Output -match 'InstallDir' -and $result.Output -match 'Uninstall') -Result $result
             $result = Invoke-Installer @('--help')
             Assert-Case -Name '--help' -Condition ($result.Code -eq 0) -Result $result
             $result = Invoke-Installer @('--bogus')
             Assert-Case -Name 'argumento desconhecido' -Condition ($result.Code -eq 2) -Result $result
+            $result = Invoke-Installer @('-Purge')
+            Assert-Case -Name '-Purge sem -Uninstall' -Condition ($result.Code -eq 2) -Result $result
             $result = Invoke-Installer @('-BaseUrl', 'http://example.com/x')
             Assert-Case -Name 'http fora do loopback' -Condition ($result.Code -eq 2) -Result $result
             $result = Invoke-Installer @('-BaseUrl', $baseUrl, '-Version', '0.1.0')
@@ -340,6 +342,19 @@ exec setpriv --reuid "${TEST_USER%%:*}" --regid "${TEST_USER##*:}" --clear-group
             $output = & $shell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command $command 2>&1 | Out-String
             $result = [pscustomobject]@{ Code = $LASTEXITCODE; Output = $output }
             Assert-Case -Name 'execucao como scriptblock' -Condition ($result.Code -eq 0 -and $output -match 'excecao capturada' -and $output -match 'sessao continua' -and (Test-Path -LiteralPath (Join-Path $scriptDir 'pixelpointer.exe'))) -Result $result
+
+            $receipt = Join-Path $scriptDir 'install-receipt.json'
+            $receiptBackup = Join-Path $scratch 'install-receipt.json'
+            Copy-Item -LiteralPath $receipt -Destination $receiptBackup
+            Remove-Item -LiteralPath $receipt -Force
+            $result = Invoke-Installer @('-Uninstall', '-InstallDir', $scriptDir)
+            Assert-Case -Name 'desinstalacao sem recibo e recusada' -Condition ($result.Code -eq 1 -and (Test-Path -LiteralPath (Join-Path $scriptDir 'pixelpointer.exe'))) -Result $result
+            Copy-Item -LiteralPath $receiptBackup -Destination $receipt
+
+            $result = Invoke-Installer @('-Uninstall', '-InstallDir', $scriptDir)
+            Assert-Case -Name 'desinstalacao em diretorio explicito' -Condition ($result.Code -eq 0 -and -not (Test-Path -LiteralPath $scriptDir)) -Result $result
+            $result = Invoke-Installer @('-Uninstall', '-Purge', '-InstallDir', (Join-Path $scratch 'missing-purge'))
+            Assert-Case -Name 'purge recusa instalacao ausente' -Condition ($result.Code -eq 1 -and -not (Test-Path -LiteralPath (Join-Path $scratch 'missing-purge'))) -Result $result
         }
     }
 }
