@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/lzocateli/PixelPointer/compare/v0.3.2...v0.4.0) (2026-11-05)
+
+
+### Adicionado
+
+* **app:** adicione atualização opt-in com proveniência Sigstore verificada ([#59](https://github.com/lzocateli/PixelPointer/issues/59)) ([b49a5ec](https://github.com/lzocateli/PixelPointer/commit/b49a5ec3c5848d414d5b0c7318b2b3340bf94737))
+
 ## [0.3.2](https://github.com/lzocateli/PixelPointer/compare/v0.3.1...v0.3.2) (2026-11-04)
 
 
