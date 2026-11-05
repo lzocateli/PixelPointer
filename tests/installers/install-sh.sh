@@ -154,40 +154,44 @@ else
     grep -q 'Autoatualização ... disponível' "$work/out" || fail "aplicativo nao reconheceu a instalacao de usuario"
     pass "prefixo padrao \$HOME/.local"
 
-    purge_data="$work/purge-data"
-    purge_config="$work/purge-config"
-    purge_state="$work/purge-state"
-    purge_cache="$work/purge-cache"
-    pictures="$work/pictures"
-    mkdir -p "$work/bin" "$purge_data/Trash/files" "$purge_data/Trash/info" \
-        "$purge_config/pixelpointer" "$purge_state/pixelpointer" "$purge_cache/pixelpointer/run" \
-        "$pictures/Screenshots"
-    # Keep these expressions literal for expansion when the fixture helper runs.
-    # shellcheck disable=SC2016
-    printf '%s\n' '#!/bin/sh' '[ "${1:-}" = PICTURES ] || exit 1' 'echo "$TEST_PICTURES_DIR"' > "$work/bin/xdg-user-dir"
-    chmod 0755 "$work/bin/xdg-user-dir"
-    printf 'config\n' > "$purge_config/pixelpointer/update.json"
-    printf 'state\n' > "$purge_state/pixelpointer/screencast-restore-token"
-    printf 'cache\n' > "$purge_cache/pixelpointer/run/pixelpointer.sock"
-    printf 'capture\n' > "$pictures/Screenshots/pixelpointer-test.png"
-    printf 'trash\n' > "$purge_data/Trash/files/pixelpointer-test.png"
-    printf 'metadata\n' > "$purge_data/Trash/info/pixelpointer-test.png.trashinfo"
-    printf 'keep\n' > "$purge_data/Trash/files/keep.txt"
-    printf 'keep\n' > "$purge_data/Trash/info/keep.txt.trashinfo"
-    env XDG_DATA_HOME="$purge_data" "$HOME/.local/bin/pixelpointer" install-desktop-file >/dev/null
-    expect_code 0 "purge do usuario" env HOME="$HOME" XDG_CONFIG_HOME="$purge_config" \
-        XDG_STATE_HOME="$purge_state" XDG_CACHE_HOME="$purge_cache" XDG_DATA_HOME="$purge_data" \
-        TEST_PICTURES_DIR="$pictures" PATH="$work/bin:$PATH" sh "$installer" --uninstall --purge
-    [ ! -e "$HOME/.local/lib/pixelpointer" ] || fail "purge manteve o aplicativo"
-    [ ! -e "$purge_config/pixelpointer" ] || fail "purge manteve configuracoes"
-    [ ! -e "$purge_state/pixelpointer" ] || fail "purge manteve estado"
-    [ ! -e "$purge_cache/pixelpointer" ] || fail "purge manteve cache"
-    [ ! -e "$pictures/Screenshots" ] || fail "purge manteve capturas"
-    [ ! -e "$purge_data/Trash/files/pixelpointer-test.png" ] || fail "purge manteve item PixelPointer na Lixeira"
-    [ ! -e "$purge_data/Trash/info/pixelpointer-test.png.trashinfo" ] || fail "purge manteve metadata PixelPointer na Lixeira"
-    [ -f "$purge_data/Trash/files/keep.txt" ] || fail "purge removeu outro item da Lixeira"
-    [ -f "$purge_data/Trash/info/keep.txt.trashinfo" ] || fail "purge removeu metadata alheia da Lixeira"
-    pass "purge Linux remove dados do app e preserva outros itens da Lixeira"
+    if [ "$(uname -s)" = "Linux" ]; then
+        purge_data="$work/purge-data"
+        purge_config="$work/purge-config"
+        purge_state="$work/purge-state"
+        purge_cache="$work/purge-cache"
+        pictures="$work/pictures"
+        mkdir -p "$work/bin" "$purge_data/Trash/files" "$purge_data/Trash/info" \
+            "$purge_config/pixelpointer" "$purge_state/pixelpointer" "$purge_cache/pixelpointer/run" \
+            "$pictures/Screenshots"
+        # Keep these expressions literal for expansion when the fixture helper runs.
+        # shellcheck disable=SC2016
+        printf '%s\n' '#!/bin/sh' '[ "${1:-}" = PICTURES ] || exit 1' 'echo "$TEST_PICTURES_DIR"' > "$work/bin/xdg-user-dir"
+        chmod 0755 "$work/bin/xdg-user-dir"
+        printf 'config\n' > "$purge_config/pixelpointer/update.json"
+        printf 'state\n' > "$purge_state/pixelpointer/screencast-restore-token"
+        printf 'cache\n' > "$purge_cache/pixelpointer/run/pixelpointer.sock"
+        printf 'capture\n' > "$pictures/Screenshots/pixelpointer-test.png"
+        printf 'trash\n' > "$purge_data/Trash/files/pixelpointer-test.png"
+        printf 'metadata\n' > "$purge_data/Trash/info/pixelpointer-test.png.trashinfo"
+        printf 'keep\n' > "$purge_data/Trash/files/keep.txt"
+        printf 'keep\n' > "$purge_data/Trash/info/keep.txt.trashinfo"
+        env XDG_DATA_HOME="$purge_data" "$HOME/.local/bin/pixelpointer" install-desktop-file >/dev/null
+        expect_code 0 "purge do usuario" env HOME="$HOME" XDG_CONFIG_HOME="$purge_config" \
+            XDG_STATE_HOME="$purge_state" XDG_CACHE_HOME="$purge_cache" XDG_DATA_HOME="$purge_data" \
+            TEST_PICTURES_DIR="$pictures" PATH="$work/bin:$PATH" sh "$installer" --uninstall --purge
+        [ ! -e "$HOME/.local/lib/pixelpointer" ] || fail "purge manteve o aplicativo"
+        [ ! -e "$purge_config/pixelpointer" ] || fail "purge manteve configuracoes"
+        [ ! -e "$purge_state/pixelpointer" ] || fail "purge manteve estado"
+        [ ! -e "$purge_cache/pixelpointer" ] || fail "purge manteve cache"
+        [ ! -e "$pictures/Screenshots" ] || fail "purge manteve capturas"
+        [ ! -e "$purge_data/Trash/files/pixelpointer-test.png" ] || fail "purge manteve item PixelPointer na Lixeira"
+        [ ! -e "$purge_data/Trash/info/pixelpointer-test.png.trashinfo" ] || fail "purge manteve metadata PixelPointer na Lixeira"
+        [ -f "$purge_data/Trash/files/keep.txt" ] || fail "purge removeu outro item da Lixeira"
+        [ -f "$purge_data/Trash/info/keep.txt.trashinfo" ] || fail "purge removeu metadata alheia da Lixeira"
+        pass "purge Linux remove dados do app e preserva outros itens da Lixeira"
+    else
+        printf 'skip: purge disponivel somente no Linux (%s)\n' "$(uname -s)"
+    fi
 fi
 
 printf 'install.sh aprovado (uid %s)\n' "$(id -u)"
