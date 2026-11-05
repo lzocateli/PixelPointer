@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/lzocateli/PixelPointer/compare/v0.4.0...v0.5.0) (2026-11-05)
+
+
+### Adicionado
+
+* **packaging:** adicione purge e sincronize estados da tray ([#61](https://github.com/lzocateli/PixelPointer/issues/61)) ([9313a15](https://github.com/lzocateli/PixelPointer/commit/9313a155cd981990c16e85352a24a556b0670be2))
+
 ## [0.4.0](https://github.com/lzocateli/PixelPointer/compare/v0.3.2...v0.4.0) (2026-11-05)
 
 
