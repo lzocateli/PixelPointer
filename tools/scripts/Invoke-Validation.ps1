@@ -18,6 +18,9 @@ executam no host com o SDK do global.json. E o modo usado no Windows e no
 macOS, onde nao ha imagem de container com a toolchain nativa; -Aot publica o
 RID do host em artifacts/aot/<rid>.
 
+Ambos os modos verificam o codigo de saida do runner de instaladores, inclusive
+quando o ultimo cenario espera uma recusa com codigo nativo diferente de zero.
+
 O container roda como root: no Podman rootless isso corresponde ao usuario do
 host; no Docker, os diretorios gerados (bin, obj, artifacts) sao devolvidos ao
 usuario do host ao final. O script nunca altera perfil, registro ou PATH do host.
@@ -111,6 +114,11 @@ if ($Native) {
     Write-Output "Validando no host ($hostRid) com $(& dotnet --version)$(if ($Aot) { ' (com Native AOT)' })"
     Push-Location $repositoryRoot
     try {
+        $powerShell = Join-Path $PSHOME $(if ($IsWindows) { 'pwsh.exe' } else { 'pwsh' })
+        & $powerShell -NoProfile -File tools/scripts/Test-InstallerExitCode.ps1
+        if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+        }
         foreach ($step in $nativeSteps) {
             Write-Output "`n> dotnet $($step -join ' ')"
             & dotnet @step
@@ -157,6 +165,7 @@ $steps.Add('mkdir -p /tmp/apt/lists/partial /tmp/apt/archives/partial')
 $steps.Add('apt_opts="-o APT::Sandbox::User=root -o Dir::State::Lists=/tmp/apt/lists -o Dir::Cache::Archives=/tmp/apt/archives"')
 $steps.Add('apt-get $apt_opts update -qq')
 $steps.Add('DEBIAN_FRONTEND=noninteractive apt-get $apt_opts install -y -qq --no-install-recommends libfontconfig1 >/dev/null')
+$steps.Add('pwsh -NoProfile -File tools/scripts/Test-InstallerExitCode.ps1')
 $steps.Add('dotnet restore PixelPointer.slnx')
 $steps.Add('dotnet format PixelPointer.slnx --verify-no-changes --no-restore')
 $steps.Add('dotnet build PixelPointer.slnx --configuration Release --no-restore')

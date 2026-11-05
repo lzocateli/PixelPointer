@@ -12,6 +12,26 @@ builds Native AOT packages for all supported RIDs, and
 through Homebrew and winget. Every step has a local equivalent under
 `tools/scripts/`.
 
+## Installer test exit codes
+
+The `tools/scripts/Test-Installers.ps1` runner exits with `0` when all scenarios
+pass, even if the last scenario tests an expected rejection with native exit code
+`1`. Scenario failures still return `1`; usage errors return `2`.
+The “Instaladores aprovados” message does not replace checking the exit code.
+
+At the clone root, in a validation container with PowerShell 7, run:
+
+```powershell
+pwsh -NoProfile -File tools/scripts/Test-InstallerExitCode.ps1
+```
+
+The test needs no packages or HTTP server and uses only temporary files and
+processes. It must pass four combinations of previous native exit code and failure
+count, exiting with `0`. It also runs in both container and `-Native` modes of
+`Invoke-Validation.ps1`; it does not replace real installer tests on each OS.
+If a candidate fails because of this issue, integrate the fix, update the Release
+PR, and generate another `rc.N+1` without moving the previous tag.
+
 ## Required Candidate (release preview)
 
 Every stable `vX.Y.Z` is preceded by a candidate `vX.Y.Z-rc.N`, validated in the
