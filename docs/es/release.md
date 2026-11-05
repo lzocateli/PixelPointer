@@ -11,6 +11,26 @@ publica paquetes Native AOT para todos los RIDs compatibles y
 [`post-release.yml`](../../.github/workflows/post-release.yml) distribuye por
 Homebrew y winget. Cada etapa tiene un equivalente local en `tools/scripts/`.
 
+## Código de salida de las pruebas de instaladores
+
+El runner `tools/scripts/Test-Installers.ps1` termina con `0` cuando todos los
+escenarios pasan, aunque el último pruebe un rechazo esperado con código nativo
+`1`. Los escenarios fallidos siguen devolviendo `1`; los errores de uso devuelven
+`2`. El mensaje “Instaladores aprovados” no sustituye comprobar el código de salida.
+
+En la raíz del clon, en un container de validación con PowerShell 7, ejecute:
+
+```powershell
+pwsh -NoProfile -File tools/scripts/Test-InstallerExitCode.ps1
+```
+
+La prueba no requiere paquetes ni servidor HTTP y solo utiliza procesos y archivos
+temporales. Debe aprobar cuatro combinaciones de código nativo anterior y cantidad
+de fallos, terminando con `0`. También se ejecuta en los modos container y `-Native`
+de `Invoke-Validation.ps1`; no sustituye las pruebas reales de instaladores por SO.
+Si una candidata falla por este problema, integre la corrección, actualice el
+Release PR y genere otra `rc.N+1`, sin mover la etiqueta anterior.
+
 ## Candidata obligatoria (release preview)
 
 Toda versión estable `vX.Y.Z` va precedida de una candidata `vX.Y.Z-rc.N`, validada en

@@ -12,6 +12,26 @@ Native AOT para todos os RIDs suportados e o
 Homebrew e pelo winget. Cada etapa tem um comando local equivalente em
 `tools/scripts/`.
 
+## Código de saída dos testes de instaladores
+
+O runner `tools/scripts/Test-Installers.ps1` encerra com `0` quando todos os
+cenários passam, mesmo que o último cenário teste uma recusa esperada com código
+nativo `1`. Falhas de cenário continuam retornando `1`; erros de uso retornam `2`.
+A mensagem “Instaladores aprovados” não substitui a verificação do código de saída.
+
+Na raiz do clone, em um container de validação com PowerShell 7, execute:
+
+```powershell
+pwsh -NoProfile -File tools/scripts/Test-InstallerExitCode.ps1
+```
+
+O teste não exige pacotes nem servidor HTTP e usa somente processos e arquivos
+temporários. Deve aprovar quatro combinações de código nativo anterior e contagem
+de falhas, encerrando com `0`. Ele também integra os modos container e `-Native`
+de `Invoke-Validation.ps1`; não substitui os testes reais dos instaladores por SO.
+Se uma candidata falhar por esse problema, integre a correção, atualize o Release
+PR e gere outra `rc.N+1`, sem mover a tag anterior.
+
 ## Candidata obrigatória (release preview)
 
 Toda estável `vX.Y.Z` é precedida por uma candidata `vX.Y.Z-rc.N`, validada no
