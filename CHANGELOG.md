@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.5.0](https://github.com/lzocateli/PixelPointer/compare/v0.4.0...v0.5.0) (2026-11-05)
+
+
+### Adicionado
+
+* **packaging:** adicione purge e sincronize estados da tray ([#61](https://github.com/lzocateli/PixelPointer/issues/61)) ([9313a15](https://github.com/lzocateli/PixelPointer/commit/9313a155cd981990c16e85352a24a556b0670be2))
+
+
+### Corrigido
+
+* **packaging:** ajuste instaladores e padronize ferramentas git gratuitas ([#63](https://github.com/lzocateli/PixelPointer/issues/63)) ([db1d40e](https://github.com/lzocateli/PixelPointer/commit/db1d40ebe8ff14b1cb4ee096814e79dc2950c232))
+* **packaging:** retorne sucesso após testes dos instaladores ([#67](https://github.com/lzocateli/PixelPointer/issues/67)) ([f8a0d67](https://github.com/lzocateli/PixelPointer/commit/f8a0d6737d832b890d8d1e90ba4fda0498f38568))
+
 ## [0.4.0](https://github.com/lzocateli/PixelPointer/compare/v0.3.2...v0.4.0) (2026-11-05)
 
 
