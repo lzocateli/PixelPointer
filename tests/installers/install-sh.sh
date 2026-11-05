@@ -39,9 +39,12 @@ expect_code() {
 
 expect_code 0 "--help" sh "$installer" --help
 grep -q -- '--prefix' "$work/out" || fail "--help sem a opcao --prefix"
+grep -q -- '--uninstall' "$work/out" || fail "--help sem a opcao --uninstall"
+grep -q -- '--purge' "$work/out" || fail "--help sem a opcao --purge"
 pass "--help"
 
 expect_code 2 "argumento desconhecido" sh "$installer" --bogus
+expect_code 2 "--purge sem --uninstall" sh "$installer" --purge
 expect_code 2 "http fora do loopback" sh "$installer" --base-url http://example.com/x
 expect_code 2 "credenciais na URL" sh "$installer" --base-url http://localhost:80@example.com/x
 expect_code 2 "prefixo relativo" sh "$installer" --base-url "$base_url" --prefix relativo
@@ -94,6 +97,18 @@ fi
 [ "$(ls -A "$prefix/bin")" = "pixelpointer" ] || fail "arquivos restantes em $prefix/bin"
 pass "reinstalacao substitui o aplicativo sem residuos"
 
+receipt_backup="$work/install-receipt.json"
+cp "$prefix/lib/pixelpointer/install-receipt.json" "$receipt_backup"
+rm -f -- "$prefix/lib/pixelpointer/install-receipt.json"
+expect_code 1 "desinstalacao sem recibo" sh "$installer" --uninstall --prefix "$prefix"
+[ -x "$prefix/lib/pixelpointer/pixelpointer" ] || fail "desinstalacao sem recibo removeu o aplicativo"
+mv "$receipt_backup" "$prefix/lib/pixelpointer/install-receipt.json"
+
+expect_code 0 "desinstalacao em prefixo explicito" sh "$installer" --uninstall --prefix "$prefix"
+[ ! -e "$prefix/lib/pixelpointer" ] || fail "desinstalacao manteve o aplicativo"
+[ ! -e "$prefix/bin/pixelpointer" ] || fail "desinstalacao manteve o link"
+pass "desinstalacao remove somente o aplicativo"
+
 foreign="$work/foreign-link"
 mkdir -p "$foreign/bin"
 ln -s /bin/true "$foreign/bin/pixelpointer"
@@ -138,6 +153,41 @@ else
     expect_code 0 "origem detectada pelo aplicativo" "$HOME/.local/bin/pixelpointer" update status
     grep -q 'Autoatualização ... disponível' "$work/out" || fail "aplicativo nao reconheceu a instalacao de usuario"
     pass "prefixo padrao \$HOME/.local"
+
+    purge_data="$work/purge-data"
+    purge_config="$work/purge-config"
+    purge_state="$work/purge-state"
+    purge_cache="$work/purge-cache"
+    pictures="$work/pictures"
+    mkdir -p "$work/bin" "$purge_data/Trash/files" "$purge_data/Trash/info" \
+        "$purge_config/pixelpointer" "$purge_state/pixelpointer" "$purge_cache/pixelpointer/run" \
+        "$pictures/Screenshots"
+    # Keep these expressions literal for expansion when the fixture helper runs.
+    # shellcheck disable=SC2016
+    printf '%s\n' '#!/bin/sh' '[ "${1:-}" = PICTURES ] || exit 1' 'echo "$TEST_PICTURES_DIR"' > "$work/bin/xdg-user-dir"
+    chmod 0755 "$work/bin/xdg-user-dir"
+    printf 'config\n' > "$purge_config/pixelpointer/update.json"
+    printf 'state\n' > "$purge_state/pixelpointer/screencast-restore-token"
+    printf 'cache\n' > "$purge_cache/pixelpointer/run/pixelpointer.sock"
+    printf 'capture\n' > "$pictures/Screenshots/pixelpointer-test.png"
+    printf 'trash\n' > "$purge_data/Trash/files/pixelpointer-test.png"
+    printf 'metadata\n' > "$purge_data/Trash/info/pixelpointer-test.png.trashinfo"
+    printf 'keep\n' > "$purge_data/Trash/files/keep.txt"
+    printf 'keep\n' > "$purge_data/Trash/info/keep.txt.trashinfo"
+    env XDG_DATA_HOME="$purge_data" "$HOME/.local/bin/pixelpointer" install-desktop-file >/dev/null
+    expect_code 0 "purge do usuario" env HOME="$HOME" XDG_CONFIG_HOME="$purge_config" \
+        XDG_STATE_HOME="$purge_state" XDG_CACHE_HOME="$purge_cache" XDG_DATA_HOME="$purge_data" \
+        TEST_PICTURES_DIR="$pictures" PATH="$work/bin:$PATH" sh "$installer" --uninstall --purge
+    [ ! -e "$HOME/.local/lib/pixelpointer" ] || fail "purge manteve o aplicativo"
+    [ ! -e "$purge_config/pixelpointer" ] || fail "purge manteve configuracoes"
+    [ ! -e "$purge_state/pixelpointer" ] || fail "purge manteve estado"
+    [ ! -e "$purge_cache/pixelpointer" ] || fail "purge manteve cache"
+    [ ! -e "$pictures/Screenshots" ] || fail "purge manteve capturas"
+    [ ! -e "$purge_data/Trash/files/pixelpointer-test.png" ] || fail "purge manteve item PixelPointer na Lixeira"
+    [ ! -e "$purge_data/Trash/info/pixelpointer-test.png.trashinfo" ] || fail "purge manteve metadata PixelPointer na Lixeira"
+    [ -f "$purge_data/Trash/files/keep.txt" ] || fail "purge removeu outro item da Lixeira"
+    [ -f "$purge_data/Trash/info/keep.txt.trashinfo" ] || fail "purge removeu metadata alheia da Lixeira"
+    pass "purge Linux remove dados do app e preserva outros itens da Lixeira"
 fi
 
 printf 'install.sh aprovado (uid %s)\n' "$(id -u)"

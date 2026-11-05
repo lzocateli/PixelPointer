@@ -12,17 +12,20 @@ base_url=""
 work_dir=""
 staged_dir=""
 backup_dir=""
+uninstall=0
+purge=0
 
 usage() {
     cat <<'EOF'
-Instala o pixelpointer (Native AOT, sem dependencia de .NET) a partir das
-releases do GitHub, conferindo o SHA-256 do pacote com o SHA256SUMS da release.
+Instala ou remove o pixelpointer (Native AOT, sem dependencia de .NET). A
+instalacao vem das releases do GitHub e confere o SHA-256 com o SHA256SUMS.
 
 O aplicativo (executavel e bibliotecas nativas SDL3 e libSkiaSharp) vai para
 <prefixo>/lib/pixelpointer e o comando e um link em <prefixo>/bin/pixelpointer.
 
 Uso:
   install.sh [--version <X.Y.Z|latest>] [--prefix <dir> | --global]
+    install.sh --uninstall [--prefix <dir> | --global] [--purge]
   install.sh --help
 
 Opcoes:
@@ -30,12 +33,17 @@ Opcoes:
   --prefix <dir>   Prefixo absoluto. Padrao: $HOME/.local.
   --global         Usa o prefixo /usr/local. Exige root (use sudo); o
                    instalador nunca se autoeleva.
+    --uninstall      Remove a instalacao. Para --global no Linux, remova antes
+                                     a integracao desktop e encerre o daemon como usuario.
+    --purge          Com --uninstall, remove configuracoes, cache, capturas e
+                                     itens PixelPointer da Lixeira (Linux, usuario).
   --base-url <url> Diretorio com os pacotes e o SHA256SUMS (espelho ou
                    testes). Exige https://, exceto http://127.0.0.1 e
                    http://localhost. Nao combina com --version.
   --help           Mostra esta ajuda.
 
-Requisitos: curl ou wget, tar com gzip e sha256sum ou shasum.
+Requisitos de instalacao: curl ou wget, tar com gzip e sha256sum ou shasum.
+--purge no Linux tambem exige xdg-user-dir.
 Plataformas: linux-x64 e linux-arm64 (glibc 2.34+ e libfontconfig),
 osx-arm64 e osx-x64.
 
@@ -50,6 +58,7 @@ estiver no PATH, ele mostra a linha a adicionar. No Linux, rode depois
 Exemplos:
   sh install.sh
   sh install.sh --version 0.1.0 --prefix "$HOME/apps"
+  sh install.sh --uninstall --purge
   curl -fsSL https://github.com/lzocateli/PixelPointer/releases/latest/download/install.sh | sudo sh -s -- --global
 
 Codigos de saida: 0 sucesso; 1 falha; 2 erro de uso.
@@ -130,6 +139,14 @@ while [ $# -gt 0 ]; do
             global=1
             shift
             ;;
+        --uninstall)
+            uninstall=1
+            shift
+            ;;
+        --purge)
+            purge=1
+            shift
+            ;;
         --base-url)
             require_value "$@"
             base_url="$2"
@@ -144,6 +161,13 @@ while [ $# -gt 0 ]; do
             ;;
     esac
 done
+
+if [ "$purge" -eq 1 ] && [ "$uninstall" -ne 1 ]; then
+    usage_error "--purge exige --uninstall"
+fi
+if [ "$uninstall" -eq 1 ] && { [ "$version_set" -eq 1 ] || [ -n "$base_url" ]; }; then
+    usage_error "--uninstall nao combina com --version ou --base-url"
+fi
 
 version="${version#v}"
 if [ "$version" != "latest" ]; then
@@ -237,11 +261,101 @@ case "$os_name" in
         ;;
 esac
 
+if [ "$purge" -eq 1 ]; then
+    if [ "$os_name" != "Linux" ]; then
+        usage_error "--purge so esta disponivel no Linux"
+    fi
+    if [ "$global" -eq 1 ] || [ "$(id -u)" -eq 0 ]; then
+        usage_error "--purge exige instalacao e execucao no usuario; nao use sudo ou --global"
+    fi
+    for path in "${XDG_CONFIG_HOME:-$HOME/.config}" "${XDG_STATE_HOME:-$HOME/.local/state}" \
+        "${XDG_CACHE_HOME:-$HOME/.cache}" "${XDG_DATA_HOME:-$HOME/.local/share}"; do
+        case "$path" in
+            /*) [ "$path" != "/" ] || die "diretorio XDG invalido para --purge" ;;
+            *) die "diretorios XDG devem ser absolutos para --purge" ;;
+        esac
+    done
+    if ! command -v xdg-user-dir >/dev/null 2>&1; then
+        die "--purge exige xdg-user-dir (pacote xdg-user-dirs) para localizar as capturas"
+    fi
+    pictures_dir="$(xdg-user-dir PICTURES)" || die "nao foi possivel resolver PICTURES"
+    case "$pictures_dir" in
+        /*)
+            if [ "$pictures_dir" = "/" ] || [ "$pictures_dir" = "$HOME" ]; then
+                die "diretorio PICTURES invalido para --purge"
+            fi
+            ;;
+        *) die "xdg-user-dir nao retornou um caminho absoluto para PICTURES" ;;
+    esac
+fi
+
 asset="pixelpointer-$rid.tar.gz"
 lib_root="$prefix/lib"
 bin_dir="$prefix/bin"
 app_dir="$lib_root/pixelpointer"
 link="$bin_dir/pixelpointer"
+
+if [ "$uninstall" -eq 1 ]; then
+    if [ -L "$app_dir" ] || [ ! -d "$app_dir" ] || [ -L "$app_dir/pixelpointer" ] || [ ! -f "$app_dir/pixelpointer" ]; then
+        die "instalacao PixelPointer nao encontrada ou caminho inesperado em $app_dir"
+    fi
+    receipt="$app_dir/install-receipt.json"
+    if [ -L "$receipt" ] || [ ! -f "$receipt" ] || ! grep -Eq '"installer"[[:space:]]*:[[:space:]]*"install\.sh"' "$receipt"; then
+        die "recibo install.sh ausente ou invalido em $app_dir; reinstale pelo instalador antes de remover"
+    fi
+    if [ -L "$link" ]; then
+        current_target="$(readlink "$link")"
+        if [ "$current_target" != "$app_dir/pixelpointer" ]; then
+            die "$link aponta para $current_target; nenhum arquivo foi removido"
+        fi
+    elif [ -e "$link" ]; then
+        die "$link nao e um link do PixelPointer; nenhum arquivo foi removido"
+    fi
+    "$app_dir/pixelpointer" --version >/dev/null || die "executavel em $app_dir nao e um PixelPointer valido"
+    if [ "$global" -eq 1 ]; then
+        if [ "$os_name" = "Linux" ]; then
+            printf 'Aviso: daemon e integracao desktop do usuario nao foram alterados; remova-os antes de executar com sudo.\n' >&2
+        fi
+    else
+        if "$app_dir/pixelpointer" status >/dev/null 2>&1; then
+            "$app_dir/pixelpointer" quit >/dev/null || die "nao foi possivel encerrar o daemon; nada foi removido"
+            attempts=0
+            while "$app_dir/pixelpointer" status >/dev/null 2>&1; do
+                attempts=$((attempts + 1))
+                if [ "$attempts" -ge 10 ]; then
+                    die "o daemon nao encerrou a tempo; nada foi removido"
+                fi
+                sleep 1
+            done
+        fi
+        if [ "$os_name" = "Linux" ]; then
+            "$app_dir/pixelpointer" uninstall-desktop-file || die "nao foi possivel remover a integracao desktop; nenhum binario foi removido"
+        fi
+        if [ -n "${XDG_RUNTIME_DIR:-}" ] && [ -S "$XDG_RUNTIME_DIR/pixelpointer.sock" ] && [ ! -L "$XDG_RUNTIME_DIR/pixelpointer.sock" ]; then
+            rm -f -- "$XDG_RUNTIME_DIR/pixelpointer.sock"
+        fi
+    fi
+
+    rm -f -- "$link"
+    rm -rf -- "$app_dir"
+    if [ "$purge" -eq 1 ]; then
+        config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+        state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
+        cache_home="${XDG_CACHE_HOME:-$HOME/.cache}"
+        data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
+        rm -rf -- "$config_home/pixelpointer" "$state_home/pixelpointer" "$cache_home/pixelpointer" "$pictures_dir/Screenshots"
+        for trash_dir in "$data_home/Trash/files" "$data_home/Trash/info"; do
+            if [ -d "$trash_dir" ] && [ ! -L "$trash_dir" ]; then
+                find "$trash_dir" -mindepth 1 -maxdepth 1 -iname '*pixelpointer*' -exec rm -rf -- {} +
+            fi
+        done
+    fi
+    printf 'PixelPointer removido de %s\n' "$prefix"
+    if [ "$purge" -eq 1 ]; then
+        printf 'Configuracoes, cache, capturas e itens PixelPointer da Lixeira removidos.\n'
+    fi
+    exit 0
+fi
 
 download() {
     if command -v curl >/dev/null 2>&1; then

@@ -195,7 +195,7 @@ internal sealed unsafe partial class TrayController : IDisposable
             DiagnosticLog.Write("TRAY", "action=update-check-now");
             updates.RequestCheck();
         });
-        SdlTrayNative.SetTrayEntryEnabled(_installEntry, updates.Origin.CanSelfUpdate && preferences.CheckAutomatically);
+        RefreshUpdates();
     }
 
     internal static IReadOnlyList<string> AboutEntries =>
