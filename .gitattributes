@@ -1,15 +1,25 @@
 # Normalize text files in the repository.
 * text=auto eol=lf
 
-# Windows-native scripts retain their expected line endings.
+# Pin PowerShell source to stable CRLF; PowerShell 7 supports it on Windows, macOS and Linux.
 *.bat text eol=crlf
 *.cmd text eol=crlf
 *.ps1 text eol=crlf
+*.psm1 text eol=crlf
+*.psd1 text eol=crlf
 
-# Keep container and Unix entrypoints executable after checkout.
+# POSIX and cross-platform shell entrypoints require stable LF on every host.
 *.sh text eol=lf
+*.bash text eol=lf
+*.zsh text eol=lf
+*.fish text eol=lf
 **/entrypoint* text eol=lf
 .githooks/* text eol=lf
+
+# Common cross-platform scripting languages use LF.
+*.py text eol=lf
+*.pl text eol=lf
+*.rb text eol=lf
 
 # Web source and package metadata use stable Unix line endings.
 *.css text eol=lf

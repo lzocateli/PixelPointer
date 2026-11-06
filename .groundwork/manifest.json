@@ -57,7 +57,7 @@
   "files": {
     ".gitattributes": {
       "component": "core",
-      "sha256": "a9732bc6b25deabf2dc6755dbb5176c089fd4c7dfb01f07e8e87097aa3cbe858"
+      "sha256": "a51139a7880acb3d3cbca495171c89e14c9f5b613154c31d2060a6d36e23c46b"
     },
     ".githooks/pre-commit": {
       "component": "secret-scanning",
@@ -249,7 +249,7 @@
     },
     "tools/scripts/ci/GroundworkRelease.psm1": {
       "component": "release",
-      "sha256": "d717ceab9b15c6228315ea05572631dd6dc839acd4cb443c2033f04f96cb0d1d"
+      "sha256": "9e71b0b47a6d6b55d1718e02fefaa06fe61ff16e9a5fd8334e1ba530ba21e284"
     },
     "tools/scripts/ci/New-ReleaseManifest.ps1": {
       "component": "release",
