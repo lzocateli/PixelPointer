@@ -1,10 +1,10 @@
 <#
 .SYNOPSIS
-Testa a matriz de origens permitidas para submissão winget.
+Testa as origens permitidas para submissão winget por versão explícita.
 
 .DESCRIPTION
-Usa decisões sintéticas para post-release (push em main), republish na tag,
-workflow_dispatch, PR e execução sem submissão. Não acessa o GitHub nem submete manifestos.
+Usa decisões sintéticas para workflow_dispatch em main, republish na tag,
+push, PR e execução sem submissão. Não acessa o GitHub nem submete manifestos.
 
 .PARAMETER RemainingArguments
 Aceita somente --help; outros valores retornam erro de uso.
@@ -33,7 +33,6 @@ if ($RemainingArguments.Count -gt 0) {
 
 Import-Module (Join-Path $PSScriptRoot 'ReleaseGovernance.psm1') -Force
 $cases = @(
-    @{ EventName = 'push'; Ref = 'refs/heads/main'; Version = '1.2.3'; Submit = $true; Expected = $true }
     @{ EventName = 'workflow_dispatch'; Ref = 'refs/heads/main'; Version = '1.2.3'; Submit = $true; Expected = $true }
     @{ EventName = 'workflow_dispatch'; Ref = 'refs/tags/v1.2.3'; Version = '1.2.3'; Submit = $true; Expected = $true }
     @{ EventName = 'workflow_dispatch'; Ref = 'refs/heads/main'; Version = '1.2.3'; Submit = $false; Expected = $true }
@@ -57,4 +56,4 @@ foreach ($case in $cases) {
     }
 }
 
-Write-Output 'Aprovado: post-release em main, republish na tag, dispatch manual, sem submissão, PR, origem inválida e recusa.'
+Write-Output 'Aprovado: dispatch manual versionado, republish na tag, sem submissão, push, PR, origem inválida e recusa.'

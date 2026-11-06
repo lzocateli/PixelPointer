@@ -26,7 +26,6 @@ jobs:
     name: Release assets
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    environment: release
     permissions:
       contents: write
       id-token: write
@@ -83,9 +82,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.tag }}
+          REPUBLISH: ${{ inputs.republish }}
         run: >
           ./tools/scripts/ci/Publish-ReleaseAssets.ps1 -Tag $env:RELEASE_TAG -Path artifacts/release-assets
-          -EntriesPath artifacts/release-entries/assets.json
+          -EntriesPath artifacts/release-entries/assets.json -Republish:($env:REPUBLISH -eq 'true')
 
       - name: Upload release entries
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

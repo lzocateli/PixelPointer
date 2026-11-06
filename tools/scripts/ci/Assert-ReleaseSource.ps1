@@ -22,6 +22,9 @@ Publication, ReleasePlease ou Snapshot.
 Exige equivalência com a candidata aceita quando obrigatória.
 .PARAMETER Republish
 Somente artefatos ausentes de uma release já pública.
+.PARAMETER Preflight
+Valida a fonte antes do build, sem autorizar publicação. Exige tag e é seguido por uma
+revalidação com autorização imediatamente antes da publicação.
 .PARAMETER Tag
 Tag histórica no modo Republish.
 .PARAMETER OutputPath
@@ -42,6 +45,7 @@ param(
     [ValidateSet('Publication', 'ReleasePlease', 'Snapshot')][string] $Stage = 'Publication',
     [switch] $Stable,
     [switch] $Republish,
+    [switch] $Preflight,
     [string] $Tag = '',
     [string] $OutputPath = '',
     [Alias('h')][switch] $Help,
@@ -58,8 +62,9 @@ try {
     if ($Repository -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') { throw 'Repositório inválido.' }
     if ($Commit -notmatch '^[0-9a-f]{40}$') { throw 'SHA inválido.' }
     if ($DefaultBranch -notmatch '^[A-Za-z0-9._/-]+$' -or $DefaultBranch.Contains('..')) { throw 'Branch padrão inválida.' }
+    if ($Preflight -and ($Stage -ne 'Publication' -or -not (Test-ReleaseTagName $Tag))) { throw 'Preflight exige Stage Publication e uma tag de release válida.' }
     if ($Republish) {
-        Assert-DistributionApproval -Repository $Repository -Commit $Commit -Tag $Tag
+        if (-not $Preflight) { Assert-DistributionApproval -Repository $Repository -Commit $Commit -Tag $Tag }
         if ($Tag -cnotmatch '^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$') { throw 'Republish exige tag estável.' }
         $release = Find-GitHubRelease -Repository $Repository -Tag $Tag
         if ($null -eq $release -or $release['draft'] -or $release['prerelease']) { throw 'Republish histórico exige release estável já pública; rascunho exige nova validação de fonte.' }
@@ -86,6 +91,15 @@ try {
         throw "Release PR integrado pendente não corresponde ao SHA $Commit; recusa criar tag de uma base antiga. Resolva a integração e gere uma nova candidata."
     }
     if ($Stage -eq 'ReleasePlease') {
+        if ((Get-DistributionApprovalMode -Config (Read-CiCdConfig)) -ceq 'manual-dispatch') {
+            if ($env:CONFIRM_DISTRIBUTION -cne 'true' -or $env:AUTHORIZE_COMMIT -cne $Commit) { throw "Distribuição manual exige confirmação explícita da tag e do SHA $Commit; dispare Release novamente como administrador." }
+            $version = [string]((Get-Content -LiteralPath '.release-please-manifest.json' -Raw | ConvertFrom-Json -AsHashtable)['.'])
+            $expectedTag = "v$version"
+            if ($env:AUTHORIZE_TAG -cne $expectedTag) { throw "Tag autorizada difere da versão integrada $expectedTag." }
+            $run = Invoke-GhJson -Path "repos/$Repository/actions/runs/$env:GITHUB_RUN_ID"
+            if ($run['head_sha'] -cne $Commit) { throw 'Execução de autorização pertence a outro SHA.' }
+            Assert-ManualDistributionApproval -Repository $Repository -Commit $Commit -Tag $expectedTag -Run $run
+        }
         $releaseConfig = Get-Content -LiteralPath 'release-please-config.json' -Raw | ConvertFrom-Json -AsHashtable
         if ($releaseConfig['draft'] -isnot [bool] -or -not $releaseConfig['draft']) { throw 'Distribuição bloqueada: release-please precisa de draft=true até a aprovação de distribution.' }
         foreach ($package in ($releaseConfig['packages'] ?? @{}).Values) {
@@ -104,7 +118,7 @@ try {
     Assert-CurrentReleaseSource -Repository $Repository -Commit $Commit -DefaultBranch $DefaultBranch
     if ($Stage -eq 'Publication' -and ($Stable -or $Tag)) {
         if (-not $Tag) { $Tag = 'v' + [string]((Get-Content -LiteralPath '.release-please-manifest.json' -Raw | ConvertFrom-Json -AsHashtable)['.']) }
-        Assert-DistributionApproval -Repository $Repository -Commit $Commit -Tag $Tag
+        if (-not $Preflight) { Assert-DistributionApproval -Repository $Repository -Commit $Commit -Tag $Tag }
     }
     if ($Stage -eq 'ReleasePlease') { Write-GitHubOutput -Path $OutputPath -Values @{ release_ready = 'true' } }
 }

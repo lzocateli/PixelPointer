@@ -11,8 +11,8 @@ ativa no GitHub. Este guia complementa a
 As guardas foram implementadas no catálogo e aplicadas localmente por atualização
 gerenciada. O [contrato de integridade](release-integrity.md) documenta interfaces,
 recuperação, migração e limites; ativação remota depende de integrar estas mudanças.
-O gate `distribution` desta mudança ainda exige integração dos workflows e
-configuração dos revisores no GitHub; atualizar os arquivos locais não o ativa.
+O fluxo local agora prepara e testa artifacts privados antes do gate `distribution`.
+A configuração remota dos revisores e da merge queue ainda não foi sincronizada.
 
 ## Fluxo implementado
 
@@ -40,23 +40,15 @@ flowchart TD
       RP --> MANUAL[/"Run workflow: Release preview na main"/]
       MANUAL --> RESOLVE["Resolver versão, dependências, HEAD atual e CI verde"]
       MAINCI --> RESOLVE
-      subgraph ENV_RC_TAG["Environment: release | tag RC"]
-         RELRC{"Aprovar criação da tag RC"}
-      end
-      RESOLVE --> RELRC
-      RELRC --> RCTAG["Revalidar fonte; GitHub App cria tag e rascunho"]
+      RESOLVE --> RCTAG["Revalidar fonte; GitHub App cria tag e rascunho privado"]
       RCTAG --> RCREF[("vX.Y.Z-rc.N: prerelease em rascunho")]
       RCREF --> RCCTX["Validar versão e ancestralidade da tag"]
+      RCCTX --> PUB["Preflight: build 6 RIDs, smoke, instaladores, SBOM e artifact privado"]
       subgraph ENV_RC_DISTRIBUTION["Environment: distribution | RC"]
-         DISTRC{"Autorizar divulgação do RC"}
+         DISTRC{"Testar artifact privado e autorizar divulgação"}
       end
-      RCCTX --> DISTRC
-      DISTRC --> PUB["publish.yml: build 6 RIDs, smoke, instaladores, SBOM"]
-      subgraph ENV_RC_ASSETS["Environment: release | assets RC"]
-         RCASSETAPP{"Aprovar upload dos assets RC"}
-      end
-      PUB --> RCASSETAPP
-      RCASSETAPP --> ASSETS["Atestar e anexar assets; gerar manifesto; finalizar RC"]
+      PUB --> DISTRC
+      DISTRC --> ASSETS["Publicar os mesmos artifacts sem rebuild; atestar e gerar manifesto"]
       ASSETS --> RCFINAL[("RC pública e atestada, sem Latest")]
       RCFINAL --> Q["Disparar Deploy na tag; guard quality"]
       Q --> TESTRC[/"Baixar e testar manualmente o pacote RC"/]
@@ -84,24 +76,22 @@ flowchart TD
       subgraph ENV_STABLE_DISTRIBUTION["Environment: distribution | estável"]
          DISTFINAL{"Autorizar divulgação da estável"}
       end
-      FINALCTX --> DISTFINAL
-      DISTFINAL --> FINALBUILD["Build, smoke e SBOM da tag autorizada"]
-      subgraph ENV_STABLE_RELEASE["Environment: release | assets estáveis"]
-         FINALAPP{"Aprovar publicação dos assets"}
-      end
-      FINALBUILD --> FINALAPP
-      FINALAPP --> FINALPUB["Revalidar fonte; atestar assets e manifesto; publicar"]
+      FINALCTX --> FINALBUILD["Preflight privado: build, smoke, instaladores e SBOM"]
+      FINALBUILD --> DISTFINAL
+      DISTFINAL --> FINALPUB["Revalidar fonte; publicar mesmos artifacts sem rebuild; atestar manifesto"]
       FINALPUB --> STABLE[("Release estável pública")]
    end
 
    subgraph DISTRIBUTION["4. Distribuição e verificação"]
-      STABLE --> POST["post-release.yml"]
+      STABLE -.-> HB["Dispatch manual: distribute-homebrew.yml vX.Y.Z"]
+      HB --> HBVALID["Validar stable, manifesto, SHA256SUMS e atestações"]
       subgraph ENV_HOMEBREW["Environment: release | Homebrew"]
          BREWAPP{"Aprovar atualização do tap"}
       end
-      POST --> BREWAPP
+      HBVALID --> BREWAPP
       BREWAPP --> BREW["Atualizar tap e verificar instalação"]
-      POST --> WINGETCHECK["winget.yml: validar pacote"]
+      STABLE -.-> WG["Dispatch manual: winget.yml vX.Y.Z"]
+      WG --> WINGETCHECK["Validar stable e manifesto local"]
       subgraph ENV_WINGET["Environment: winget"]
          WINGETAPP{"Aprovar submissão ao winget"}
       end
@@ -126,16 +116,13 @@ flowchart TD
    classDef manual fill:#fff4cc,stroke:#966800,color:#3d2c00
    classDef approval fill:#ffe4e6,stroke:#be123c,color:#4c0519
    classDef artifact fill:#e7f6ec,stroke:#15803d,color:#12351e
-   class CI,RESULT,MAINCI,RP,RPCI,RESOLVE,RCTAG,RCCTX,PUB,ASSETS,Q,QS,REFRESH,RPOK,FINALCI,FINALGUARD,FINALTAG,FINALCTX,FINALBUILD,FINALPUB,POST,BREW,WINGETCHECK,WINGET,AUTOQ,VERIFYQ,PRODGUARD,VERIFYPROD automatic
-   class PR,MERGE,MANUAL,TESTRC,RPMERGE,RESUME,PROD manual
-   class REVIEW,RELRC,DISTRC,RCASSETAPP,QA,RPREVIEW,DISTFINAL,FINALAPP,BREWAPP,WINGETAPP,STABLEQA,PRODAPP approval
+   class CI,RESULT,MAINCI,RP,RPCI,RESOLVE,RCTAG,RCCTX,PUB,ASSETS,Q,QS,REFRESH,RPOK,FINALCI,FINALGUARD,FINALTAG,FINALCTX,FINALBUILD,FINALPUB,HBVALID,WINGETCHECK,BREW,AUTOQ,VERIFYQ,PRODGUARD,VERIFYPROD automatic
+   class PR,MERGE,MANUAL,TESTRC,RPMERGE,RESUME,PROD,HB,WG manual
+   class REVIEW,DISTRC,QA,RPREVIEW,DISTFINAL,BREWAPP,WINGETAPP,STABLEQA,PRODAPP approval
    class RCREF,RCFINAL,ACCEPT,FINALREF,STABLE artifact
-   style ENV_RC_TAG fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
    style ENV_RC_DISTRIBUTION fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
-   style ENV_RC_ASSETS fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
    style ENV_RC_QUALITY fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
    style ENV_STABLE_DISTRIBUTION fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
-   style ENV_STABLE_RELEASE fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
    style ENV_HOMEBREW fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
    style ENV_WINGET fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
    style ENV_STABLE_QUALITY fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
@@ -145,25 +132,30 @@ flowchart TD
 As aprovações de Environment são feitas em **Actions > execução > Review deployments**,
 não no botão de merge do PR. Um mesmo Environment pode pedir mais de uma aprovação
 em jobs diferentes; aprovar o PR não substitui aceitar o RC em `quality`.
-`distribution` autoriza a divulgação da versão e do SHA indicados no job, antes
-de qualquer pacote público no fluxo. `release` mantém as credenciais de publicação;
-uma aprovação não substitui a outra. A guarda exige prova humana na mesma execução,
+`distribution` autoriza a divulgação da versão e do SHA indicados no job, após os
+checks e, quando `distributionAfterValidation=true`, após o teste do artifact privado.
+`release` mantém credenciais de destinos que ainda dependem dele, como Homebrew;
+não substitui a aprovação de `distribution`. A guarda exige prova humana na mesma execução,
 inclusive em RC, preview manual e republish; um ambiente sem revisores não libera
-o envio. Depois da espera, fonte e CI são revalidados. Tags e rascunhos podem ser
-criados antes dessa autorização, mas os pacotes não são distribuídos ao público.
+o envio. Depois da espera, fonte e CI são revalidados. Essa autorização cobre somente
+a release canônica: ela não inicia nem autoriza Homebrew ou winget. Cada canal é
+disparado manualmente com a tag estável exata e passa por sua validação e aprovação.
+`post-release.yml` não inicia distribuições automaticamente.
 
 O CI da `main` e o release-please partem do mesmo push, mas não há dependência
 `needs` entre esses workflows. O desenho não implica que o CI da `main` terminou
 antes da resolução da candidata. O Preview gate admite o waiver auditável
 descrito na estratégia; PRs comuns, inclusive fixes, não exigem esse gate.
 
-O aceite humano em `quality` deve representar teste manual do pacote: a espera
-do Environment ocorre **antes** da conferência de assets e do smoke automatizado.
-O sucesso posterior registra o aceite; o smoke não substitui o teste gráfico humano.
+No modo atual, o revisor de `distribution` baixa e testa o artifact privado antes
+da divulgação. `quality` continua sendo um aceite separado: a espera ocorre antes
+da conferência dos assets publicados e do smoke automatizado. O plano de consolidação
+entre esses dois aceites ainda requer uma RC real e prova humana; o smoke não substitui
+o teste gráfico.
 
-A estável é reconstruída a partir da tag final, não promovida por reutilização dos
-binários do RC. A estratégia exige equivalência do código, com diferenças apenas
-de metadados de release. `production` **não bloqueia a publicação pública nem a
+A estável é construída a partir da tag final, não promovida por reutilização dos
+binários do RC; após a autorização, publica os mesmos bytes do preflight. A estratégia
+exige equivalência do código, com diferenças apenas de metadados de release. `production` **não bloqueia a publicação pública nem a
 distribuição**: ambas já começaram quando esse fluxo manual é executado.
 PixelPointer não tem servidor implantado; o deploy verifica pacotes publicados.
 

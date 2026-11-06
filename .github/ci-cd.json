@@ -2,10 +2,11 @@
   "$comment": "Semente do Altivy.Groundwork: pertence ao projeto e é lida pelos workflows gw-*. Revise mudanças em PR.",
   "schemaVersion": 1,
   "releaseDependencies": [],
+  "distributionAfterValidation": true,
   "defaultBranch": "main",
   "commitScopes": ["app", "core", "rendering", "capture", "hotkeys", "overlay", "ipc", "platform", "linux", "windows", "macos", "packaging", "tests", "docs", "tooling", "deps", "actions", "repo"],
   "dotnet": {
-    "sdkImage": "mcr.microsoft.com/dotnet/sdk:10.0.403-noble@sha256:9c7b6b263d9d4c2e4718e16dae6d75cd8f4b5ccf206f1e7d48a98eb429981b03",
+    "sdkImage": "lzocateli/dotnet-sdk:10.0.403-noble-v1",
     "solution": ""
   },
   "versionFiles": ["Directory.Build.props"],

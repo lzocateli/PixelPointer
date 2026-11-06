@@ -1,0 +1,136 @@
+name: Distribute Homebrew
+run-name: Homebrew ${{ inputs.version }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Stable release tag to distribute (vX.Y.Z)
+        type: string
+        required: true
+
+permissions: {}
+
+concurrency:
+  group: distribute-homebrew-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate stable release ${{ inputs.version }}
+    if: ${{ github.ref_name == github.event.repository.default_branch }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      attestations: read
+    steps:
+      - name: Checkout distribution scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Verify explicit stable release and attestations
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || { echo "::error::Informe uma tag stable exata vX.Y.Z."; exit 1; }
+          release=$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json tagName,isDraft,isPrerelease)
+          [[ $(jq -r '.tagName' <<<"$release") == "$RELEASE_TAG" ]] || { echo "::error::Tag resolvida difere da versão informada."; exit 1; }
+          [[ $(jq -r '.isDraft' <<<"$release") == false && $(jq -r '.isPrerelease' <<<"$release") == false ]] || { echo "::error::A distribuição Homebrew aceita somente releases stable públicas."; exit 1; }
+          mkdir -p dist
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir dist --pattern SHA256SUMS --pattern release-manifest.json
+          gh attestation verify dist/release-manifest.json --repo "$GITHUB_REPOSITORY" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/gw-release.yml"
+          gh attestation verify dist/SHA256SUMS --repo "$GITHUB_REPOSITORY" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/gw-github-assets.yml"
+          expected=$(jq -er --arg tag "$RELEASE_TAG" --arg name SHA256SUMS '.artifacts[] | select(.kind == "asset" and .name == $name) | .digest' dist/release-manifest.json)
+          actual="sha256:$(sha256sum dist/SHA256SUMS | cut -d ' ' -f 1)"
+          [[ "$actual" == "$expected" ]] || { echo "::error::SHA256SUMS não corresponde ao manifesto imutável."; exit 1; }
+          version="${RELEASE_TAG#v}"
+          ./tools/scripts/New-HomebrewFormula.ps1 -Version "$version" -ReleaseDirectory dist -OutputFile dist/Formula/pixelpointer.rb
+          ruby -c dist/Formula/pixelpointer.rb
+
+  publish:
+    name: Publish Homebrew formula for ${{ inputs.version }}
+    needs: validate
+    if: ${{ needs.validate.result == 'success' }}
+    outputs:
+      formula: ${{ steps.tap.outputs.formula }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment:
+      name: release
+      url: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ inputs.version }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout distribution scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Revalidate exact release after approval
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          release=$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json tagName,isDraft,isPrerelease)
+          [[ $(jq -r '.tagName' <<<"$release") == "$RELEASE_TAG" && $(jq -r '.isDraft' <<<"$release") == false && $(jq -r '.isPrerelease' <<<"$release") == false ]] || { echo "::error::Release stable mudou ou deixou de estar pública durante a aprovação."; exit 1; }
+          mkdir -p dist
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir dist --pattern SHA256SUMS --pattern release-manifest.json
+          gh attestation verify dist/release-manifest.json --repo "$GITHUB_REPOSITORY" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/gw-release.yml"
+          gh attestation verify dist/SHA256SUMS --repo "$GITHUB_REPOSITORY" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/gw-github-assets.yml"
+          expected=$(jq -er --arg name SHA256SUMS '.artifacts[] | select(.kind == "asset" and .name == $name) | .digest' dist/release-manifest.json)
+          actual="sha256:$(sha256sum dist/SHA256SUMS | cut -d ' ' -f 1)"
+          [[ "$actual" == "$expected" ]] || { echo "::error::SHA256SUMS diverge do manifesto após aprovação."; exit 1; }
+
+      - name: Update tap
+        id: tap
+        shell: pwsh
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          $version = $env:VERSION -replace '^v', ''
+          ./tools/scripts/Update-HomebrewTap.ps1 -Version $version -ReleaseDirectory dist -Push
+          $code = $LASTEXITCODE
+          if ($code -eq 3) {
+            Write-Output "::warning::Tap Homebrew já publica uma versão maior que $version; nenhuma alteração feita."
+            "formula=newer" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
+          if ($code -eq 0) { "formula=current" >> $env:GITHUB_OUTPUT }
+          exit $code
+
+  verify:
+    name: Verify Homebrew installation
+    needs: publish
+    if: ${{ needs.publish.result == 'success' && needs.publish.outputs.formula == 'current' }}
+    runs-on: macos-15-intel
+    timeout-minutes: 15
+    permissions: {}
+    steps:
+      - name: Install exact selected release from tap
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+          HOMEBREW_NO_ANALYTICS: '1'
+          HOMEBREW_NO_ENV_HINTS: '1'
+        run: |
+          set -euo pipefail
+          expected="${VERSION#v}"
+          brew install lzocateli/tap/pixelpointer
+          actual="$(pixelpointer --version)"
+          case "$actual" in
+            "$expected"|"$expected"+*) echo "ok: $actual" ;;
+            *) echo "::error::Tap instalou '$actual', não $expected."; exit 1 ;;
+          esac
+          pixelpointer selftest
+          brew test lzocateli/tap/pixelpointer

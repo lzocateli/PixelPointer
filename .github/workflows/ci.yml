@@ -6,6 +6,8 @@ name: CI
 on:
   pull_request:
     types: [opened, synchronize, reopened, edited]
+  merge_group:
+    types: [checks_requested]
   push:
     branches:
       - main
@@ -13,11 +15,11 @@ on:
 
 permissions: {}
 
-# Em PRs, uma execução nova espera a anterior: cancelar uma execução em andamento deixa um check
-# Result com falha no mesmo commit, e o ruleset considera todas as execuções do check, bloqueando o merge.
+# Em PRs e merge groups, uma execução nova espera a anterior: cancelar uma execução em andamento deixa
+# um check Result com falha no mesmo commit e pode bloquear o merge. Pushes/dispatches podem cancelar.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name != 'pull_request' }}
+  cancel-in-progress: ${{ github.event_name != 'pull_request' && github.event_name != 'merge_group' }}
 
 jobs:
   hygiene:

@@ -1,8 +1,7 @@
 # Gerenciado pelo Altivy.Groundwork (componente release-preview). Não edite: mudanças vão para o catálogo.
 # Release preview (docs/estrategia-de-release.md): disparo manual na branch padrão. Calcula a candidata
-# vX.Y.Z-rc.N da versão do Release PR aberto, marca a tag no commit-base do Release PR (aprovação no
-# Environment release), chama publish.yml com a versão da candidata, atesta o release-manifest.json e
-# publica como prerelease sem Latest. Não roda post-release.yml. Com deploy configurado, dispara o
+# vX.Y.Z-rc.N, marca uma tag/draft privado, prepara e testa os artefatos antes da autorização de
+# distribution e os publica sem rebuild. Não roda post-release.yml. Com deploy configurado, dispara o
 # gw-deploy.yml no Environment de preview; o aceite lá libera o preview gate do Release PR.
 #   gh workflow run gw-preview.yml --ref main
 name: Release preview
@@ -62,7 +61,6 @@ jobs:
     needs: resolve
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    environment: release
     permissions:
       contents: read
       pull-requests: read
@@ -136,6 +134,7 @@ jobs:
       tag: ${{ steps.tag.outputs.tag }}
       version: ${{ steps.tag.outputs.version }}
       commit: ${{ steps.tag.outputs.commit }}
+      distribution_after_validation: ${{ steps.policy.outputs.distribution_after_validation }}
     steps:
       - name: Checkout tag
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -143,6 +142,15 @@ jobs:
           ref: refs/tags/${{ needs.resolve.outputs.tag }}
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Read publication preflight policy
+        id: policy
+        shell: pwsh
+        run: |
+          $config = Get-Content -LiteralPath .github/ci-cd.json -Raw | ConvertFrom-Json
+          $afterValidation = if ($null -eq $config.distributionAfterValidation) { $false } else { $config.distributionAfterValidation }
+          if ($afterValidation -isnot [bool]) { throw 'distributionAfterValidation deve ser boolean.' }
+          "distribution_after_validation=$($afterValidation.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
 
       - name: Validate candidate tag and ancestry
         id: tag
@@ -157,14 +165,35 @@ jobs:
           ./tools/scripts/ci/Test-PublishedRelease.ps1 -Tag $env:RELEASE_TAG -Repository $env:GITHUB_REPOSITORY -Expect Draft
           exit $LASTEXITCODE
 
+  prepare:
+    name: Prepare and validate ${{ needs.context.outputs.tag }}
+    needs: context
+    if: ${{ needs.context.outputs.distribution_after_validation == 'true' }}
+    uses: ./.github/workflows/publish.yml
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      actions: read
+      checks: read
+      pull-requests: read
+    with:
+      tag: ${{ needs.context.outputs.tag }}
+      version: ${{ needs.context.outputs.version }}
+      republish: false
+      preflight: true
+      publish_only: false
+    secrets: inherit
+
   authorize-distribution:
     name: Authorize public RC distribution ${{ needs.context.outputs.tag }} at ${{ needs.context.outputs.commit }}
-    needs: context
+    needs: [context, prepare]
+    if: ${{ !cancelled() && needs.context.result == 'success' && (needs.context.outputs.distribution_after_validation != 'true' || needs.prepare.result == 'success') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     environment:
       name: distribution
-      url: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ needs.context.outputs.tag }}
+      url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     permissions:
       contents: read
       actions: read
@@ -191,7 +220,8 @@ jobs:
 
   publish:
     name: Publish
-    needs: [context, authorize-distribution]
+    needs: [context, prepare, authorize-distribution]
+    if: ${{ !cancelled() && needs.context.result == 'success' && needs.authorize-distribution.result == 'success' && (needs.context.outputs.distribution_after_validation != 'true' || needs.prepare.result == 'success') }}
     uses: ./.github/workflows/publish.yml
     permissions:
       contents: write
@@ -205,6 +235,8 @@ jobs:
       tag: ${{ needs.context.outputs.tag }}
       version: ${{ needs.context.outputs.version }}
       republish: false
+      preflight: false
+      publish_only: ${{ needs.context.outputs.distribution_after_validation == 'true' }}
     secrets: inherit
 
   finalize:

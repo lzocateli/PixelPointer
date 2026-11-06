@@ -45,8 +45,8 @@ a human decides **when** the release happens by merging the Release PR.
    - creates tag `vX.Y.Z` and a draft GitHub Release;
    - calls `publish.yml` in the `release` Environment (approve when requested);
    - generates, attests and attaches `release-manifest.json`;
-   - publishes the GitHub Release only if all preceding steps succeed;
-   - calls `post-release.yml` with the release already public (project distribution, when configured).
+    - publishes the GitHub Release only if all preceding steps succeed. Homebrew and
+       winget are not started by this flow; each delivery uses its own dispatch and exact tag.
 4. Confirm:
 
    ```bash
@@ -76,8 +76,8 @@ gh workflow run gw-release.yml --repo lzocateli/PixelPointer --ref vX.Y.Z -f mod
 ```
 
 `republish` validates the tag, reruns `publish.yml` idempotently (uploads only
-missing artifacts and never overwrites published ones), finalizes the release
-and runs `post-release.yml` again with `republish=true`. If `release-manifest.json`
+missing artifacts and never overwrites published ones), and finalizes the release
+without running registry distributions. If `release-manifest.json`
 already exists, it is not changed: any digest mismatch makes the workflow fail.
 
 ## 5. Fix a defective release

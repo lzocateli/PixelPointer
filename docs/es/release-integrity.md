@@ -12,10 +12,13 @@ CI ausente/fallido o consulta inconclusa bloquean. Se relee HEAD después de las
 consultas; la ascendencia no basta. El portugués brasileño es la fuente normativa.
 
 El RC usa la versión del Release PR abierto, cuya base debe coincidir con el SHA.
-Tras aprobar `release`, se repite la resolución con cabeza del Release PR y tag
-esperadas antes de crear tag/borrador. La publicación de assets/paquetes valida
-la fuente tras aprobar, y la finalización revalida antes de hacer pública la
-GitHub Release. Los workflows nunca deben eliminar estas guardas.
+La guarda valida la fuente y la cabeza del Release PR antes de crear la etiqueta
+y el borrador. La divulgación se autoriza en el Environment `distribution`; tras
+la espera, fuente, SHA y etiqueta se revalidan antes de cualquier carga pública.
+Cuando `distributionAfterValidation` está habilitado, build/pruebas generan
+artifacts privados antes de la aprobación y el publisher reutiliza esos mismos
+bytes sin recompilar. La finalización revalida antes de hacer pública la GitHub
+Release. Los workflows nunca deben eliminar estas guardas.
 
 Preview gate exige cabeza actual del Release PR, dependencias integradas, base
 actual y CI verde antes de comprobar aceptación o waiver. La release final
@@ -30,7 +33,7 @@ sólo la salida `release_ready=true` de la guarda autoriza crear release/tag.
 
 ## Autorización de distribución
 
-Estables, RCs, previews manuales y reenvíos de artefactos ausentes exigen aprobación
+En el modo predeterminado `environment`, estables, RCs, previews manuales y reenvíos de artefactos ausentes exigen aprobación
 humana en el nuevo Environment `distribution`, antes de publicar en feeds,
 registros o GitHub Releases y antes de Homebrew/winget. Tags y borradores privados
 pueden existir antes de autorizar; no equivalen a distribuir el paquete.
@@ -60,6 +63,48 @@ fallback a ambiente sin revisores: si el plan de GitHub no soporta la protecció
 la publicación queda bloqueada. Un ambiente creado automáticamente sin aprobación
 registrada no permite enviar paquetes. Actualizar localmente el catálogo no configura
 GitHub ni activa gates remotos.
+
+### Alternativa explícita para repositorio privado
+
+Para estables privadas sin soporte de revisores de Environment en su plan, existe
+el opt-in `distributionApproval.mode = "manual-dispatch"` en `.github/ci-cd.json`.
+El parámetro de renderización es `distribution_approval_mode`; `environment` sigue
+siendo el valor predeterminado de nuevos consumidores. Groundwork selecciona la
+alternativa explícitamente en configuración y parámetro versionados. No hay
+detección automática del plan ni fallback después de HTTP 422.
+
+El run usa `distribution-manual`, separado del ambiente nativo. Ese ambiente no
+representa aprobación: la evidencia es el dispatch autenticado de un administrador
+humano, con título inmutable `Authorize distribution | <tag> | <SHA>`. La guarda
+consulta la API y verifica `workflow_dispatch`, `gw-release.yml`, ref permitida,
+SHA, actor humano y permiso administrativo actual. Falta de confirmación, bot,
+permiso sólo de escritura, otro actor en reejecución, tag/SHA incorrectos o API
+inconclusa bloquean. La tag se revisa antes de publicar. HEAD actual, CI/Result,
+dependencias, versiones, draft y equivalencia RC siguen obligatorios cuando aplican.
+
+Desde la raíz del repositorio privado, con GitHub CLI autenticado como administrador,
+después de integrar Release PR y esperar CI verde, defina `SHA_APROVADO` con el SHA
+completo del merge. Sustituya la versión ficticia `v1.2.3` por la integrada:
+
+```bash
+gh workflow run gw-release.yml --ref main -f mode=release \
+	-f confirm_distribution=true -f authorize_tag=v1.2.3 \
+	-f authorize_commit="$SHA_APROVADO"
+```
+
+El comando autoriza publicar y puede crear tag/borrador y enviar paquetes; no lo
+ejecute sin revisar versión y fuente. El push del merge no publica solo: falta de
+confirmación rechaza antes de crear tag. Reejecutar un evento push no lo convierte
+en aprobación manual. Otro administrador exige nuevo dispatch. Republish de tag
+estable ya pública que contenga este soporte usa `mode=republish` en esa tag con
+la misma confirmación explícita, conservando la fuente histórica.
+
+La alternativa no aplica a repositorios públicos, RCs ni previews manuales; esos
+flujos mantienen aprobación nativa. Tags/runs anteriores sin soporte no se modifican:
+preserve borradores/artefactos y prepare una versión nueva con la corrección; nunca
+mueva tags ni libere código antiguo. Administradores capaces de editar workflows
+siguen dentro de la frontera de confianza; revisión de branch protegida y logs de
+GitHub son parte de la auditoría.
 
 ## Integraciones y fixes
 
@@ -111,7 +156,10 @@ fuente revalidada; no son republish histórico. Escale al mantenedor si main ava
 después de un Release PR integrado aún pendiente de tag.
 
 Republish sólo tiene excepción de HEAD para tag estable inmutable de release
-**ya pública**, checkout correspondiente y artefactos ausentes. Redeploy/rollback
+**ya pública**, checkout correspondiente y artefactos ausentes. Antes de subir
+assets a GitHub Release, el publicador exige una entrada correspondiente en el
+manifiesto inmutable y un digest reconstruido idéntico; rechaza assets no listados
+o divergentes antes de que queden huérfanos en la release. Redeploy/rollback
 conservan tags históricas y políticas de deploy/`rollbackMinimumVersion`.
 
 Actualice consumidores con `groundwork update --dry-run`, revise y aplique
@@ -119,7 +167,10 @@ Actualice consumidores con `groundwork update --dry-run`, revise y aplique
 se migran automáticamente. En `ci.yml`, conceda `pull-requests`, `actions` y
 `checks: read` al llamador de higiene; snapshot depende de `result`, sin entrar
 en los `needs` de Result. En `publish.yml`, propague permisos y `republish` a todos
-los publicadores y llamadas anidadas. Preserve personalizaciones; nunca cambie
+los publicadores y llamadas anidadas. En `release-please-config.json`, agregue
+`"always-update": true`: sin esto, un commit que no cambia las notas (`ci`, `docs`,
+`chore`) deja el Release PR detrás de la rama predeterminada y `gw-preview.yml`
+rechaza generar la candidata. Preserve personalizaciones; nunca cambie
 hashes manualmente para ocultar desviaciones.
 
 Las correcciones locales del catálogo aún no son una versión distribuida: integre

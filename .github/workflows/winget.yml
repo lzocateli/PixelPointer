@@ -1,21 +1,10 @@
 name: Winget
 
 # Gera, valida e (opcionalmente) submete o manifesto winget lzocateli.PixelPointer.
-# - workflow_call (post-release.yml, depois que a release foi publicada): valida e submete.
 # - workflow_dispatch: valida a versao informada; submit=true envia o PR (ex.: primeira
-#   submissao ou reenvio apos falha), a partir de main.
+#   submissao ou reenvio apos falha), a partir de main. Nunca é disparado pelo post-release.
 # - pull_request que altera a cadeia do winget: valida com a ultima release, sem submeter.
 on:
-  workflow_call:
-    inputs:
-      version:
-        description: "Versao publicada (X.Y.Z ou vX.Y.Z)"
-        type: string
-        required: true
-      submit:
-        description: "Envia o PR ao microsoft/winget-pkgs"
-        type: boolean
-        default: false
   workflow_dispatch:
     inputs:
       version:
@@ -49,6 +38,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - name: Test version-specific submission policy
+        shell: pwsh
+        run: ./tools/scripts/Test-WingetSubmissionPolicy.ps1
 
       - name: Resolve version
         id: version

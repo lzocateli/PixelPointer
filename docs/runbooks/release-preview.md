@@ -20,9 +20,12 @@ aceite: `approval`.
    gh workflow run gw-preview.yml --repo lzocateli/PixelPointer --ref main
    ```
 
-3. Aprove o Environment `release` quando solicitado. O workflow calcula `vX.Y.Z-rc.N`, cria a tag
-   pelo GitHub App, chama `publish.yml`, atesta o `release-manifest.json` e publica a prerelease.
-4. Confira:
+3. O workflow calcula `vX.Y.Z-rc.N`, cria a tag e o rascunho privado, compila/testa os pacotes e
+   disponibiliza o artifact privado `release-assets` no run. Ainda não há publicação pública.
+4. Abra a execução pelo link do Environment `distribution`, baixe `release-assets`, verifique
+   `SHA256SUMS` e teste o pacote. Aprove `distribution` somente depois; o workflow anexa os mesmos
+   artifacts à prerelease, sem rebuild, atesta o `release-manifest.json` e não atualiza Homebrew/winget.
+5. Confira:
 
    ```bash
    gh release view vX.Y.Z-rc.N --repo lzocateli/PixelPointer
@@ -59,7 +62,7 @@ reexecuta o CI do Release PR.
 | Sintoma | Causa provável | Ação |
 | --- | --- | --- |
 | `Nenhum Release PR aberto` | não há commit releasable desde a última estável | integre um `feat`/`fix` ou use `Release-As:` |
-| `O Release PR #N não está sobre <sha>` | o release-please ainda não atualizou o Release PR | aguarde o `gw-release.yml` na `main` e dispare de novo |
+| `O Release PR #N não está sobre <sha>` | o release-please ainda não atualizou o Release PR; sem `"always-update": true` em `release-please-config.json`, um commit que não muda as notas (`ci`, `docs`, `chore`) nunca o atualiza (`remained the same` no log) | aguarde o `gw-release.yml` na `main` e dispare de novo; sem a opção, adicione-a por PR |
 | `Preview gate` vermelho depois do aceite | a `main` andou e o Release PR mudou de commit-base | gere nova candidata (`rc.N+1`) e valide |
 | `Preview gate` vermelho sem nova integração | o CI do Release PR não foi reexecutado | `gh run rerun <id>` na execução do CI do Release PR |
 | Deploy da candidata recusado | Environment diferente de `quality` ou tag fora do padrão `-rc.N` | use `quality`; prereleases `preview.N` nunca são implantáveis |

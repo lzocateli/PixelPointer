@@ -19,7 +19,7 @@ Raiz do repositório. Padrão: diretório atual.
 
 .PARAMETER Components
 Componentes cujos arquivos gerenciados são verificados. Padrão: ci, release,
-publish-nuget, publish-containers, publish-github-assets, deploy,
+publish-nuget, publish-containers, publish-github-assets, native-aot, deploy,
 dependency-updates e repository-policy.
 
 .PARAMETER SummaryPath
@@ -42,7 +42,7 @@ Requer PowerShell 7+. Código de saída 0 quando todos estão íntegros, 1 em de
 param(
     [string] $Root = '.',
     [string] $SummaryPath = '',
-    [string[]] $Components = @('ci', 'release', 'publish-nuget', 'publish-containers', 'publish-github-assets', 'deploy', 'dependency-updates', 'repository-policy'),
+    [string[]] $Components = @('ci', 'release', 'publish-nuget', 'publish-containers', 'publish-github-assets', 'native-aot', 'deploy', 'dependency-updates', 'repository-policy'),
     [Alias('h')]
     [switch] $Help,
     [Parameter(ValueFromRemainingArguments)]

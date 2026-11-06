@@ -22,10 +22,13 @@ Repository: `lzocateli/PixelPointer` · default branch: `main` · acceptance: `a
    gh workflow run gw-preview.yml --repo lzocateli/PixelPointer --ref main
    ```
 
-3. Approve the `release` Environment when asked. The workflow computes `vX.Y.Z-rc.N`, creates the
-   tag through the GitHub App, calls `publish.yml`, attests `release-manifest.json` and publishes
-   the prerelease.
-4. Check it:
+3. The workflow computes `vX.Y.Z-rc.N`, creates the tag and private draft, builds/tests the packages,
+   and uploads a private `release-assets` artifact to the run. Nothing is public yet.
+4. Open the run from the `distribution` Environment link, download `release-assets`, verify
+   `SHA256SUMS`, and test the package. Approve `distribution` only afterward; the workflow attaches
+   the same artifacts to the prerelease without rebuilding, attests `release-manifest.json`, and
+   does not update Homebrew or winget.
+5. Check it:
 
    ```bash
    gh release view vX.Y.Z-rc.N --repo lzocateli/PixelPointer

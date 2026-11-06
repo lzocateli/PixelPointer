@@ -11,8 +11,8 @@ Guards were implemented in the catalog and applied locally through managed updat
 The [integrity contract](release-integrity.md) documents interfaces, recovery,
 migration and limits. Remote activation requires merging these changes.
 Brazilian Portuguese is normative.
-The new `distribution` gate still requires merging the workflows and configuring
-reviewers on GitHub; local file updates do not activate it.
+The local flow now prepares and tests private artifacts before `distribution`.
+Remote reviewer and merge queue configuration has not been synchronized.
 
 ## Implemented Flow
 
@@ -40,23 +40,15 @@ flowchart TD
     RP --> MANUAL[/"Run workflow: Release preview on main"/]
     MANUAL --> RESOLVE["Resolve version, dependencies, current HEAD and green CI"]
     MAINCI --> RESOLVE
-    subgraph ENV_RC_TAG["Environment: release | RC tag"]
-      RELRC{"Approve RC tag creation"}
-    end
-    RESOLVE --> RELRC
-    RELRC --> RCTAG["Revalidate source; GitHub App creates tag and draft"]
+    RESOLVE --> RCTAG["Revalidate source; GitHub App creates tag and private draft"]
     RCTAG --> RCREF[("vX.Y.Z-rc.N: draft prerelease")]
     RCREF --> RCCTX["Validate tag version and ancestry"]
+    RCCTX --> PUB["Preflight: build 6 RIDs, smoke, installers, SBOM and private artifact"]
     subgraph ENV_RC_DISTRIBUTION["Environment: distribution | RC"]
-      DISTRC{"Authorize public RC distribution"}
+      DISTRC{"Test private artifact and authorize disclosure"}
     end
-    RCCTX --> DISTRC
-    DISTRC --> PUB["publish.yml: build 6 RIDs, smoke, installers, SBOM"]
-    subgraph ENV_RC_ASSETS["Environment: release | RC assets"]
-      RCASSETAPP{"Approve RC asset upload"}
-    end
-    PUB --> RCASSETAPP
-    RCASSETAPP --> ASSETS["Attest and attach assets; create manifest; finalize RC"]
+    PUB --> DISTRC
+    DISTRC --> ASSETS["Publish same artifacts without rebuild; attest and create manifest"]
     ASSETS --> RCFINAL[("Public attested RC, no Latest")]
     RCFINAL --> Q["Dispatch Deploy on tag; quality guard"]
     Q --> TESTRC[/"Download and manually test RC package"/]
@@ -84,24 +76,22 @@ flowchart TD
     subgraph ENV_STABLE_DISTRIBUTION["Environment: distribution | stable"]
       DISTFINAL{"Authorize public stable distribution"}
     end
-    FINALCTX --> DISTFINAL
-    DISTFINAL --> FINALBUILD["Build, smoke and SBOM of authorized tag"]
-    subgraph ENV_STABLE_RELEASE["Environment: release | stable assets"]
-      FINALAPP{"Approve asset publication"}
-    end
-    FINALBUILD --> FINALAPP
-    FINALAPP --> FINALPUB["Revalidate source; attest assets and manifest; publish"]
+    FINALCTX --> FINALBUILD["Private preflight: build, smoke, installers and SBOM"]
+    FINALBUILD --> DISTFINAL
+    DISTFINAL --> FINALPUB["Revalidate source; publish same artifacts without rebuild; attest manifest"]
     FINALPUB --> STABLE[("Public stable release")]
   end
 
   subgraph DISTRIBUTION["4. Distribution and Verification"]
-    STABLE --> POST["post-release.yml"]
+    STABLE -.-> HB["Manual dispatch: distribute-homebrew.yml vX.Y.Z"]
+    HB --> HBVALID["Validate stable, manifest, SHA256SUMS and attestations"]
     subgraph ENV_HOMEBREW["Environment: release | Homebrew"]
       BREWAPP{"Approve tap update"}
     end
-    POST --> BREWAPP
+    HBVALID --> BREWAPP
     BREWAPP --> BREW["Update tap and verify installation"]
-    POST --> WINGETCHECK["winget.yml: validate package"]
+    STABLE -.-> WG["Manual dispatch: winget.yml vX.Y.Z"]
+    WG --> WINGETCHECK["Validate stable release and local manifest"]
     subgraph ENV_WINGET["Environment: winget"]
       WINGETAPP{"Approve winget submission"}
     end
@@ -126,16 +116,13 @@ flowchart TD
   classDef manual fill:#fff4cc,stroke:#966800,color:#3d2c00
   classDef approval fill:#ffe4e6,stroke:#be123c,color:#4c0519
   classDef artifact fill:#e7f6ec,stroke:#15803d,color:#12351e
-  class CI,RESULT,MAINCI,RP,RPCI,RESOLVE,RCTAG,RCCTX,PUB,ASSETS,Q,QS,REFRESH,RPOK,FINALCI,FINALGUARD,FINALTAG,FINALCTX,FINALBUILD,FINALPUB,POST,BREW,WINGETCHECK,WINGET,AUTOQ,VERIFYQ,PRODGUARD,VERIFYPROD automatic
-  class PR,MERGE,MANUAL,TESTRC,RPMERGE,RESUME,PROD manual
-  class REVIEW,RELRC,DISTRC,RCASSETAPP,QA,RPREVIEW,DISTFINAL,FINALAPP,BREWAPP,WINGETAPP,STABLEQA,PRODAPP approval
+  class CI,RESULT,MAINCI,RP,RPCI,RESOLVE,RCTAG,RCCTX,PUB,ASSETS,Q,QS,REFRESH,RPOK,FINALCI,FINALGUARD,FINALTAG,FINALCTX,FINALBUILD,FINALPUB,HBVALID,WINGETCHECK,BREW,AUTOQ,VERIFYQ,PRODGUARD,VERIFYPROD automatic
+  class PR,MERGE,MANUAL,TESTRC,RPMERGE,RESUME,PROD,HB,WG manual
+  class REVIEW,DISTRC,QA,RPREVIEW,DISTFINAL,BREWAPP,WINGETAPP,STABLEQA,PRODAPP approval
   class RCREF,RCFINAL,ACCEPT,FINALREF,STABLE artifact
-  style ENV_RC_TAG fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
   style ENV_RC_DISTRIBUTION fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
-  style ENV_RC_ASSETS fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
   style ENV_RC_QUALITY fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
   style ENV_STABLE_DISTRIBUTION fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
-  style ENV_STABLE_RELEASE fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
   style ENV_HOMEBREW fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
   style ENV_WINGET fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
   style ENV_STABLE_QUALITY fill:#303030,stroke:#111111,stroke-width:2px,color:#ffffff,stroke-dasharray:5 5
@@ -145,24 +132,30 @@ flowchart TD
 Environment approvals happen under **Actions > run > Review deployments**, not in
 the PR merge button. The same Environment may request approval in multiple jobs;
 approving a PR does not replace accepting its RC in `quality`.
-`distribution` authorizes disclosure of the version and SHA shown in the job,
-before any public package in this flow. `release` supplies publication credentials;
-neither approval replaces the other. The guard requires human review evidence in
+`distribution` authorizes disclosure of the version and SHA shown in the job, after
+checks and, when `distributionAfterValidation=true`, after testing the private artifact.
+`release` supplies credentials for destinations that still use it, such as Homebrew;
+it does not replace `distribution`. The guard requires human review evidence in
 the same run, including RC, manual preview and republish; an unprotected environment
-cannot release packages. Source and CI are revalidated after waiting. Tags and
-drafts may precede authorization, but packages are not distributed publicly.
+cannot release packages. Source and CI are revalidated after waiting. This approval
+covers only the canonical release: it does not start or authorize Homebrew or winget.
+Each channel is dispatched manually with its exact stable tag and runs its own
+validation and approval. `post-release.yml` does not start distributions automatically.
 
 Main CI and release-please start from the same push, but there is no cross-workflow
 `needs` dependency. The diagram does not imply that main CI finishes before
 candidate resolution. Preview gate allows the auditable waiver described in the
 strategy; regular PRs, including fixes, do not require this gate.
 
-Human approval in `quality` must represent manual package testing: the Environment
-wait occurs **before** asset verification and automated smoke. Subsequent success
-records acceptance; smoke does not replace human graphical testing.
+In the current mode, the `distribution` reviewer downloads and tests the private
+artifact before disclosure. `quality` remains a separate acceptance: its Environment
+wait happens before verification of published assets and automated smoke. Consolidating
+these acceptances still requires a real RC and human proof; smoke does not replace
+graphical testing.
 
-Stable packages are rebuilt from the final tag, not promoted by reusing RC binaries.
-The strategy requires equivalent code, with only release metadata differences.
+Stable packages are built from the final tag, not promoted by reusing RC binaries;
+after approval the same preflight bytes are published. The strategy requires equivalent
+code, with only release metadata differences.
 `production` **does not gate public publication or distribution**: both have
 already started when that manual flow runs. PixelPointer has no deployed server;
 deployment verifies published packages.
@@ -173,9 +166,10 @@ deployment verifies published packages.
 | --- | --- | --- |
 | `publish.yml`, dispatch on `main` with preview | Build and validation; creates `vX.Y.Z-preview.N` and GitHub Pre-release without Latest; neither promotable nor deployable | `distribution`, `release` |
 | `publish.yml`, PR changing release chain | Build, smoke and installers; no tag or publication | None |
-| `gw-release.yml`, dispatch on tag with `mode=republish` | Validates tag and existing release; requires authorization for missing artifacts, finalizes and reruns distribution; no new version or auto-deploy | `distribution`, `release`, `winget` for submission |
+| `gw-release.yml`, dispatch on tag with `mode=republish` | Validates tag and existing release; requires authorization for missing canonical artifacts; does not create a new version or start registry channels | `distribution`, `release` |
 | `gw-deploy.yml`, historical tag dispatch | Redeploy/rollback using the same guard and smoke; respects `rollbackMinimumVersion`; no recreated tag or release | `quality` or `production` |
-| `winget.yml`, dispatch | Validates supplied version; optional, idempotent submission | `winget` if submitting |
+| `distribute-homebrew.yml`, dispatch | Requires `vX.Y.Z`; validates manifest/checksum/attestation and updates only the selected tap | `release` |
+| `winget.yml`, dispatch | Requires an explicit version; validates and submits only to winget-pkgs when requested | `winget` if submitting |
 | `scheduled-smoke.yml`, Monday 09:00 UTC or dispatch | Rebuilds and tests AOT/packages; no publication | None |
 | `gw-gitleaks.yml` | Called by CI; also accepts dispatch; scanning without publication | None |
 | `gw-pr-hygiene.yml` | Called by CI: title, actionlint, managed files and Release PR Preview gate | None |
@@ -184,9 +178,8 @@ deployment verifies published packages.
 
 `publishSnapshots: true` enables manual preview, but current CI does not call
 automatic snapshot publication on each push. The `preview` Environment mentioned
-in the strategy is absent from the local Environment policy. `winget` is referenced
-by its workflow but is also absent from that policy. Their actual existence and
-protections on GitHub have not been verified.
+in the strategy is absent from the local Environment policy. The actual existence
+and protections of GitHub Environments have not been verified.
 
 ## Corrected Gaps
 
