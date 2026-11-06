@@ -46,8 +46,8 @@ una persona decide **cuándo** se publica, al integrar el Release PR.
    - crea la etiqueta `vX.Y.Z` y una GitHub Release en borrador;
    - llama a `publish.yml` en el Environment `release` (aprueba cuando se solicite);
    - genera, atesta y adjunta `release-manifest.json`;
-   - publica la GitHub Release solo si todos los pasos anteriores tuvieron éxito;
-   - llama a `post-release.yml` con la release ya pública (distribución del proyecto, si está configurada).
+    - publica la GitHub Release solo si todos los pasos anteriores tuvieron éxito. Homebrew y
+       winget no se inician desde este flujo; cada entrega usa su propio dispatch y tag exacta.
 4. Confirma:
 
    ```bash
@@ -78,8 +78,8 @@ gh workflow run gw-release.yml --repo lzocateli/PixelPointer --ref vX.Y.Z -f mod
 ```
 
 `republish` valida la etiqueta, vuelve a ejecutar `publish.yml` de forma
-idempotente (solo carga lo que falta y nunca sobrescribe artefactos publicados),
-finaliza la release y ejecuta `post-release.yml` otra vez con `republish=true`. Si
+idempotente (solo carga lo que falta y nunca sobrescribe artefactos publicados)
+y finaliza la release sin ejecutar distribuciones de registries. Si
 `release-manifest.json` ya existe, no se modifica: cualquier divergencia de
 resumen criptográfico hace fallar el workflow.
 

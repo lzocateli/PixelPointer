@@ -15,7 +15,7 @@ aceite da candidata `vX.Y.Z-rc.N` em `quality` ([release-preview](release-previe
 | Environment | Destino | Runner | Revisores |
 | --- | --- | --- | --- |
 | `quality` | Assets da GitHub Release (candidata ou estável) e máquinas de teste do mantenedor | `ubuntu-24.04` do GitHub | `@lzocateli` (obrigatório: aceite `approval`) |
-| `production` | Assets da GitHub Release estável; a distribuição por Homebrew e winget acontece no `post-release.yml` | `ubuntu-24.04` do GitHub | `@lzocateli` |
+| `production` | Assets da GitHub Release estável; Homebrew e winget exigem dispatch independente com versão explícita | `ubuntu-24.04` do GitHub | `@lzocateli` |
 
 ## Execução
 

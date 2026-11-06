@@ -557,7 +557,7 @@ diagnóstico existente quedan en la terminal.
 
 Generar **preview nueva tras integrar este PR en main con CI verde**, antes del
 aceite manual de primer uso. No esperar toda la F2; la preview actual no tiene
-`setup`. Tras generar y aprobar el Environment `release`, probar GNOME/Wayland
+`setup`. Tras generar el artifact privado y aprobar el Environment `distribution`, probar GNOME/Wayland
 y Windows: abrir/cerrar sin acciones, diagnóstico, registro explícito cuando
 corresponda, cancelación/consentimiento voluntario e inicio elegido del daemon.
 No quitar Pre-release ni promover estable antes de validar el alcance afectado.

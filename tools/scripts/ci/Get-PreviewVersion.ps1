@@ -95,7 +95,7 @@ try {
     $headCommit = Invoke-GhJson -Path "repos/$Repository/commits/$head"
     $parents = @($headCommit['parents'] | ForEach-Object { [string]$_['sha'] })
     if ($parents.Count -ne 1 -or $parents[0] -ne $Commit) {
-        throw "O Release PR #$($pull['number']) não está sobre $Commit; aguarde o release-please atualizá-lo e dispare de novo."
+        throw "O Release PR #$($pull['number']) não está sobre $Commit; aguarde o release-please atualizá-lo e dispare de novo. Se o log do Release disser remained the same, confira `"always-update`": true em release-please-config.json."
     }
 
     $content = Invoke-GhJson -Path "repos/$Repository/contents/.release-please-manifest.json?ref=$head"

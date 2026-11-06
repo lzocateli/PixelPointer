@@ -9,8 +9,9 @@ Registra o aceite de uma candidata no Environment de preview e reavalia o Releas
 Chamado pelo gw-deploy.yml depois do deploy (ou aceite) com sucesso. Para tag de candidata
 vX.Y.Z-rc.N no Environment de preview (deploy.previewEnvironment), anexa à GitHub Release o
 asset preview-acceptance.json (schemaVersion, tag, versão, commit, Environment, resultado,
-instante, ator e execução) e reexecuta a última execução do workflow CI do Release PR
-aberto, para o preview gate ler o aceite. Em qualquer outra tag ou Environment, não faz nada.
+instante, ator e execução) e reexecuta as execuções sem sucesso do workflow CI do Release PR
+aberto, para o preview gate ler o aceite. Um commit pode ter mais de uma execução (o
+release-please gera mais de um evento pull_request), e cada Result reprovado bloqueia o merge. Em qualquer outra tag ou Environment, não faz nada.
 Requer GH_TOKEN com contents:write e actions:write. Ver docs/estrategia-de-release.md.
 
 .PARAMETER Tag
@@ -125,16 +126,21 @@ try {
 
     $head = [string]$pulls[0]['head']['sha']
     $runs = Invoke-GhJson -Path "repos/$Repository/actions/runs?head_sha=$head&event=pull_request&per_page=20"
-    $run = @($runs['workflow_runs'] ?? @()) | Where-Object { $_['name'] -ceq 'CI' } | Select-Object -First 1
-    if ($null -eq $run) {
+    $ciRuns = @(@($runs['workflow_runs'] ?? @()) | Where-Object { $_['name'] -ceq 'CI' })
+    if ($ciRuns.Count -eq 0) {
         Write-Output "Nenhuma execução CI do Release PR #$($pulls[0]['number']) para reexecutar."
     }
-    elseif ($run['status'] -ne 'completed') {
-        Write-Output "CI do Release PR #$($pulls[0]['number']) ainda em execução; o gate lerá o aceite ao terminar só se for reexecutado depois."
-    }
-    else {
-        Invoke-GhJson -Path "repos/$Repository/actions/runs/$($run['id'])/rerun" -Method POST -Body @{} | Out-Null
-        Write-Output "CI do Release PR #$($pulls[0]['number']) reexecutado para reavaliar o preview gate."
+    foreach ($run in $ciRuns) {
+        if ($run['status'] -ne 'completed') {
+            Write-Output "CI $($run['id']) do Release PR #$($pulls[0]['number']) ainda em execução; o gate lerá o aceite ao terminar só se for reexecutado depois."
+        }
+        elseif ($run['conclusion'] -ceq 'success') {
+            Write-Output "CI $($run['id']) do Release PR #$($pulls[0]['number']) já aprovado; não reexecutado."
+        }
+        else {
+            Invoke-GhJson -Path "repos/$Repository/actions/runs/$($run['id'])/rerun" -Method POST -Body @{} | Out-Null
+            Write-Output "CI $($run['id']) do Release PR #$($pulls[0]['number']) reexecutado para reavaliar o preview gate."
+        }
     }
 }
 catch {

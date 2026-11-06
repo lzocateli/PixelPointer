@@ -1,15 +1,15 @@
 # Semente do Altivy.Groundwork (componente release), adaptada do antigo release.yml.
 # Publica o pixelpointer em Native AOT para todos os RIDs suportados (ver docs/release.md),
 # com SDL3 e libSkiaSharp ao lado do executavel.
-# - workflow_call (gw-release.yml, apos o merge humano do Release PR): build, smoke e testes
-#   dos instaladores na tag, SBOM atestado e assets anexados a GitHub Release em rascunho no
-#   Environment `release` (gw-github-assets.yml, com atestacao de proveniencia). Homebrew e
-#   winget rodam em post-release.yml, com a release ja publica.
+# - workflow_call (gw-release.yml, apos o merge humano do Release PR): preflight privado opcional
+#   com build, smoke, testes dos instaladores e SBOM; apos aprovacao de `distribution`, publica
+#   os mesmos artifacts sem rebuild e anexa assets atestados a GitHub Release em rascunho.
+#   Homebrew e winget usam workflows independentes apos a release publica.
 # - pull_request que altera a cadeia de release: build, smoke e testes sem publicar.
 # - workflow_call de gw-preview.yml com a candidata vX.Y.Z-rc.N: mesma publicacao, versao da tag,
 #   publicada como prerelease sem Latest e validada no Environment quality.
-# - workflow_dispatch preview em main: GitHub Pre-release preview.N apos aprovacao no Environment
-#   release; nunca promovivel nem implantavel.
+# - workflow_dispatch preview em main: GitHub Pre-release preview.N apos aprovacao de
+#   `distribution`; nunca promovivel nem implantavel.
 name: Publish
 
 on:
@@ -27,6 +27,14 @@ on:
         default: ''
       republish:
         description: Reenvio de artefatos ausentes de uma release existente
+        type: boolean
+        default: false
+      preflight:
+        description: Preparar e testar artefatos privados sem publicá-los
+        type: boolean
+        default: false
+      publish_only:
+        description: Publicar somente os artefatos preparados anteriormente no mesmo run
         type: boolean
         default: false
       preview:
@@ -101,12 +109,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.tag }}
           REPUBLISH: ${{ inputs.republish || false }}
+          PREFLIGHT: ${{ inputs.preflight || false }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           Import-Module ./tools/scripts/ci/GroundworkRelease.psm1
           $commit = (git rev-parse HEAD | Out-String).Trim()
           $stable = $env:RELEASE_TAG -ne '' -and -not (Test-CandidateTag $env:RELEASE_TAG)
-          ./tools/scripts/ci/Assert-ReleaseSource.ps1 -Repository $env:GITHUB_REPOSITORY -Commit $commit -DefaultBranch $env:DEFAULT_BRANCH -Stable:$stable -Republish:($env:REPUBLISH -eq 'true') -Tag $env:RELEASE_TAG
+          ./tools/scripts/ci/Assert-ReleaseSource.ps1 -Repository $env:GITHUB_REPOSITORY -Commit $commit -DefaultBranch $env:DEFAULT_BRANCH -Stable:$stable -Republish:($env:REPUBLISH -eq 'true') -Preflight:($env:PREFLIGHT -eq 'true') -Tag $env:RELEASE_TAG
           exit $LASTEXITCODE
 
       - name: Resolve version
@@ -119,7 +128,11 @@ jobs:
           RUN_NUMBER: ${{ github.run_number }}
           EVENT_NAME: ${{ github.event_name }}
           REF_NAME: ${{ github.ref_name }}
+          PREFLIGHT: ${{ inputs.preflight || false }}
+          PUBLISH_ONLY: ${{ inputs.publish_only || false }}
         run: |
+          if ($env:PREFLIGHT -eq 'true' -and $env:PUBLISH_ONLY -eq 'true') { throw 'Preflight e publish_only são modos mutuamente exclusivos.' }
+          if ($env:PUBLISH_ONLY -eq 'true' -and -not $env:TAG) { throw 'publish_only exige uma tag preparada anteriormente.' }
           [xml] $props = Get-Content -LiteralPath Directory.Build.props -Raw
           $prefix = @($props.Project.PropertyGroup | ForEach-Object { $_.VersionPrefix } | Where-Object { $_ })[0]
           $publish = 'false'
@@ -174,6 +187,7 @@ jobs:
           Write-Output "Versao: $displayVersion (preview: $($env:PREVIEW); publicar: $publish)"
 
       - name: Build and tests in container
+        if: ${{ inputs.publish_only != true }}
         shell: pwsh
         run: |
           ./tools/scripts/Test-WingetSubmissionPolicy.ps1
@@ -182,6 +196,7 @@ jobs:
   build:
     name: Publish ${{ matrix.rid }}
     needs: validate
+    if: ${{ needs.validate.outputs.publish == 'true' && inputs.publish_only != true }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 40
     permissions:
@@ -237,6 +252,7 @@ jobs:
   verify:
     name: Smoke and installers (${{ matrix.runner }})
     needs: [validate, build]
+    if: ${{ needs.validate.outputs.publish == 'true' && inputs.publish_only != true }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     permissions:
@@ -298,7 +314,7 @@ jobs:
     # Antes dos assets e da aprovacao: a release so fica publica com o SBOM de cada pacote atestado.
     name: Attest SBOM ${{ matrix.rid }}
     needs: [validate, build, verify]
-    if: ${{ needs.validate.outputs.publish == 'true' || (needs.validate.outputs.preview == 'true' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') }}
+    if: ${{ inputs.publish_only != true && (needs.validate.outputs.publish == 'true' || (needs.validate.outputs.preview == 'true' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -331,7 +347,7 @@ jobs:
   release-assets:
     name: Prepare release assets
     needs: [validate, build, verify, attest-sbom]
-    if: ${{ !cancelled() && needs.validate.result == 'success' && needs.build.result == 'success' && needs.verify.result == 'success' && (needs.attest-sbom.result == 'success' || needs.attest-sbom.result == 'skipped') && (needs.validate.outputs.publish == 'true' || needs.validate.outputs.preview == 'true') }}
+    if: ${{ !cancelled() && inputs.publish_only != true && needs.validate.result == 'success' && needs.build.result == 'success' && needs.verify.result == 'success' && (needs.attest-sbom.result == 'success' || needs.attest-sbom.result == 'skipped') && (needs.validate.outputs.publish == 'true' || needs.validate.outputs.preview == 'true') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -375,12 +391,12 @@ jobs:
           name: ${{ needs.validate.outputs.preview == 'true' && format('pixelpointer-preview-{0}-{1}', github.run_id, github.run_attempt) || 'release-assets' }}
           path: dist/*
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
 
   publish-assets:
     name: Publish release assets
     needs: [validate, release-assets]
-    if: ${{ needs.validate.outputs.publish == 'true' }}
+    if: ${{ !cancelled() && inputs.preflight != true && needs.validate.outputs.publish == 'true' && (inputs.publish_only == true || needs.release-assets.result == 'success') }}
     uses: ./.github/workflows/gw-github-assets.yml
     permissions:
       contents: write
@@ -428,7 +444,6 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && needs.validate.outputs.preview == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    environment: release
     permissions:
       contents: read
       id-token: write

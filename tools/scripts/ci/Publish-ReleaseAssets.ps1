@@ -24,6 +24,9 @@ Repositório owner/nome. Padrão: $env:GITHUB_REPOSITORY.
 .PARAMETER EntriesPath
 Arquivo JSON de saída com as entradas do manifesto.
 
+.PARAMETER Republish
+Exige release stable pública e digest idêntico ao manifesto imutável antes de reenviar assets ausentes.
+
 .PARAMETER DryRun
 Mostra o que seria enviado sem alterar a release.
 
@@ -46,6 +49,7 @@ param(
     [string] $Path = 'artifacts/release-assets',
     [string] $Repository = $env:GITHUB_REPOSITORY,
     [string] $EntriesPath = 'artifacts/release-entries/assets.json',
+    [switch] $Republish,
     [switch] $DryRun,
     [Alias('h')]
     [switch] $Help,
@@ -77,6 +81,14 @@ try {
 
     $release = Find-GitHubRelease -Repository $Repository -Tag $Tag
     if ($null -eq $release) { throw "Release $Tag inexistente." }
+    $manifest = $null
+    if ($Republish) {
+        if ($release['draft'] -or $release['prerelease'] -or (Test-CandidateTag $Tag)) { throw 'Republish de assets exige uma release stable pública.' }
+        $manifestText = Get-ReleaseAssetText -Repository $Repository -Release $release -Name 'release-manifest.json'
+        if (-not $manifestText) { throw 'Republish recusado: release-manifest.json ausente.' }
+        $manifest = ConvertFrom-Json -InputObject $manifestText -AsHashtable -Depth 32
+        Assert-ReleaseManifest -Manifest $manifest -ExpectedTag $Tag
+    }
     $assets = @{}
     foreach ($asset in @($release['assets'] ?? @())) { $assets[$asset['name']] = $asset }
 
@@ -97,6 +109,8 @@ try {
                 }
             }
 
+            if ($Republish) { Assert-RepublishAssetDigest -Manifest $manifest -Name $file.Name -Digest $published }
+
             if ($published -ne $digest) {
                 Write-Output "::warning title=Assets da release::$($file.Name) já publicado com outro SHA-256; o asset publicado é mantido e registrado no manifesto."
             }
@@ -105,9 +119,11 @@ try {
             $digest = $published
         }
         elseif ($DryRun) {
+            if ($Republish) { Assert-RepublishAssetDigest -Manifest $manifest -Name $file.Name -Digest $digest }
             Write-Output "[dry-run] enviaria $($file.Name)."
         }
         else {
+            if ($Republish) { Assert-RepublishAssetDigest -Manifest $manifest -Name $file.Name -Digest $digest }
             & gh release upload $Tag $file.FullName --repo $Repository | Out-Null
             if ($LASTEXITCODE -ne 0) { throw "Falha ao anexar $($file.Name)." }
             Write-Output "$($file.Name) anexado a $Tag."

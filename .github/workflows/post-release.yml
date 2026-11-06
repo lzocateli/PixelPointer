@@ -1,10 +1,5 @@
-# Semente do Altivy.Groundwork (componente release): distribuicao do PixelPointer.
-# Chamado por gw-release.yml depois que a GitHub Release foi publicada (assets publicos).
-# - homebrew: no Environment `release` (unico lugar do HOMEBREW_TAP_TOKEN), gera a formula a
-#   partir do SHA256SUMS publicado e envia ao tap; idempotente (formula igual nao gera commit).
-# - verify-homebrew: instala pelo tap e confere a versao.
-# - winget: winget.yml valida e submete no Environment `winget`; nao submete se a versao ja
-#   estiver no winget-pkgs ou houver PR aberto.
+# Semente do Altivy.Groundwork (componente release): verificações pós-release sem distribuição.
+# Homebrew e winget são iniciados por workflows independentes e exigem versão explícita.
 name: Post release
 
 on:
@@ -26,80 +21,18 @@ on:
 permissions: {}
 
 jobs:
-  homebrew:
-    name: Update Homebrew tap
+  record:
+    name: Record published release
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    environment: release
-    permissions:
-      contents: read
-    outputs:
-      formula: ${{ steps.tap.outputs.formula }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: refs/tags/${{ inputs.tag }}
-          persist-credentials: false
-
-      - name: Download published checksums
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ inputs.tag }}
-        run: gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern SHA256SUMS --dir dist
-
-      - name: Update Homebrew tap
-        id: tap
-        shell: pwsh
-        env:
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-          VERSION: ${{ inputs.version }}
-        run: |
-          ./tools/scripts/Update-HomebrewTap.ps1 -Version $env:VERSION -ReleaseDirectory dist -Push
-          $code = $LASTEXITCODE
-          if ($code -eq 3) {
-            Write-Output "::warning::Tap Homebrew ja publica versao maior que $($env:VERSION); formula mantida."
-            "formula=newer" >> $env:GITHUB_OUTPUT
-            exit 0
-          }
-          if ($code -eq 0) { "formula=current" >> $env:GITHUB_OUTPUT }
-          exit $code
-
-  verify-homebrew:
-    name: Verify Homebrew tap
-    needs: homebrew
-    if: ${{ needs.homebrew.outputs.formula == 'current' }}
-    runs-on: macos-15-intel
-    timeout-minutes: 15
+    timeout-minutes: 5
     permissions: {}
     steps:
-      - name: Install from tap
+      - name: Confirm no downstream registry was started
         shell: bash
         env:
-          VERSION: ${{ inputs.version }}
-          HOMEBREW_NO_AUTO_UPDATE: "1"
-          HOMEBREW_NO_ANALYTICS: "1"
-          HOMEBREW_NO_ENV_HINTS: "1"
+          RELEASE_TAG: ${{ inputs.tag }}
+          RELEASE_VERSION: ${{ inputs.version }}
+          REPUBLISH: ${{ inputs.republish }}
         run: |
-          set -euo pipefail
-          brew install lzocateli/tap/pixelpointer
-          actual="$(pixelpointer --version)"
-          case "$actual" in
-            "$VERSION"|"$VERSION"+*) echo "ok: $actual" ;;
-            *) echo "::error::Versao instalada pelo tap '$actual' difere de $VERSION."; exit 1 ;;
-          esac
-          pixelpointer selftest
-          brew test lzocateli/tap/pixelpointer
-
-  winget:
-    name: Winget
-    permissions:
-      contents: read
-    uses: ./.github/workflows/winget.yml
-    with:
-      version: ${{ inputs.tag }}
-      submit: true
-    # Em reutilizáveis aninhados (gw-release -> post-release -> winget), cada chamada precisa repassar
-    # os secrets; sem isso, o WINGET_CREATE_GITHUB_TOKEN do Environment winget chega vazio ao job.
-    secrets: inherit
+          echo "Release $RELEASE_TAG ($RELEASE_VERSION) published; Homebrew and winget require separate version-specific dispatches."
+          echo "republish=$REPUBLISH"

@@ -40,10 +40,10 @@ O título do PR (squash) decide se a mudança **conta** para a próxima release;
    [estratégia de release](../estrategia-de-release.md).
 3. Faça o merge (squash). O workflow `gw-release.yml`:
    - cria a tag `vX.Y.Z` e a GitHub Release em rascunho;
-   - chama `publish.yml` no Environment `release` (aprove quando solicitado);
+   - com `distributionAfterValidation: true`, compila/testa em preflight privado, aguarda `distribution` e publica os mesmos artifacts sem rebuild; o padrão `false` aguarda `distribution` antes de chamar `publish.yml`;
    - gera, atesta e anexa o `release-manifest.json`;
-   - publica a GitHub Release somente se tudo acima teve sucesso;
-   - chama `post-release.yml` com a release já pública (distribuição do projeto, quando houver).
+   - publica a GitHub Release somente se tudo acima teve sucesso. Distribuições por registry
+     não são iniciadas por esse fluxo: use o workflow específico e informe a versão stable exata.
 4. Confirme:
 
    ```bash
@@ -72,9 +72,10 @@ gh workflow run gw-release.yml --repo lzocateli/PixelPointer --ref vX.Y.Z -f mod
 ```
 
 O modo `republish` valida a tag, reexecuta `publish.yml` de forma idempotente (envia só o que
-falta, nunca sobrescreve artefato publicado), finaliza a release e executa `post-release.yml` de novo
-com `republish=true`. Se o `release-manifest.json`
-já existir, ele não é alterado: qualquer digest divergente faz o workflow falhar.
+falta, nunca sobrescreve artefato publicado), finaliza a release e não inicia distribuições por registry.
+Para cada asset ausente, o digest reconstruído deve corresponder a uma entrada
+do `release-manifest.json` já publicado; ausência da entrada ou divergência falha antes do upload.
+O manifesto publicado nunca é alterado e nenhum asset divergente pode ficar órfão na release.
 
 ## 5. Corrigir uma release defeituosa
 

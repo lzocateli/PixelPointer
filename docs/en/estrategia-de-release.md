@@ -19,10 +19,12 @@ same code as the validated candidate: between them only version files, `CHANGELO
 ```text
 PR (squash, Conventional Commit)
   └─▶ main ─▶ release-please updates the Release PR (version + CHANGELOG)
-          └─▶ gw-preview.yml (manual) ─▶ tag vX.Y.Z-rc.N ─▶ publish ─▶ attested prerelease
+            └─▶ gw-preview.yml (manual) ─▶ tag/draft ─▶ private preflight and tests
+              └─▶ distribution (approval after tests) ─▶ publish same artifact ─▶ attested prerelease
                   └─▶ quality: deploy/smoke + human approval ─▶ preview-acceptance.json
                           └─▶ Preview gate green on the Release PR
-                                  └─▶ human merge ─▶ tag vX.Y.Z ─▶ publish ─▶ stable release
+                  └─▶ human merge ─▶ tag/draft ─▶ preflight and tests
+                    └─▶ distribution (approval after tests) ─▶ publish without rebuild ─▶ stable release
                                           └─▶ production (manual, with approval)
 ```
 
@@ -79,7 +81,9 @@ candidate).
 
 | Environment | Accepted refs | Reviewers | Use |
 | --- | --- | --- | --- |
-| `release` | `main`, `v*` | `@lzocateli` | publishing credentials, for candidates and stable releases |
+| `release` | `main`, `v*` | `@lzocateli` | retained for legacy operations; not used to approve the current AOT flow |
+| `release` | `main`, `v*` | `@lzocateli` | credentials for components that still use this Environment; does not replace `distribution` |
+| `distribution` | `main`, `v*` | `@lzocateli` | authorizes public release; with `distributionAfterValidation=true`, occurs after private preflight |
 | `quality` | `v*` | required | candidate deployment and acceptance; also accepts stable releases |
 | `production` | `v*` | required | only stable releases with a validated candidate |
 | `preview` | `main` | — | snapshots in the internal feed |
@@ -128,10 +132,10 @@ and the release notes. It is an auditable exception, not a shortcut: record the 
 | --- | --- | --- |
 | Regular PR | CI, title, Gitleaks, snapshot | review and merge |
 | Release PR | version and CHANGELOG | — |
-| Candidate | N, tag, publish, attestation, prerelease, notes | start `gw-preview.yml`; approve `release` |
+| Candidate | N, tag/draft, private preflight, build/tests, SBOM, publish the same artifact | start `gw-preview.yml`; test the private artifact and approve `distribution` |
 | `quality` | deployment, smoke test and acceptance record | test and approve `quality` |
 | `Preview gate` | full check | waiver, when needed |
-| Stable | tag, publish, release, notes with the candidate | merge the Release PR; approve `release` |
+| Stable | tag/draft, private preflight, validation, publish without rebuild, release and candidate notes | merge the Release PR; approve `distribution` after validation |
 | `production` | guard | start and approve `production` |
 | Repository | Environments, variables and rulesets (`groundwork github --sync`) | missing secrets (`--secrets`) |
 

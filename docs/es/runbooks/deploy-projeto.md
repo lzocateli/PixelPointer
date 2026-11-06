@@ -16,7 +16,7 @@ la aceptación de la candidata `vX.Y.Z-rc.N` en `quality`
 | Environment | Destino | Runner | Revisores |
 | --- | --- | --- | --- |
 | `quality` | Assets de la GitHub Release (candidata o estable) y máquinas de prueba del mantenedor | `ubuntu-24.04` de GitHub | `@lzocateli` (obligatorio: aceptación `approval`) |
-| `production` | Assets de la GitHub Release estable; la distribución por Homebrew y winget ocurre en `post-release.yml` | `ubuntu-24.04` de GitHub | `@lzocateli` |
+| `production` | Assets de la GitHub Release estable; Homebrew y winget requieren dispatch independiente con versión explícita | `ubuntu-24.04` de GitHub | `@lzocateli` |
 
 ## Ejecución
 

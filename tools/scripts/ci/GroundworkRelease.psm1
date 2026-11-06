@@ -253,6 +253,19 @@ function Assert-ReleaseEntries {
     }
 }
 
+function Assert-RepublishAssetDigest {
+    param(
+        [Parameter(Mandatory)][hashtable] $Manifest,
+        [Parameter(Mandatory)][string] $Name,
+        [Parameter(Mandatory)][string] $Digest
+    )
+
+    Assert-ReleaseManifest -Manifest $Manifest
+    $matches = @($Manifest['artifacts'] | Where-Object { $_['kind'] -ceq 'asset' -and $_['name'] -ceq $Name })
+    if ($matches.Count -ne 1) { throw "Republish recusado: o manifesto imutável não contém o asset $Name." }
+    if ($matches[0]['digest'] -cne $Digest) { throw "Republish recusado: digest reconstruído de $Name diverge do manifesto imutável." }
+}
+
 function Test-RollbackAllowed {
     <#
     Decide a trava de rollback: alvo abaixo da versão implantada só é aceito se não for menor
@@ -545,6 +558,41 @@ function Assert-InternalSnapshotPackage {
     }
 }
 
+function Get-DistributionApprovalMode {
+    param([Parameter(Mandatory)][hashtable] $Config)
+    $policy = $Config['distributionApproval'] ?? @{}
+    if ($policy -isnot [hashtable]) { throw 'distributionApproval deve ser um objeto.' }
+    $mode = $policy['mode'] ?? 'environment'
+    if ($mode -isnot [string] -or $mode -cnotin @('environment', 'manual-dispatch')) { throw 'distributionApproval.mode deve ser environment ou manual-dispatch.' }
+    return $mode
+}
+
+function Assert-ManualDistributionApproval {
+    param(
+        [Parameter(Mandatory)][string] $Repository,
+        [Parameter(Mandatory)][string] $Commit,
+        [Parameter(Mandatory)][string] $Tag,
+        [Parameter(Mandatory)][hashtable] $Run
+    )
+
+    if (-not (Test-ReleaseTagName $Tag) -or $Tag.Substring(1).Contains('-')) { throw 'Autorização manual alternativa aceita somente versões estáveis; candidatas/previews usam aprovação nativa.' }
+    $repositoryInfo = Invoke-GhJson -Path "repos/$Repository"
+    if ($repositoryInfo['private'] -isnot [bool] -or -not $repositoryInfo['private']) { throw 'Autorização manual alternativa só é permitida em repositório privado configurado explicitamente.' }
+    $expectedTitle = "Authorize distribution | $Tag | $Commit"
+    if ($Run['head_sha'] -cne $Commit -or $Run['event'] -cne 'workflow_dispatch' -or $Run['display_title'] -cne $expectedTitle -or [string]$Run['path'] -cnotmatch '^\.github/workflows/gw-release\.yml(?:@|$)' -or $Run['head_branch'] -cnotin @($repositoryInfo['default_branch'], $Tag)) {
+        throw "Autorização manual inválida: execute Release com confirmação explícita da tag $Tag e do SHA $Commit. Push, rerun de evento automático e workflows de preview não autorizam divulgação."
+    }
+    $actor = $Run['actor']
+    $triggering = $Run['triggering_actor']
+    $login = [string]$actor['login']
+    if ($actor['type'] -cne 'User' -or $triggering['type'] -cne 'User' -or $login -notmatch '^[A-Za-z0-9-]+$' -or $triggering['login'] -cne $login) {
+        throw 'Autorização manual exige usuário humano; reexecução por outro ator exige uma nova autorização.'
+    }
+    $permission = Invoke-GhJson -Path "repos/$Repository/collaborators/$login/permission"
+    if ($permission['permission'] -cne 'admin') { throw "Usuário $login não é administrador do repositório; distribuição recusada." }
+    Write-Output "Autorização manual auditada: administrador $login confirmou $Tag/$Commit na execução $($Run['id'])."
+}
+
 function Assert-DistributionApproval {
     param(
         [Parameter(Mandatory)][string] $Repository,
@@ -560,15 +608,21 @@ function Assert-DistributionApproval {
     if ($run['head_sha'] -cne $Commit -or [string]$run['path'] -cnotmatch '^\.github/workflows/(gw-release|gw-preview|publish)\.yml(?:@|$)') {
         throw "Distribuição bloqueada: execução $RunId não corresponde à fonte $Tag/$Commit ou ao workflow de publicação autorizado."
     }
-    $reviews = @(Invoke-GhJson -Path "repos/$Repository/actions/runs/$RunId/approvals" | Where-Object { $_ })
-    $distribution = @($reviews | Where-Object { @($_['environments'] | Where-Object { $_['name'] -ceq 'distribution' }).Count -gt 0 })
-    $approved = @($distribution | Where-Object { $_['state'] -ceq 'approved' -and $_['user']['type'] -ceq 'User' -and $_['user']['login'] -and -not ([string]$_['user']['login']).EndsWith('[bot]', [StringComparison]::Ordinal) })
-    if ($approved.Count -eq 0 -or @($distribution | Where-Object { $_['state'] -ceq 'rejected' }).Count -gt 0) {
-        throw "Distribuição bloqueada: aprove manualmente o Environment distribution nesta execução para $Tag/$Commit. Ambiente sem revisor, aceite de quality e aprovação de PR não autorizam publicação; rejeição exige nova execução."
+    $mode = Get-DistributionApprovalMode -Config (Read-CiCdConfig)
+    if ($mode -ceq 'manual-dispatch') {
+        Assert-ManualDistributionApproval -Repository $Repository -Commit $Commit -Tag $Tag -Run $run
+    }
+    else {
+        $reviews = @(Invoke-GhJson -Path "repos/$Repository/actions/runs/$RunId/approvals" | Where-Object { $_ })
+        $distribution = @($reviews | Where-Object { @($_['environments'] | Where-Object { $_['name'] -ceq 'distribution' }).Count -gt 0 })
+        $approved = @($distribution | Where-Object { $_['state'] -ceq 'approved' -and $_['user']['type'] -ceq 'User' -and $_['user']['login'] -and -not ([string]$_['user']['login']).EndsWith('[bot]', [StringComparison]::Ordinal) })
+        if ($approved.Count -eq 0 -or @($distribution | Where-Object { $_['state'] -ceq 'rejected' }).Count -gt 0) {
+            throw "Distribuição bloqueada: aprove manualmente o Environment distribution nesta execução para $Tag/$Commit. Ambiente sem revisor, aceite de quality e aprovação de PR não autorizam publicação; rejeição exige nova execução."
+        }
     }
     $tagCommit = Invoke-GhJson -Path "repos/$Repository/commits/$Tag"
     if ($tagCommit['sha'] -cne $Commit) { throw "Distribuição bloqueada: tag $Tag mudou depois da autorização do SHA $Commit." }
-    Write-Output "Distribuição autorizada: $Tag/$Commit, execução $RunId, revisão humana no Environment distribution."
+    Write-Output "Distribuição autorizada: $Tag/$Commit, execução $RunId, modo $mode."
 }
 
 function Write-GitHubOutput {
@@ -589,4 +643,5 @@ Export-ModuleMember -Function Test-SemVer, Test-ReleaseTagName, Compare-SemVer, 
 Get-ProjectVersionFiles, Invoke-GhJson, Assert-ReleaseManifest, Assert-ReleaseEntries, Test-RollbackAllowed,
 Find-GitHubRelease, Save-ReleaseAsset, Get-ReleaseAssetText, Write-GitHubOutput, Get-PreviewPolicy, Test-CandidateTag,
 Get-CandidateBaseVersion, Get-TagCommit, Find-ValidatedCandidate, Find-PreviewWaiver, Get-ReleasePleaseFiles, Assert-CurrentReleaseSource,
-Assert-ReleaseDependencies, Assert-StableCandidateSource, Assert-DistributionApproval, Assert-InternalSnapshotPackage
+Assert-ReleaseDependencies, Assert-StableCandidateSource, Assert-DistributionApproval, Assert-InternalSnapshotPackage,
+Get-DistributionApprovalMode, Assert-ManualDistributionApproval

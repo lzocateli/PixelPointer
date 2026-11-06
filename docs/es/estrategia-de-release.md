@@ -20,10 +20,12 @@ es el mismo código de la candidata validada: entre ambas solo cambian los archi
 ```text
 PR (squash, Conventional Commit)
   └─▶ main ─▶ release-please actualiza el Release PR (versión + CHANGELOG)
-          └─▶ gw-preview.yml (manual) ─▶ etiqueta vX.Y.Z-rc.N ─▶ publish ─▶ prerelease atestada
+            └─▶ gw-preview.yml (manual) ─▶ etiqueta/borrador ─▶ preflight privado y pruebas
+              └─▶ distribution (aprobación después de pruebas) ─▶ publish del mismo artifact ─▶ prerelease atestada
                   └─▶ quality: deploy/smoke + aprobación humana ─▶ preview-acceptance.json
                           └─▶ Preview gate en verde en el Release PR
-                                  └─▶ merge humano ─▶ etiqueta vX.Y.Z ─▶ publish ─▶ release estable
+                  └─▶ merge humano ─▶ etiqueta/borrador ─▶ preflight y pruebas
+                    └─▶ distribution (aprobación después de pruebas) ─▶ publish sin recompilar ─▶ release estable
                                           └─▶ production (manual, con aprobación)
 ```
 
@@ -81,7 +83,9 @@ de que no es la versión estable; las notas de la estable reciben la línea "Val
 
 | Environment | Refs aceptadas | Revisores | Uso |
 | --- | --- | --- | --- |
-| `release` | `main`, `v*` | `@lzocateli` | credenciales de publicación, de la candidata y de la estable |
+| `release` | `main`, `v*` | `@lzocateli` | se conserva para operaciones heredadas; no autoriza el flujo AOT actual |
+| `release` | `main`, `v*` | `@lzocateli` | credenciales de componentes que aún usan este Environment; no sustituye a `distribution` |
+| `distribution` | `main`, `v*` | `@lzocateli` | autoriza la divulgación; con `distributionAfterValidation=true`, ocurre tras el preflight privado |
 | `quality` | `v*` | obligatorios | deploy y aceptación de la candidata; también acepta estables |
 | `production` | `v*` | obligatorios | solo estables con candidata validada |
 | `preview` | `main` | — | snapshots en el feed interno |
@@ -130,10 +134,10 @@ en las notas de la release. Es una excepción auditable, no un atajo: registre e
 | --- | --- | --- |
 | PR común | CI, título, Gitleaks, snapshot | revisión y merge |
 | Release PR | versión y CHANGELOG | — |
-| Candidata | N, etiqueta, publish, atestación, prerelease, notas | iniciar `gw-preview.yml`; aprobar `release` |
+| Candidata | N, etiqueta/borrador, preflight privado, build/pruebas, SBOM, publish del mismo artifact | iniciar `gw-preview.yml`; probar el artifact privado y aprobar `distribution` |
 | `quality` | deploy, smoke y registro de la aceptación | probar y aprobar `quality` |
 | `Preview gate` | verificación completa | waiver, si corresponde |
-| Estable | etiqueta, publish, release, notas con la candidata | merge del Release PR; aprobar `release` |
+| Estable | etiqueta/borrador, preflight privado, validaciones, publish sin recompilar, release y notas de la candidata | merge del Release PR; aprobar `distribution` tras las validaciones |
 | `production` | guard | iniciar y aprobar `production` |
 | Repositorio | Environments, variables y rulesets (`groundwork github --sync`) | secrets ausentes (`--secrets`) |
 

@@ -552,7 +552,7 @@ diagnostic details remain in the terminal.
 
 Generate a **new preview after merging this delivery PR into main with green CI**,
 before manual first-use acceptance. Do not wait for all F2; the current preview
-does not contain `setup`. After generation and `release` Environment approval,
+does not contain `setup`. After generating the private artifact and approving the `distribution` Environment,
 test GNOME/Wayland and Windows: open/close without actions, diagnostics, explicit
 registration where applicable, voluntary cancel/consent and selected daemon
 startup. Do not unmark Pre-release or promote stable before affected-scope validation.

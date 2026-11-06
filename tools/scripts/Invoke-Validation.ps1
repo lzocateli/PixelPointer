@@ -82,7 +82,7 @@ if ($RemainingArguments.Count -gt 0) {
     exit 2
 }
 
-$image = 'mcr.microsoft.com/dotnet/sdk:10.0.403-noble@sha256:9c7b6b263d9d4c2e4718e16dae6d75cd8f4b5ccf206f1e7d48a98eb429981b03'
+$image = 'lzocateli/dotnet-sdk:10.0.403-noble-v1'
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 
 if ($Native) {

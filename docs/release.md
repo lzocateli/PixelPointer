@@ -7,10 +7,10 @@ republicação e correção de release defeituosa) é o do Altivy.Groundwork, de
 no runbook [release](runbooks/release.md) e em [CI-CD](../.github/CI-CD.md). Este
 documento cobre o que é específico do PixelPointer: o
 [`publish.yml`](../.github/workflows/publish.yml) publica o `pixelpointer` em
-Native AOT para todos os RIDs suportados e o
-[`post-release.yml`](../.github/workflows/post-release.yml) distribui pelo
-Homebrew e pelo winget. Cada etapa tem um comando local equivalente em
-`tools/scripts/`.
+Native AOT para todos os RIDs suportados. Homebrew e winget são distribuídos por
+dispatches independentes que exigem uma stable exata (`vX.Y.Z`); `post-release.yml`
+não inicia nem autoriza esses canais. Cada etapa tem um comando local equivalente
+em `tools/scripts/`.
 
 ## Código de saída dos testes de instaladores
 
@@ -47,19 +47,21 @@ candidata do commit-base dele esteja aceita.
    gh workflow run gw-preview.yml --repo lzocateli/PixelPointer --ref main
    ```
 
-2. Aprove o Environment `release`. O `gw-preview.yml` cria a tag `vX.Y.Z-rc.N` pelo
-   GitHub App `Altivy Release` e chama o mesmo `publish.yml` da estável: build Native
-   AOT dos seis RIDs com a versão da tag, smoke, testes dos instaladores, SBOMs e
-   assets. A candidata é publicada como **Pre-release**, sem `Latest`, com o
-   `release-manifest.json` atestado; Homebrew e winget não são atualizados.
-3. Baixe e teste a candidata nas máquinas de teste (seção
+2. O workflow cria a tag e o rascunho privado, compila os seis RIDs, roda smoke e
+   testes dos instaladores, gera SBOMs/checksums e anexa um artifact privado
+   `release-assets` ao run. Ainda não publica os assets nem a prerelease.
+3. Abra o run pelo link do Environment `distribution`, baixe `release-assets`, confira
+   `SHA256SUMS` e teste os pacotes nas máquinas de teste (seção
    [Usar um pacote preview](#usar-um-pacote-preview)). `pixelpointer --version`
-   mostra `X.Y.Z-rc.N`.
+   deve mostrar `X.Y.Z-rc.N`. Aprove `distribution` somente depois desse teste; o
+   workflow publica os mesmos artifacts, sem recompilar, como **Pre-release** sem
+   `Latest`, com o `release-manifest.json` atestado. Homebrew e winget não são atualizados.
 4. Aprove o Environment `quality` no deploy disparado pelo `gw-preview.yml` somente
    depois de testar. O [`deploy.yml`](../.github/workflows/deploy.yml) confere que os
    assets publicados são os do manifesto e roda o smoke do pacote `linux-x64`; com
    sucesso, o aceite é anexado à prerelease (`preview-acceptance.json`) e o CI do
-   Release PR é reexecutado.
+   Release PR é reexecutado. Esse aceite `quality` continua separado da autorização
+   `distribution` até a consolidação do fluxo ser comprovada.
 5. Com o `Preview gate` verde, faça o merge do Release PR. A estável é o mesmo código
    da candidata, e as notas dela trazem "Validada na `vX.Y.Z-rc.N`".
 
@@ -79,10 +81,11 @@ gh run list --repo lzocateli/PixelPointer --workflow publish.yml
 ```
 
 Após build, smoke, testes de instaladores e atestações de SBOM passarem, o job
-`Publish GitHub Pre-release` aguarda sua aprovação no Environment `release`.
-O GitHub App `Altivy Release` cria a tag `vX.Y.Z-preview.N` no commit validado,
-prepara uma release em rascunho, atesta a proveniência e anexa os 14 assets mais
-`SHA256SUMS`. Só então publica com `prerelease=true` e `make_latest=false`.
+`Publish GitHub Pre-release` aguarda sua aprovação no Environment `distribution`.
+O link do Environment abre o run validado. Depois da aprovação, o GitHub App
+`Altivy Release` cria a tag `vX.Y.Z-preview.N` no commit validado, prepara uma release
+em rascunho, atesta a proveniência e anexa os mesmos 14 assets e `SHA256SUMS` testados.
+Só então publica com `prerelease=true` e `make_latest=false`.
 A versão aparece em [Releases](https://github.com/lzocateli/PixelPointer/releases)
 com a marca **Pre-release** e downloads públicos sem login. A estável continua sendo
 `Latest`.
@@ -268,7 +271,7 @@ em toda combinação de máquina e desktop.
 
 | Risco | Controle |
 | --- | --- |
-| Publicação a partir de PR ou branch não aprovada | Job somente em dispatch da `main`, aprovação do mantenedor no Environment `release`, checkout do commit da execução e ancestralidade de `origin/main` |
+| Publicação a partir de PR ou branch não aprovada | Job somente em dispatch da `main`, aprovação no Environment `distribution`, checkout do commit da execução e ancestralidade de `origin/main` |
 | Uso de token pessoal para criar tags protegidas | Somente o App autorizado, com token limitado a `contents: write`; token e chave não entram nos artifacts nem na saída dos scripts |
 | Pacotes incompletos, adulterados ou de outra execução | Build e smoke com a mesma versão, atestações de SBOM/proveniência, conjunto exato de assets, SHA-256 local e digest remoto conferidos antes de publicar |
 | Reexecução sobrescrever release ou promover preview a estável | Rascunho deve corresponder à mesma tag/commit; nunca mover tags ou sobrescrever assets; `prerelease=true`, `make_latest=false` e nenhum post-release |
@@ -359,8 +362,8 @@ gh attestation verify pixelpointer-linux-x64.tar.gz --repo lzocateli/PixelPointe
 | --- | --- | --- |
 | Instaladores | `install.sh` / `install.ps1` (ver [README](../README.md#instalação)) | `releases/latest`; `pixelpointer update` opt-in em instalações de usuário ([guia](uso.md#atualizar)) |
 | `.deb` (asset, sem repositório APT) | `sudo apt install ./pixelpointer-linux-x64.deb` | manual, baixando a nova release |
-| Homebrew (macOS e Linux) | `brew install lzocateli/tap/pixelpointer` | `brew upgrade`; fórmula atualizada pelo `post-release.yml` |
-| winget (Windows) | `winget install lzocateli.PixelPointer` | `winget upgrade`; PR ao `microsoft/winget-pkgs` aberto pelo `post-release.yml`, publicado após a moderação da Microsoft |
+| Homebrew (macOS e Linux) | `brew install lzocateli/tap/pixelpointer` | `brew upgrade`; iniciar manualmente `distribute-homebrew.yml` para `vX.Y.Z` |
+| winget (Windows) | `winget install lzocateli.PixelPointer` | `winget upgrade`; iniciar manualmente `winget.yml` para `vX.Y.Z`, sujeito à moderação da Microsoft |
 
 O atualizador do aplicativo aceita somente pacotes de release estável cuja
 atestação de proveniência SLSA v1 foi emitida pelo workflow
@@ -461,19 +464,21 @@ consulte a [política de segurança](../.github/SECURITY.md#versões-suportadas)
    arquivos à release em rascunho, sem sobrescrever asset já publicado.
 6. O `gw-release.yml` gera e atesta o `release-manifest.json` e publica a
    release. As notas vêm do `CHANGELOG.md` gerado pelo release-please.
-7. Com a release pública, o `post-release.yml`:
-   - no Environment `release` (nova aprovação), executa
-     [`Update-HomebrewTap.ps1`](../tools/scripts/Update-HomebrewTap.ps1) com o
-     `SHA256SUMS` publicado e envia o commit `pixelpointer X.Y.Z` ao tap. Não faz
-     nada se a fórmula já corresponder à versão; se o tap já publicar versão maior
-     (correção de uma linha antiga), mantém o tap e registra um aviso;
-   - quando o tap ficou na versão da release, `verify-homebrew` instala pelo tap
-     em `macos-15` e confere a versão e o `brew test`;
-   - chama [`winget.yml`](../.github/workflows/winget.yml): gera o manifesto,
-     executa `winget validate`, instala pelo manifesto local em `windows-2025`,
-     confere `pixelpointer --version` e `selftest`, desinstala e, no Environment `winget`,
-     submete o PR com `wingetcreate submit` (v1.12.13.0, SHA-256 fixado). Não
-     submete se a versão já estiver no `winget-pkgs` ou houver PR aberto para ela.
+7. A stable publicada encerra o fluxo canônico; nenhum registry é atualizado
+    automaticamente. Para cada destino, confira a versão e inicie somente o workflow
+    correspondente a partir de `main`:
+
+    ```bash
+    gh workflow run distribute-homebrew.yml --repo lzocateli/PixelPointer --ref main -f version=vX.Y.Z
+    gh workflow run winget.yml --repo lzocateli/PixelPointer --ref main -f version=vX.Y.Z -f submit=true
+    ```
+
+    Homebrew valida a release pública, o manifesto, `SHA256SUMS` e suas atestações
+    antes da aprovação no Environment `release`; depois atualiza e verifica o tap.
+    Winget valida e instala o manifesto local antes da aprovação no Environment
+    `winget`, então submete o PR com `wingetcreate`; a Microsoft ainda precisa aprová-lo.
+    Cada execução altera somente o destino e a versão informados. `post-release.yml`
+    não faz fan-out.
 
 Pull requests que alteram a cadeia de release e `workflow_dispatch` do
 `publish.yml` executam build, smoke e testes dos instaladores, sem publicar.
@@ -484,18 +489,16 @@ causa e use o modo `republish` descrito no [runbook](runbooks/release.md).
 
 ### Winget
 
-O `winget.yml` também roda em pull requests que o alteram (valida com a última
-release, sem submeter) e por `workflow_dispatch` a partir de `main`, com
-`version` e `submit`, para a primeira submissão ou para reenviar após falha:
+O `winget.yml` roda em pull requests que o alteram (valida com a última
+release, sem submeter) e por `workflow_dispatch` independente a partir de `main`,
+sempre com versão stable exata e `submit`, para a primeira submissão ou um retry:
 
 ```bash
-gh workflow run winget.yml -f version=0.4.0 -f submit=true
+gh workflow run winget.yml --repo lzocateli/PixelPointer --ref main -f version=v0.4.0 -f submit=true
 ```
 
-No dispatch manual, `submit=true` é recusado fora de `main`. No fluxo
-automático, o workflow reutilizável recebe o contexto do `gw-release.yml`:
-`push` em `main` (post-release) ou `workflow_dispatch` na tag `vX.Y.Z`
-correspondente (republish); qualquer outra origem é recusada.
+`submit=true` é permitido somente no dispatch manual em `main` ou no republish
+na tag correspondente. Pushes e `post-release.yml` não podem submeter ao winget.
 
 O secret `WINGET_CREATE_GITHUB_TOKEN` fica somente no Environment `winget`
 com `@lzocateli` como revisor obrigatório. `prevent_self_review` está
@@ -528,7 +531,7 @@ gh pr list --repo microsoft/winget-pkgs --author lzocateli --state all \
 gh pr view <número> --repo microsoft/winget-pkgs --json state,labels,mergedAt,url
 gh pr view <número> --repo microsoft/winget-pkgs --comments | tail -n 40
 
-# Execuções do winget.yml e execuções aguardando aprovação de Environment
+# Dispatches do winget.yml e execuções aguardando aprovação de Environment
 gh run list --repo lzocateli/PixelPointer --workflow winget.yml --limit 5
 gh run list --repo lzocateli/PixelPointer --status waiting
 ```
@@ -565,14 +568,12 @@ Enquanto a primeira versão não for integrada, o PR da seguinte também sai com
 `New package`, e os moderadores podem fechar um dos dois. Para evitar PRs
 concorrentes, mantenha no máximo um PR aberto por vez:
 
-1. Antes de aprovar o Environment `winget` no `post-release.yml`, consulte os
-   PRs abertos (comando `gh pr list` acima, com `--state open`).
-2. Se não houver PR aberto do pacote, aprove: a nova versão é submetida.
-3. Se houver PR de uma versão anterior aberto, **rejeite** a aprovação do
-   Environment `winget` (Actions → execução → *Review deployments* → *Reject*).
-   A release, o Homebrew e os demais canais já estão publicados; somente o job
-   `Submit to microsoft/winget-pkgs` termina como rejeitado, e a execução do
-   `Release` aparece com falha por esse motivo.
+1. Antes de iniciar `winget.yml`, consulte os PRs abertos (comando `gh pr list`
+   acima, com `--state open`).
+2. Se não houver PR aberto do pacote, faça dispatch da versão stable desejada.
+3. Se houver PR de uma versão anterior aberto, aguarde ou resolva-o antes de
+   iniciar outro envio. A release canônica e o Homebrew permanecem independentes;
+   nenhum dos dois será alterado pelo dispatch de winget.
 4. Resolva o PR pendente: assine o CLA se houver `Needs-CLA` e responda a
    `Needs-Author-Feedback`. Se o PR antigo for encerrado sem merge, não o
    reabra: ele já foi superado.
@@ -582,7 +583,7 @@ concorrentes, mantenha no máximo um PR aberto por vez:
 
    ```bash
    gh workflow run winget.yml --repo lzocateli/PixelPointer --ref main \
-     -f version=X.Y.Z -f submit=true
+   -f version=vX.Y.Z -f submit=true
    ```
 
    O dispatch em `main` passa pela mesma validação, instalação local e aprovação
@@ -591,7 +592,7 @@ concorrentes, mantenha no máximo um PR aberto por vez:
 ### Token do tap Homebrew
 
 O secret `HOMEBREW_TAP_TOKEN` fica somente no Environment `release`, usado pelo
-job do tap no `post-release.yml`, e é um PAT
+job de publicação de `distribute-homebrew.yml`, e é um PAT
 fine-grained com acesso apenas a `lzocateli/homebrew-tap` e permissão
 `Contents: Read and write`. O script o lê da variável de ambiente e o repassa ao
 `git` por `GIT_CONFIG_*`, fora da linha de comando. Ao expirar, gere um novo PAT

@@ -16,7 +16,7 @@ the published package. It is the acceptance of the `vX.Y.Z-rc.N` candidate in
 | Environment | Target | Runner | Reviewers |
 | --- | --- | --- | --- |
 | `quality` | GitHub Release assets (candidate or stable) and the maintainer's test machines | GitHub `ubuntu-24.04` | `@lzocateli` (required: `approval` acceptance) |
-| `production` | Stable GitHub Release assets; distribution through Homebrew and winget happens in `post-release.yml` | GitHub `ubuntu-24.04` | `@lzocateli` |
+| `production` | Stable GitHub Release assets; Homebrew and winget require independent dispatches with an explicit version | GitHub `ubuntu-24.04` | `@lzocateli` |
 
 ## Execution
 

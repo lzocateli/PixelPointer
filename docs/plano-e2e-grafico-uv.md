@@ -574,8 +574,8 @@ de permissão concedida. Os detalhes do diagnóstico existente ficam no terminal
 
 Gerar uma **nova preview após integrar o PR desta entrega na main com CI verde**,
 antes do aceite manual de primeiro uso. Não é necessário esperar toda a F2;
-a preview existente não contém `setup`. Após gerar e aprovar o Environment
-`release`, testar no GNOME/Wayland e Windows: abrir/fechar sem ações, diagnóstico,
+a preview existente não contém `setup`. Após gerar o artifact privado e aprovar o Environment
+`distribution`, testar no GNOME/Wayland e Windows: abrir/fechar sem ações, diagnóstico,
 registro explícito quando aplicável, cancelamento/consentimento voluntário e
 início do daemon por escolha. Não desmarcar Pre-release nem promover a estável
 antes de validar os recortes afetados.

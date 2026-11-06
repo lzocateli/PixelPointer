@@ -20,6 +20,30 @@ if ($RemainingArguments -contains '--help') { Get-Help $PSCommandPath -Full; exi
 if ($RemainingArguments) { [Console]::Error.WriteLine('Argumento desconhecido. Use --help.'); exit 2 }
 
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
+$releaseWorkflow = Get-Content -LiteralPath (Join-Path $root '.github/workflows/gw-release.yml') -Raw
+$previewWorkflow = Get-Content -LiteralPath (Join-Path $root '.github/workflows/gw-preview.yml') -Raw
+$publishWorkflow = Get-Content -LiteralPath (Join-Path $root '.github/workflows/publish.yml') -Raw
+foreach ($workflow in @($releaseWorkflow, $previewWorkflow)) {
+    $prepareIndex = $workflow.IndexOf("  prepare:", [StringComparison]::Ordinal)
+    $approvalIndex = $workflow.IndexOf("  authorize-distribution:", [StringComparison]::Ordinal)
+    $publishIndex = $workflow.IndexOf("  publish:", [StringComparison]::Ordinal)
+    if ($prepareIndex -lt 0 -or $approvalIndex -lt 0 -or $publishIndex -lt 0 -or
+        $prepareIndex -ge $approvalIndex -or $approvalIndex -ge $publishIndex) {
+        throw 'Preflight, autorização de distribution e publicação precisam ocorrer nessa ordem.'
+    }
+    if (-not $workflow.Contains('needs: [context, prepare]', [StringComparison]::Ordinal) -or
+        -not $workflow.Contains('preflight: true', [StringComparison]::Ordinal) -or
+        -not $workflow.Contains('publish_only: ${{ needs.context.outputs.distribution_after_validation == ''true'' }}', [StringComparison]::Ordinal)) {
+        throw 'Workflow de release não propaga os modos de preparo/publicação ao publish.yml.'
+    }
+}
+$releasePolicy = Get-Content -LiteralPath (Join-Path $root '.github/ci-cd.json') -Raw | ConvertFrom-Json
+if ($releasePolicy.distributionAfterValidation -ne $true -or
+    -not $publishWorkflow.Contains('-Preflight:($env:PREFLIGHT -eq ''true'')', [StringComparison]::Ordinal) -or
+    -not $publishWorkflow.Contains('inputs.publish_only != true', [StringComparison]::Ordinal) -or
+    -not $publishWorkflow.Contains('inputs.publish_only == true || needs.release-assets.result == ''success''', [StringComparison]::Ordinal)) {
+    throw 'publish.yml precisa validar a fonte em preflight e publicar artifacts preparados sem rebuild.'
+}
 $temporary = Join-Path $root "artifacts/.preview-release-tests-$([Guid]::NewGuid().ToString('N'))"
 $directory = Join-Path $temporary 'assets'
 $null = New-Item -ItemType Directory -Path $directory -Force
