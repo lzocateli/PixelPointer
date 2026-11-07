@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.0](https://github.com/lzocateli/PixelPointer/compare/v0.5.0...v0.6.0) (2026-11-07)
+
+
+### Adicionado
+
+* **actions:** valide artefatos antes de autorizar publicação ([#68](https://github.com/lzocateli/PixelPointer/issues/68)) ([8699d59](https://github.com/lzocateli/PixelPointer/commit/8699d59399b1144f0b0b257cf1d48135b4953487))
+
+
+### Corrigido
+
+* **actions:** atualize Groundwork e corrija permissões de release ([#69](https://github.com/lzocateli/PixelPointer/issues/69)) ([ffd1323](https://github.com/lzocateli/PixelPointer/commit/ffd13237dc742b0f54369002ee26483ed7129a0d))
+
 ## [0.5.0](https://github.com/lzocateli/PixelPointer/compare/v0.4.0...v0.5.0) (2026-11-05)
 
 
