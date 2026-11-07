@@ -82,13 +82,23 @@ try {
     $pages = Invoke-GhJson -Path "repos/$Repository/pulls?state=closed&head=${owner}:release-please--branches--$DefaultBranch&per_page=100" -Paginate
     $mergedPulls = @($pages | Where-Object { $_['merged_at'] })
     $pending = @($mergedPulls | Where-Object { @($_['labels'] | Where-Object { $_['name'] -ceq 'autorelease: pending' }).Count -ne 0 })
-    if ($Stage -eq 'ReleasePlease' -and $pending.Count -eq 0) {
-        Write-GitHubOutput -Path $OutputPath -Values @{ release_ready = 'false' } | Out-Null
-        Write-Output 'Atualização do Release PR: sem release integrada pendente de tag; criação de release desabilitada.'
-        exit 0
-    }
-    if ($Stage -eq 'ReleasePlease' -and ($pending.Count -ne 1 -or $pending[0]['merge_commit_sha'] -cne $Commit)) {
-        throw "Release PR integrado pendente não corresponde ao SHA $Commit; recusa criar tag de uma base antiga. Resolva a integração e gere uma nova candidata."
+    if ($Stage -eq 'ReleasePlease') {
+        $currentPending = @($pending | Where-Object { $_['merge_commit_sha'] -ceq $Commit })
+        if ($currentPending.Count -ne 1) {
+            Write-GitHubOutput -Path $OutputPath -Values @{ release_ready = 'false' } | Out-Null
+            if ($currentPending.Count -gt 1) {
+                Write-Output "Atualização do Release PR: mais de um release PR integrado corresponde ao SHA $Commit; criação de tag e release desabilitada."
+            }
+            elseif ($pending.Count -gt 0) {
+                $pendingShas = (@($pending | ForEach-Object { [string]$_['merge_commit_sha'] } | Where-Object { $_ }) -join ', ')
+                Write-Output "Atualização do Release PR: release pendente em outro SHA ($pendingShas); release-please pode atualizar o PR, mas criação de tag e release estão desabilitadas até um merge corresponder ao HEAD atual $Commit."
+            }
+            else {
+                Write-Output 'Atualização do Release PR: sem release integrada pendente de tag; criação de release desabilitada.'
+            }
+            exit 0
+        }
+        $pending = $currentPending
     }
     if ($Stage -eq 'ReleasePlease') {
         if ((Get-DistributionApprovalMode -Config (Read-CiCdConfig)) -ceq 'manual-dispatch') {

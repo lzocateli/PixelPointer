@@ -171,7 +171,8 @@ jobs:
     if: ${{ needs.context.outputs.distribution_after_validation == 'true' }}
     uses: ./.github/workflows/publish.yml
     permissions:
-      contents: read
+      contents: write
+      packages: write
       id-token: write
       attestations: write
       actions: read
