@@ -30,6 +30,11 @@ functional changes; human review remains mandatory.
 
 When only updating the Release PR, release-please uses `skip-github-release: true`;
 only guard output `release_ready=true` authorizes release/tag creation.
+If an integrated Release PR still labeled `autorelease: pending` belongs to a SHA
+older than current HEAD, the guard returns `release_ready=false`, allowing only
+release-please to refresh the Release PR; it does not create a tag or publish. Tag
+creation is enabled only when exactly one pending PR matches current SHA. Never
+publish from the old tag; resolve and review the new version at the current HEAD.
 
 ## Distribution Authorization
 

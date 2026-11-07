@@ -30,6 +30,11 @@ autorizam alterações funcionais disfarçadas de metadados e exigem revisão hu
 
 Quando só atualiza o Release PR, o release-please usa `skip-github-release: true`;
 somente `release_ready=true` da guarda libera criação de release/tag.
+Se um Release PR integrado ainda marcado `autorelease: pending` pertencer a um SHA
+anterior ao HEAD atual, a guarda retorna `release_ready=false` para permitir somente
+que release-please atualize o Release PR; não cria tag nem publica. A autorização de
+criação só é liberada quando exatamente um pending corresponde ao SHA atual. Nunca
+publique pela tag antiga: resolva e revise a nova versão no HEAD vigente.
 
 ## Autorização da distribuição
 

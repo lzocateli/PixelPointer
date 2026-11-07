@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "toolVersion": "0.10.2",
-  "catalogVersion": "0.10.2",
+  "toolVersion": "0.11.1",
+  "catalogVersion": "0.11.1",
   "parameters": {
     "auto_deploy_environment": "quality",
     "commit_scopes": "app,core,rendering,capture,hotkeys,overlay,ipc,platform,linux,windows,macos,packaging,tests,docs,tooling,deps,actions,repo",
@@ -169,11 +169,11 @@
     },
     ".github/workflows/gw-preview.yml": {
       "component": "release-preview",
-      "sha256": "02677829cb6c0419f58ea61ef1755b2a1934e7ceb8ca7d6621cf4dfb0bbdee0e"
+      "sha256": "afd9cadab56ff16242b2fbd06e63594bb19849b9fe73bc1504acc0785ee821cf"
     },
     ".github/workflows/gw-release.yml": {
       "component": "release",
-      "sha256": "45024b227ac1dcf89193fd55f44ff81e3f634846ea0f74196b2ad2a10d48de00"
+      "sha256": "4e3274ee70332af33eb99aecc901661031d772a797f547169911a9125b01f4e6"
     },
     ".gitleaks.toml": {
       "component": "secret-scanning",
@@ -181,11 +181,11 @@
     },
     "docs/en/release-integrity.md": {
       "component": "release",
-      "sha256": "45ce4fc0dbf41a94ef862c0607b2aaba60e537becf631c6e6bb19e5d6158e0ab"
+      "sha256": "1457d70ff69a6b252e88831c6284868435d4ba10008f35a3bbf99f57d1548add"
     },
     "docs/es/release-integrity.md": {
       "component": "release",
-      "sha256": "d2793460373ffe84c7466e0da3b0cf323871b7ae1a6771e261dad8648fe3a0bf"
+      "sha256": "a2332fc0114298eb07e8ad62ecb61f955627147bc35079078828d4102fd5ab7d"
     },
     "docs/estrategia-de-release.md": {
       "component": "release-preview",
@@ -193,7 +193,7 @@
     },
     "docs/release-integrity.md": {
       "component": "release",
-      "sha256": "df975cb2965720910e4064fa4f8423a50a43906f295f026d4a165bb3201be88c"
+      "sha256": "96c6dd640ad78b571b32d18930bbcbf600fdadc6070b7c0becb150bdf8ea51c6"
     },
     "docs/runbooks/deploy-e-rollback.md": {
       "component": "deploy",
@@ -225,7 +225,7 @@
     },
     "tools/scripts/ci/Assert-ReleaseSource.ps1": {
       "component": "release",
-      "sha256": "90b4d922a9594b241033956d75ddd396a070937dd0f44abc01b39e389c4f7e60"
+      "sha256": "85ba8ec07c44b5fdacba27d2d0060952f79fd4bfa66e97e1834895384bcb4da2"
     },
     "tools/scripts/ci/Assert-ReleaseTag.ps1": {
       "component": "release",
