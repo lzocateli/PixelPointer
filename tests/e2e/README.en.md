@@ -113,10 +113,10 @@ safe to run against the host kernel. The image and package must be trusted. The
 evidence volume is only a test output channel, not a place for personal data.
 No portal/TCC permission is simulated as real consent.
 In the compositor scenario, the disposable desktop provides a local mock of
-`org.freedesktop.portal.Screenshot` that responds with an Xvfb PNG capture. This
-exercises the D-Bus call, monitor crop and product composition; it does not
-verify composed-window capture through GNOME's real portal or the system
-authorization flow.
+`org.freedesktop.portal.Screenshot` that rejects requests with code `2`.
+The test requires Ctrl+S to use `XGetImage` without calling that portal and
+checks the captured background, monitor crop and annotations in the PNG. This
+does not verify capture on GNOME's real compositor or Wayland authorization.
 
 The cooperative deadline is 120 seconds; SIGALRM at 150 seconds raises an error
 to finalize evidence; the orchestrator kills the container at 180 seconds.

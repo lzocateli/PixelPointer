@@ -331,11 +331,11 @@ meta de rendimiento de tu escritorio.
 Los atajos globales usan XGrabKey y no necesitan permiso. Si otra aplicación ya
 registró Ctrl+1 o Ctrl+2, el daemon informa el conflicto y no anuncia ese atajo
 como disponible. En el modo de dibujo, un compositor X11 permite anotaciones
-transparentes sobre el contenido actual. Para incluir las ventanas compuestas
-en Ctrl+S, el guardado usa el portal Screenshot y recorta solo el monitor de la
-superposición; ejecuta `pixelpointer grant` antes si el portal pide autorización.
-Sin compositor, la aplicación avisa y usa una captura congelada, no transparencia
-en vivo.
+transparentes sobre el contenido actual. Al guardar con Ctrl+S, la aplicación
+oculta la superposición, captura el fondo con `XGetImage` y recorta solo el monitor
+de la superposición antes de componer las anotaciones. Este flujo no llama al
+portal Screenshot ni exige `pixelpointer grant`. Sin compositor, la aplicación
+avisa y usa una captura congelada, no transparencia en vivo.
 
 ### Ejecución en segundo plano y salida
 
@@ -567,13 +567,12 @@ generado, sin `sudo`:
 
 ```bash
 ./artifacts/publish/linux-x64/pixelpointer probe
-./artifacts/publish/linux-x64/pixelpointer grant
 ./artifacts/publish/linux-x64/pixelpointer daemon
 ```
 
 1. **Diagnóstico:** `probe` debe identificar X11 e informar si hay compositor.
-  `grant` debe pedir permiso del portal para Ctrl+S; los atajos X11 no necesitan
-  ese permiso. La ausencia de Registry no debe recomendar reinstalar la entrada del
+  Ctrl+S y los atajos X11 no necesitan permiso del portal.
+  La ausencia de Registry no debe recomendar reinstalar la entrada del
   escritorio; los errores reales de registro deben seguir distinguiéndose.
 2. **Atajos y captura:** pulsa Ctrl+1, anota sobre una imagen conocida, amplía y
   cierra con Esc. El daemon debe seguir activo. Compara con
@@ -587,8 +586,8 @@ generado, sin `sudo`:
    el monitor del cursor, pulsa Ctrl+S dos veces y comprueba que cada PNG contiene
    solo ese monitor, el contenido de la ventana y los trazos alineados. En el modo
    zoom, el PNG debe contener la captura congelada y los trazos. Comprueba el
-   mensaje, los dos archivos distintos y el destino XDG. Si el portal pide
-   autorización, concédela o ejecuta `grant` antes. Si el destino no permite
+  mensaje, los dos archivos distintos y el destino XDG. No debe haber solicitudes
+  al portal. Si el destino no permite
    escritura, espera un error en la superposición y ningún archivo en otra
    carpeta. Usa una cuenta sin privilegios para esta prueba.
 5. **Bandeja y salida:** abre y cierra Zoom/Desenhar desde la bandeja. Elige

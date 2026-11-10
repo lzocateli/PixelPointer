@@ -297,6 +297,7 @@ class Scenario:
         self.display.button(1, False)
 
     def verify_diagnostic_log(self):
+        assert not Path("/tmp/portal-screenshot-requested").exists(), "X11 dependeu do portal Screenshot"
         required = [
             "COMMAND received id=draw source=global-hotkey shortcut=CTRL+2",
             "DISPLAY stage=overlay-start",
@@ -312,7 +313,7 @@ class Scenario:
                 "DISPLAY stage=before-snapshot",
                 "DISPLAY stage=after-snapshot",
                 "SNAPSHOT compositor-settle ms=250",
-                "SNAPSHOT background-captured source=xdg-desktop-portal Screenshot desktop=800x600 monitor-bounds=(0,0,800,600) monitor=800x600",
+                "SNAPSHOT background-captured source=X11 XGetImage desktop=800x600 monitor-bounds=(0,0,800,600) monitor=800x600",
             ])
         def missing():
             return [expected for expected in required

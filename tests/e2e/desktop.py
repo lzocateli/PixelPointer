@@ -4,7 +4,6 @@ import json
 import os
 import shlex
 import subprocess
-import uuid
 from pathlib import Path
 
 from dbus_fast import Message, MessageType, Variant
@@ -61,6 +60,7 @@ class ScreenshotPortal(ServiceInterface):
         token = options.get("handle_token")
         if self.bus is None or self.sender is None or token is None:
             raise RuntimeError("Solicitacao Screenshot sem contexto D-Bus")
+        Path("/tmp/portal-screenshot-requested").touch()
         sender = self.sender.removeprefix(":").replace(".", "_")
         request = f"/org/freedesktop/portal/desktop/request/{sender}/{token.value}"
         asyncio.get_running_loop().create_task(self.respond(request))
@@ -68,15 +68,13 @@ class ScreenshotPortal(ServiceInterface):
 
     async def respond(self, request):
         await asyncio.sleep(0.05)
-        path = Path("/tmp", f"pixelpointer-portal-{uuid.uuid4().hex}.png")
-        self.desktop.screenshot().save(path)
         self.bus.send(Message(
             message_type=MessageType.SIGNAL,
             path=request,
             interface="org.freedesktop.portal.Request",
             member="Response",
             signature="ua{sv}",
-            body=[0, {"uri": Variant("s", path.as_uri())}],
+            body=[2, {}],
         ))
 
 
