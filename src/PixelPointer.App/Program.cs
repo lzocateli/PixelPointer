@@ -581,7 +581,7 @@ static void RunOverlay(
     }
 
     IScreenCapture? snapshotCapture = transparentDraw
-        ? portal is not null ? new PortalScreenCapture(portal) : new DeferredPortalScreenCapture(ConnectPortal)
+        ? new X11ScreenCapture()
         : null;
     var metrics = new OverlaySession(bitmap, mode, transparentDraw, LoadSettings(), snapshotCapture,
         snipMonitor?.Bounds).Run(cancellationToken);

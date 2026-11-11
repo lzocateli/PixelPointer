@@ -323,10 +323,11 @@ alone do not prove a noticeable improvement or your desktop's performance target
 Global hotkeys use XGrabKey and need no permission. If another app already
 registered Ctrl+1 or Ctrl+2, the daemon reports the conflict and does not claim
 that hotkey is available. In draw mode, an X11 compositor enables transparent
-annotations over current content. To include composited windows in Ctrl+S, saving
-uses the Screenshot portal and crops only the overlay's monitor; run
-`pixelpointer grant` first if the portal requests authorization. Without a
-compositor, the app warns and uses a frozen capture, not live transparency.
+annotations over current content. When saving with Ctrl+S, the app hides the
+overlay, captures the background with `XGetImage` and crops only the overlay's
+monitor before composing annotations. This flow does not call the Screenshot
+portal or require `pixelpointer grant`. Without a compositor, the app warns and
+uses a frozen capture, not live transparency.
 
 ### Running in the background and exiting
 
@@ -549,13 +550,12 @@ package without `sudo`:
 
 ```bash
 ./artifacts/publish/linux-x64/pixelpointer probe
-./artifacts/publish/linux-x64/pixelpointer grant
 ./artifacts/publish/linux-x64/pixelpointer daemon
 ```
 
 1. **Diagnostics:** `probe` should identify X11 and report whether a compositor
-  is present. `grant` should request portal permission for Ctrl+S; X11 hotkeys
-  themselves need no permission. Missing Registry must not recommend reinstalling the desktop
+  is present. Ctrl+S and X11 hotkeys need no portal permission.
+  Missing Registry must not recommend reinstalling the desktop
   entry; real registration errors must remain distinguishable.
 2. **Hotkeys and capture:** press Ctrl+1, annotate a known image, zoom and close
   with Esc. The daemon should remain active. Compare with
@@ -569,8 +569,8 @@ package without `sudo`:
   cursor's monitor, press Ctrl+S twice and check that each PNG contains only that
   monitor, the window content and aligned strokes. In zoom, the PNG should
   contain the frozen capture and strokes. Check the message, two distinct files
-  and the XDG destination. If the portal requests authorization, grant it or run
-  `grant` first. With an unwritable destination, expect an overlay error and no
+  and the XDG destination. No portal request should occur.
+  With an unwritable destination, expect an overlay error and no
   file in another folder. Use an unprivileged user for this test.
 5. **Tray and exit:** open and close Zoom/Desenhar from the tray. Choose **Sair**
   with and without an overlay open. If the tray is unavailable, confirm the

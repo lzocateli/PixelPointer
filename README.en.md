@@ -218,7 +218,7 @@ Without the shortcuts portal, bind a desktop shortcut to `pixelpointer zoom` or
 | Window, input and pen | SDL3 (native Wayland, X11, Win32, Cocoa) |
 | Drawing and zoom | SkiaSharp |
 | Capture and hotkeys on Wayland | XDG portals (Screenshot, GlobalShortcuts) over D-Bus |
-| Capture and hotkeys on X11, Windows and macOS | XGetImage/XGrabKey and Screenshot portal for X11 drawing, GDI/RegisterHotKey, screencapture |
+| Capture and hotkeys on X11, Windows and macOS | XGetImage/XGrabKey, GDI/RegisterHotKey, screencapture |
 | Distribution | .NET 10 Native AOT, ~19 MB including native libraries |
 
 ## Development

@@ -324,11 +324,11 @@ ou a meta de desempenho no seu desktop.
 Os atalhos globais usam XGrabKey e não precisam de permissão. Se outra aplicação
 já registrou Ctrl+1 ou Ctrl+2, o daemon informa o conflito e não anuncia o atalho
 como disponível. Em modo de desenho, um compositor X11 permite anotações
-transparentes sobre o conteúdo atual. Para que Ctrl+S inclua as janelas compostas,
-o salvamento usa o portal Screenshot e recorta somente o monitor da sobreposição;
-execute `pixelpointer grant` para autorizar a captura antes do uso, se o portal
-solicitar. Sem compositor, o aplicativo avisa e usa uma captura congelada, não
-transparência ao vivo.
+transparentes sobre o conteúdo atual. Ao salvar com Ctrl+S, o aplicativo oculta
+a sobreposição, captura o fundo com `XGetImage` e recorta somente o monitor da
+sobreposição antes de compor as anotações. Esse fluxo não chama o portal
+Screenshot nem exige `pixelpointer grant`. Sem compositor, o aplicativo avisa
+e usa uma captura congelada, não transparência ao vivo.
 
 ### Execução em segundo plano e encerramento
 
@@ -535,13 +535,11 @@ gerado, sem `sudo`:
 
 ```bash
 ./artifacts/publish/linux-x64/pixelpointer probe
-./artifacts/publish/linux-x64/pixelpointer grant
 ./artifacts/publish/linux-x64/pixelpointer daemon
 ```
 
 1. **Diagnóstico:** `probe` deve identificar X11 e informar se há compositor.
-   `grant` deve solicitar a permissão do portal para a captura de Ctrl+S; os
-   atalhos X11 não precisam dessa permissão.
+   Ctrl+S e os atalhos X11 não precisam de permissão do portal.
    Falta de Registry não deve recomendar reinstalar a entrada desktop; erro real
    de registro deve continuar distinguível.
 2. **Atalhos e captura:** pressione Ctrl+1, anote sobre uma imagem conhecida,
@@ -556,8 +554,8 @@ gerado, sem `sudo`:
    monitor do cursor, pressione Ctrl+S duas vezes e confira que cada PNG contém
    somente esse monitor, o conteúdo da janela e os traços alinhados. No zoom, o
    PNG deve conter a captura congelada e os traços. Confira a mensagem, os dois
-   arquivos distintos e a pasta XDG configurada. Se o portal pedir autorização,
-   conceda-a ou rode `grant` antes. Com destino sem permissão, espere erro na
+   arquivos distintos e a pasta XDG configurada. Não deve haver solicitação ao
+   portal. Com destino sem permissão, espere erro na
    sobreposição e nenhum arquivo em outra pasta.
    Use um usuário sem privilégios para esse teste.
 5. **Tray e saída:** abra e feche Zoom/Desenhar pela tray. Use **Sair** com e sem

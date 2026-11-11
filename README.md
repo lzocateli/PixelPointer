@@ -230,7 +230,7 @@ sobreposição. Detalhes e exportação com alfa:
 | Janela, entrada e caneta | SDL3 (Wayland nativo, X11, Win32, Cocoa) |
 | Desenho e zoom | SkiaSharp |
 | Captura e atalhos no Wayland | Portais XDG (Screenshot, GlobalShortcuts) via D-Bus |
-| Captura e atalhos no X11, Windows e macOS | XGetImage/XGrabKey e Screenshot portal no desenho X11, GDI/RegisterHotKey, screencapture |
+| Captura e atalhos no X11, Windows e macOS | XGetImage/XGrabKey, GDI/RegisterHotKey, screencapture |
 | Distribuição | .NET 10 Native AOT, ~19 MB com as bibliotecas nativas |
 
 ## Desenvolvimento

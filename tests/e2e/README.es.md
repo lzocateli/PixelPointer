@@ -116,10 +116,10 @@ hostil contra el kernel del host. La imagen y el paquete deben ser confiables. E
 volumen de evidencias es solo un canal de salida de la prueba, no un lugar para
 datos personales. Ningún permiso de portal/TCC se simula como consentimiento real.
 En el escenario con compositor, el escritorio descartable proporciona un mock
-local de `org.freedesktop.portal.Screenshot`, que responde con una captura PNG
-de Xvfb. Esto ejercita la llamada D-Bus, el recorte por monitor y la composición
-del producto; no verifica la captura compuesta de ventanas mediante el portal
-real de GNOME ni el flujo de autorización del sistema.
+local de `org.freedesktop.portal.Screenshot`, que rechaza solicitudes con código
+`2`. La prueba exige que Ctrl+S use `XGetImage` sin llamar a ese portal y verifica
+el fondo capturado, el recorte por monitor y las anotaciones en el PNG. Esto no
+verifica la captura en el compositor real de GNOME ni la autorización de Wayland.
 
 El plazo cooperativo es de 120 segundos; SIGALRM a los 150 segundos genera un
 error para finalizar evidencias; el orquestador mata el contenedor a los 180

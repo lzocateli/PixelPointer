@@ -225,7 +225,7 @@ solución de problemas: [guía de uso](docs/es/uso.md).
 | Ventana, entrada y lápiz | SDL3 (Wayland nativo, X11, Win32, Cocoa) |
 | Dibujo y zoom | SkiaSharp |
 | Captura y atajos en Wayland | Portales XDG (Screenshot, GlobalShortcuts) por D-Bus |
-| Captura y atajos en X11, Windows y macOS | XGetImage/XGrabKey y portal Screenshot para dibujo X11, GDI/RegisterHotKey, screencapture |
+| Captura y atajos en X11, Windows y macOS | XGetImage/XGrabKey, GDI/RegisterHotKey, screencapture |
 | Distribución | .NET 10 Native AOT, ~19 MB con las bibliotecas nativas |
 
 ## Desarrollo
