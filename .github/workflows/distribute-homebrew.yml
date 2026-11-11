@@ -50,7 +50,7 @@ jobs:
           actual="sha256:$(sha256sum dist/SHA256SUMS | cut -d ' ' -f 1)"
           [[ "$actual" == "$expected" ]] || { echo "::error::SHA256SUMS não corresponde ao manifesto imutável."; exit 1; }
           version="${RELEASE_TAG#v}"
-          ./tools/scripts/New-HomebrewFormula.ps1 -Version "$version" -ReleaseDirectory dist -OutputFile dist/Formula/pixelpointer.rb
+          pwsh -NoProfile -File ./tools/scripts/New-HomebrewFormula.ps1 -Version "$version" -ReleaseDirectory dist -OutputFile dist/Formula/pixelpointer.rb
           ruby -c dist/Formula/pixelpointer.rb
 
   publish:
