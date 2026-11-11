@@ -158,6 +158,22 @@ jobs:
           VERSION: ${{ needs.manifest.outputs.version }}
           WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN }}
         run: |
+          function Write-ReviewInstructions {
+            $message = "Please review lzocateli.PixelPointer version $($env:VERSION) for inclusion in the Windows Package Manager repository. Local manifest validation, installation, self-test and uninstallation checks passed in the submission workflow. Thank you."
+            $instructions = @(
+              'Texto sugerido para o corpo do PR (nao garante aprovacao; confira CLA, checklist e comentarios dos revisores):'
+              'Suggested PR body text (does not guarantee approval; check the CLA, checklist and reviewer comments):'
+              'Texto sugerido para el cuerpo del PR (no garantiza aprobacion; revise el CLA, la lista de verificacion y los comentarios):'
+              ''
+              $message
+              ''
+              'Apos ler e aceitar o CLA, comente no PR / After reading and accepting the CLA, comment on the PR / Tras leer y aceptar el CLA, comente en el PR:'
+              '@microsoft-github-policy-service agree'
+            )
+            $instructions | Write-Output
+            $instructions | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          }
+
           if (-not $env:WINGET_CREATE_GITHUB_TOKEN) {
             Write-Output '::error::Secret WINGET_CREATE_GITHUB_TOKEN ausente no Environment winget.'
             exit 1
@@ -172,6 +188,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           if ($open) {
             Write-Output "PR ja aberto para $($env:VERSION): $open"
+            Write-ReviewInstructions
             exit 0
           }
           gh api "repos/microsoft/winget-pkgs/contents/$package" --silent 2>$null
@@ -186,4 +203,6 @@ jobs:
             exit 1
           }
           ./wingetcreate.exe submit --no-open --prtitle "${kind}: lzocateli.PixelPointer version $($env:VERSION)" winget
-          exit $LASTEXITCODE
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Write-ReviewInstructions
+          exit 0
