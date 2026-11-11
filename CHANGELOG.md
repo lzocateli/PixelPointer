@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.2](https://github.com/lzocateli/PixelPointer/compare/v0.6.1...v0.6.2) (2026-11-11)
+
+
+### Corrigido
+
+* **actions:** corrija Homebrew e oriente a revisão no winget ([#75](https://github.com/lzocateli/PixelPointer/issues/75)) ([2e94cfa](https://github.com/lzocateli/PixelPointer/commit/2e94cfa40a1f11162e288a71e24d2c8653242ecb))
+
 ## [0.6.1](https://github.com/lzocateli/PixelPointer/compare/v0.6.0...v0.6.1) (2026-11-11)
 
 
