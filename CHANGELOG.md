@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.1](https://github.com/lzocateli/PixelPointer/compare/v0.6.0...v0.6.1) (2026-11-11)
+
+
+### Corrigido
+
+* Bump the nuget-production group with 3 updates ([#72](https://github.com/lzocateli/PixelPointer/issues/72)) ([2afa9c3](https://github.com/lzocateli/PixelPointer/commit/2afa9c36dda0083f3d3a6352401c451cac382a92))
+* **capture:** salve o desenho X11 sem depender do portal ([#73](https://github.com/lzocateli/PixelPointer/issues/73)) ([1a76a43](https://github.com/lzocateli/PixelPointer/commit/1a76a43a5163a73c09d59829fb89c2b92ad70b80))
+
 ## [0.6.0](https://github.com/lzocateli/PixelPointer/compare/v0.5.0...v0.6.0) (2026-11-07)
 
 
