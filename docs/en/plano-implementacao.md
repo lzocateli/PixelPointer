@@ -5,8 +5,8 @@
 | Field | Value |
 | --- | --- |
 | Initial status | Approved for F0 (decisions of 2026-10-29) |
-| Plan status (2026-11-04) | **Active**. Section 8 is the sole source for implementation, validation, decision and documentation backlog |
-| Delivery status (2026-11-04) | v0.3.1 is the latest stable release. F0/F1 are delivered; zoom, annotation, timer, snipping, Live Zoom and GIF are implemented. The 2026-11-04 GNOME/X11 acceptance covers the features available in a local package, but is not a published release or cross-platform validation. See [consolidated pending items](#8-consolidated-pending-items) |
+| Plan status (2026-11-20) | **Active for post-1.0 evolution**. Section 8 is the sole source for pending work; the 1.0.0 cutoff is recorded there |
+| Delivery status (2026-11-20) | The current baseline includes zoom, annotation, timer, snipping, Live Zoom and GIF recording, with per-OS capabilities and limits in the matrix below. Additional manual Windows 11 evidence covers installation, daemon startup, Ctrl+2/drawing over video and viewing the tray menu. This does not complete the cross-platform matrix or all plan items |
 | First functional version | v0.1.2, accepted as stable by the maintainer on 2026-10-30 on Ubuntu 24.04.5/GNOME X11 and Ubuntu 26.04/GNOME Wayland; manual acceptance limited to recorded flows/environments, without completing F2/F3 or validating Windows/macOS |
 | Origin | AI-assisted |
 | Human reviewer | Lincoln Zocateli |
@@ -226,30 +226,43 @@ Scope decisions and open work are tracked only in
 
 This is the single source for implementation, validation, decision and
 documentation backlog. E2E plans and acceptance records retain evidence and
-historical limits without maintaining a separate task list. Updated 2026-11-04;
+historical limits without maintaining a separate task list. Updated 2026-11-20;
 historical PRs remain in the repository and graphical results are recorded in the
 [E2E plan](plano-e2e-grafico-uv.md).
 
+**Scope cutoff requested by the maintainer for stable version 1.0.0
+(2026-11-20):** consider the first
+stable version of the currently implemented product complete, subject to the
+capability matrix and per-platform limitations in section 4 and the user
+documentation. This does not declare the entire evolution plan complete.
+Wayland monitor selection, asynchronous Wayland recording startup, DemoType,
+macOS recording, MP4/audio, additional distribution formats, remaining native
+validation and performance targets are outside this cutoff; they remain
+explicitly tracked below as future work or limitations. The updater remains
+available as documented, but has not been validated on Windows 11 or macOS.
+This plan is closed for this cutoff only after candidate 1.0.0 is validated and
+accepted under the [release process](release.md#required-candidate-release-preview).
+
 | ID | Type | Status | Open work and completion criterion |
 | --- | --- | --- |
-| IMPL-01 | Implementation | Partial | Implement Wayland monitor capture/selection while preserving GNOME Screenshot policy; verify output selection and cropping on a real compositor |
-| IMPL-02 | Implementation | Open | Make Wayland recording startup asynchronous; portal consent, waits and errors must not block daemon callbacks |
-| IMPL-03 | Implementation | Not implemented | Define and implement macOS GIF, MP4 and audio only after selecting components with verified permissive licenses; FFmpeg is not approved |
-| IMPL-04 | Implementation | Not started | Design and implement DemoType per platform, including Wayland input-injection permissions and limits |
-| IMPL-05 | Implementation/architecture | Not extracted | Decide whether `PixelPointer.Platform*` abstractions remain necessary; if so, extract them from `PixelPointer.App` without duplicating existing adapters |
-| IMPL-06 | Implementation | Implemented; awaiting human review of [ADR 2026-0001](adr/2026-0001-atualizacao-opt-in.md) and validation on Windows and macOS | Opt-in update checking and installation for self-managed installs (`pixelpointer update`, **Atualizações** submenu); `.deb`, Homebrew and winget only notify and direct users to their package manager. Validated on Linux x64 with unit tests, installers, X11 E2E and a real update from GitHub. Requirements and decisions are in the [update plan](plano-atualizacao.md) |
-| DEC-01 | Scope decision | Open | Decide whether `.zip`, `.dmg`, AppImage and Flatpak remain in scope; do not implement automatic startup without explicit approval |
+| IMPL-01 | Implementation | Partial, outside the 1.0.0 cutoff | Implement Wayland monitor capture/selection while preserving GNOME Screenshot policy; verify output selection and cropping on a real compositor |
+| IMPL-02 | Implementation | Open, outside the 1.0.0 cutoff | Make Wayland recording startup asynchronous; portal consent, waits and errors must not block daemon callbacks |
+| IMPL-03 | Implementation | Not implemented, outside the 1.0.0 cutoff | Define and implement macOS GIF, MP4 and audio only after selecting components with verified permissive licenses; FFmpeg is not approved |
+| IMPL-04 | Implementation | Not started, outside the 1.0.0 cutoff | Design and implement DemoType per platform, including Wayland input-injection permissions and limits |
+| IMPL-05 | Implementation/architecture | Deferred; does not block 1.0.0 | Reassess the need for `PixelPointer.Platform*` abstractions when a concrete requirement exists; do not extract layers without demonstrated need |
+| IMPL-06 | Implementation | Implemented; outside the 1.0.0 cutoff; human review of [ADR 2026-0001](adr/2026-0001-atualizacao-opt-in.md) and macOS validation remain open | Opt-in update checking and installation for self-managed installs (`pixelpointer update`, **Atualizações** submenu); `.deb`, Homebrew and winget only notify and direct users to their package manager. Validated on Linux x64; updater not yet validated on Windows 11. Requirements and decisions are in the [update plan](plano-atualizacao.md) |
+| DEC-01 | Scope decision | Deferred until after 1.0.0 | `.zip`, `.dmg`, AppImage and Flatpak are outside the current cutoff; reconsider in a future decision. Do not implement automatic startup without explicit approval |
 | DOC-01 | Documentation | Open | Create en/es translations of the F0 report and historical issue #3 plan |
 | VAL-01 | Performance validation | Target unmet | Measure and address GNOME latency: observed capture 520–531 ms and first frame 585–635 ms versus the < 150 ms target; record a decision if the target changes |
 | VAL-02 | Performance validation | Open | Measure GPU rendering on real hardware and at 4K; use results to decide whether it can stop being opt-in |
-| VAL-03 | Native validation | Open | Define a run compliant with container rules (or obtain explicit authorization for an exception) and complete the Windows checklist for capture, hotkeys, GIF, Ctrl+S, tray and shutdown; record OS/architecture and evidence |
+| VAL-03 | Native validation | Partial | Manual evidence supplied from Windows 11 x64 on 2026-11-20 covers installation with SHA-256 verification, daemon startup, Ctrl+2/drawing over video and viewing the tray menu. Still missing evidence for zoom execution, GIF, Ctrl+S, menu actions, shutdown and updater validation; record OS/architecture for other tests. The observed package was 0.6.1 and this is not acceptance of candidate 1.0.0 |
 | VAL-04 | Native validation | Open | Define a run compliant with container rules (or obtain explicit authorization for an exception) and validate macOS capture, Live Zoom, permissions, installation and hotkeys; recording is excluded until implemented |
 | VAL-05 | Compatibility/E2E | Partial | Run a Wayland matrix on GNOME/KDE and other compositors: natural portal incompatibility, real consent, physical hotkeys and tray. Isolated Sway already covers ScreenCast, recording, lifecycle, controlled `GetAll` denial and scales 1/1.5/2 |
 | VAL-06 | Hardware/E2E | Partial | Validate hotkey conflicts, pen/pressure, multiple displays, scales and GPUs on real hardware; X11/Windows and a two-display GNOME/X11 setup have local evidence, not full-matrix coverage |
 | VAL-07 | Compatibility | Open | Run and record Linux arm64 tests on suitable hardware |
 
-**Partial Windows evidence on 2026-10-31:** the requester attached four
-screenshots in this conversation. They show installation through `install.ps1`
+**Additional Windows evidence on 2026-10-31:** the requester attached four
+screenshots in that session. They show installation through `install.ps1`
 with SHA-256 verification, the daemon registering Ctrl+1 and Ctrl+2, the tray
 menu with Zoom, Desenhar and Sair, and annotations on the screen. They also show
 two guidance problems, already documented in the [README](../../README.en.md#installation):

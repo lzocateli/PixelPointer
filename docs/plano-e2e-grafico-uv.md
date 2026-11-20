@@ -7,7 +7,7 @@
 | Data | 2026-10-30 |
 | Autorização humana | Solicitante, nesta conversa: “Eu autorizo os E2E gráficos isolados nas regras do projeto” |
 | Decisão autorizada | Permitir uma suíte gráfica automatizada separada e isolada |
-| Estado de execução (2026-11-04) | X11 virtual passou 10/10; revisão humana de vídeos foi encerrada por decisão do mantenedor sem revisão registrada. O pacote local recebeu aceite GNOME/X11 em dois monitores. Sway isolado valida ScreenCast/PipeWire, gravação, ciclo de vida, recusa controlada de `GetAll`, repetição na conexão e escalas 1/1,5/2. Captura/zoom/desenho foram aceitos manualmente no GNOME Wayland; Screenshot evita o indicador, mas a latência observada não atende < 150 ms. As pendências atuais de implementação e validação estão centralizadas no [plano de implementação, seção 8](plano-implementacao.md#8-pendências-consolidadas) |
+| Estado de execução (2026-11-20) | X11 virtual passou 10/10; o pacote local recebeu aceite GNOME/X11 em dois monitores; Sway isolado valida ScreenCast/PipeWire, gravação, ciclo de vida e escalas 1/1,5/2. Captura/zoom/desenho têm aceite manual GNOME Wayland, com latência acima da meta. Evidência manual Windows 11 de instalação, daemon, Ctrl+2/desenho sobre vídeo e menu da tray está registrada na seção 8. As pendências estão centralizadas no [plano de implementação, seção 8](plano-implementacao.md#8-pendências-consolidadas) |
 | Versão funcional de referência | v0.1.2, primeira versão funcional aceita como estável pelo mantenedor em 2026-10-30 nos ambientes GNOME X11 e Wayland registrados; não é aprovação da matriz multiplataforma completa |
 | Primeiro alvo | Linux x64, X11 em desktop descartável |
 | Expansão | GNOME X11, Wayland por compositor e demais sistemas após viabilidade comprovada |
@@ -196,7 +196,8 @@ somente no [plano de implementação, seção 8](plano-implementacao.md#8-pendê
 | GNOME X11 | Funcionalidades locais aprovadas pelo mantenedor em 2026-11-04 no pacote `0.3.0-local.cursor-monitor.5`, com dois monitores 1920×1080 em escala 1; ver o registro de aceite abaixo. A aprovação não encerra a matriz multiplataforma |
 | Wayland | Sway isolado valida ScreenCast/PipeWire, gravação, ciclo de vida, recusa controlada de `GetAll`, repetição na conexão e escalas 1/1,5/2; reuso de token também exercitado. GNOME Wayland tem aceite manual de captura/zoom/desenho; Screenshot evita o indicador, com captura observada de 520–531 ms e primeiro quadro de 585–635 ms. Consentimento real segue obrigatório; mocks/XTEST via XWayland não contam como prova nativa |
 | Linux arm64 | Este registro não contém execução nessa arquitetura |
-| Windows/macOS | Este registro não contém E2E nativo nesses sistemas. Qualquer estratégia de runner/exceção precisa seguir as regras do projeto |
+| Windows 11 | Evidência manual fornecida em 2026-11-20 para instalação verificada, daemon, Ctrl+2/desenho sobre vídeo e visualização do menu da tray; não é E2E automatizado nem valida o restante do checklist |
+| macOS | Este registro não contém E2E nativo nesse sistema; qualquer estratégia de runner/exceção precisa seguir as regras do projeto |
 | Caneta/GPU/monitores físicos | Uso nos dois monitores 1920×1080 em escala 1 foi confirmado manualmente; este registro não comprova cobertura de caneta ou matriz completa de GPU, escalas e topologias |
 
 Riscos principais: diferenças de renderização, foco e temporização, painel sem SNI,
@@ -210,6 +211,23 @@ reproduzíveis. A revisão inicial dos vídeos X11 foi encerrada por decisão do
 mantenedor em 2026-10-31, sem revisão registrada. A autorização permite construir
 a suíte; não aprova ferramentas, exceções de segurança, suporte multiplataforma
 ou resultados ainda inexistentes. Pendências atuais ficam no rastreador central.
+
+### Evidência manual complementar no Windows 11
+
+Em 2026-11-20, o mantenedor forneceu capturas de uma máquina Windows 11. O
+terminal mostra a instalação de `pixelpointer-win-x64.zip` por `install.ps1`
+com conferência de SHA-256, a versão `0.6.1+bc75a48…`, o início do daemon e o
+registro do comando `draw` vindo do atalho global Ctrl+2. Uma captura mostra
+anotações sobre vídeo em reprodução e outra mostra o menu da tray com Zoom,
+Desenhar e Sair. Isso complementa a evidência manual de 2026-10-31 e comprova
+esse recorte básico no Windows informado pelo mantenedor.
+
+As imagens não comprovam que Ctrl+1 executou o zoom, gravação GIF, Ctrl+S,
+acionamento dos itens do menu, saída pelo menu, atualização automática, outras
+arquiteturas ou escalas. Portanto, VAL-03 permanece parcial no
+[plano de implementação](plano-implementacao.md#8-pendências-consolidadas).
+As capturas não foram copiadas para o repositório e não se registram nelas
+caminhos pessoais ou outros dados do perfil.
 
 ### Aceite funcional do pacote local no GNOME X11
 
