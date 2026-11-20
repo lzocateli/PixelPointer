@@ -5,8 +5,8 @@
 | Campo | Valor |
 | --- | --- |
 | Status inicial | aprovado para F0 (decisões de 2026-10-29) |
-| Status do plano (2026-11-04) | **Ativo**. A seção 8 é a fonte única das pendências de implementação, validação, decisão e documentação |
-| Estado de entrega (2026-11-04) | v0.3.1 é a última versão estável publicada. F0/F1 entregues; zoom, anotação, timer, recorte, Live Zoom e GIF estão implementados. O aceite GNOME/X11 de 2026-11-04 cobre manualmente as funcionalidades disponíveis no pacote local, mas não representa release publicada nem validação multiplataforma. Veja as [pendências consolidadas](#8-pendências-consolidadas) |
+| Status do plano (2026-11-20) | **Ativo para evolução pós-1.0**. A seção 8 é a fonte única das pendências; o corte da 1.0.0 está registrado nela |
+| Estado de entrega (2026-11-20) | A base atual contém zoom, anotação, timer, recorte, Live Zoom e gravação GIF, com capacidades e limites por SO na matriz abaixo. Há aceite manual adicional no Windows 11 para instalação, daemon, Ctrl+2/desenho sobre vídeo e visualização do menu da tray. Esse recorte não completa a matriz multiplataforma nem todas as pendências deste plano |
 | Primeira versão funcional | v0.1.2, aceita como estável pelo mantenedor em 2026-10-30 no Ubuntu 24.04.5/GNOME X11 e Ubuntu 26.04/GNOME Wayland; aceite manual limitado aos fluxos e ambientes registrados, sem concluir F2/F3 ou validar Windows/macOS |
 | Origem | IA assistida |
 | Revisor humano | Lincoln Zocateli |
@@ -224,29 +224,43 @@ Decisões de escopo e tarefas em aberto são acompanhadas somente na
 Esta é a fonte única de status e próxima ação para pendências de implementação,
 validação, decisão e documentação. Os planos de E2E e os registros de aceite
 mantêm evidências e limites históricos, sem manter outro backlog. Atualizado em
-2026-11-04; os históricos de PR estão no repositório e os resultados gráficos no
+2026-11-20; os históricos de PR estão no repositório e os resultados gráficos no
 [plano E2E](plano-e2e-grafico-uv.md).
+
+**Corte de escopo solicitado pelo mantenedor para a versão estável 1.0.0
+(2026-11-20):** tratar como concluída
+a primeira versão estável do produto atualmente implementado, respeitando a
+matriz de capacidades e limitações por plataforma da seção 4 e a documentação de
+uso. Isto não declara concluído todo o plano de evolução. Seleção de monitor
+Wayland, início assíncrono da gravação Wayland, DemoType, gravação macOS,
+MP4/áudio, formatos adicionais de distribuição, validações nativas restantes e
+metas de desempenho não fazem parte deste corte; continuam explicitamente
+listados abaixo como trabalho futuro ou limitações. O atualizador permanece
+disponível conforme o suporte documentado, mas não recebeu validação Windows 11
+ou macOS. O plano só fica encerrado para este corte depois da candidata 1.0.0
+ser validada e aceita conforme o
+[processo de release](release.md#candidata-obrigatória-release-preview).
 
 | ID | Tipo | Status | Pendência e critério de conclusão |
 | --- | --- | --- | --- |
-| IMPL-01 | Implementação | Parcial | Implementar captura/seleção de monitor no Wayland, preservando a política Screenshot do GNOME; validar a saída escolhida e o recorte em compositor real |
-| IMPL-02 | Implementação | Pendente | Tornar assíncrono o início da gravação Wayland; consentimento, espera do portal e falhas não podem bloquear callbacks do daemon |
-| IMPL-03 | Implementação | Não implementada | Definir e implementar gravação GIF no macOS, MP4 e áudio somente após selecionar componentes com licença permissiva verificada; FFmpeg não é opção aprovada |
-| IMPL-04 | Implementação | Não iniciada | Projetar e implementar DemoType por plataforma, incluindo autorização/limites de injeção de entrada no Wayland |
-| IMPL-05 | Implementação/arquitetura | Não extraída | Decidir se as abstrações `PixelPointer.Platform*` continuam necessárias; se sim, extraí-las de `PixelPointer.App` sem duplicar os adaptadores atuais |
-| IMPL-06 | Implementação | Implementada; aguarda revisão humana do [ADR 2026-0001](adr/2026-0001-atualizacao-opt-in.md) e validação em Windows e macOS | Verificação e instalação automática opt-in para instalações autogerenciadas (`pixelpointer update`, submenu **Atualizações**); `.deb`, Homebrew e winget apenas notificam e direcionam ao gerenciador. Validado no Linux x64 com testes unitários, instaladores, E2E X11 e atualização real a partir do GitHub. Requisitos e decisões no [plano de atualização](plano-atualizacao.md) |
-| DEC-01 | Decisão de escopo | Pendente | Decidir se `.zip`, `.dmg`, AppImage e Flatpak seguem no escopo; não implementar início automático sem decisão explícita |
+| IMPL-01 | Implementação | Parcial, fora do corte 1.0.0 | Implementar captura/seleção de monitor no Wayland, preservando a política Screenshot do GNOME; validar a saída escolhida e o recorte em compositor real |
+| IMPL-02 | Implementação | Pendente, fora do corte 1.0.0 | Tornar assíncrono o início da gravação Wayland; consentimento, espera do portal e falhas não podem bloquear callbacks do daemon |
+| IMPL-03 | Implementação | Não implementada, fora do corte 1.0.0 | Definir e implementar gravação GIF no macOS, MP4 e áudio somente após selecionar componentes com licença permissiva verificada; FFmpeg não é opção aprovada |
+| IMPL-04 | Implementação | Não iniciada, fora do corte 1.0.0 | Projetar e implementar DemoType por plataforma, incluindo autorização/limites de injeção de entrada no Wayland |
+| IMPL-05 | Implementação/arquitetura | Adiada; não bloqueia 1.0.0 | Reavaliar a necessidade das abstrações `PixelPointer.Platform*` quando houver requisito concreto; não extrair camadas sem necessidade demonstrada |
+| IMPL-06 | Implementação | Implementada; fora do corte 1.0.0, revisão humana do [ADR 2026-0001](adr/2026-0001-atualizacao-opt-in.md) e validação macOS pendentes | Verificação e instalação automática opt-in para instalações autogerenciadas (`pixelpointer update`, submenu **Atualizações**); `.deb`, Homebrew e winget apenas notificam e direcionam ao gerenciador. Validado no Linux x64; Windows 11 ainda não validado para o atualizador. Requisitos e decisões no [plano de atualização](plano-atualizacao.md) |
+| DEC-01 | Decisão de escopo | Adiada para pós-1.0.0 | `.zip`, `.dmg`, AppImage e Flatpak não entram no corte atual; reavaliar em decisão futura. Não implementar início automático sem decisão explícita |
 | DOC-01 | Documentação | Pendente | Criar traduções en/es do relatório F0 e do plano histórico da issue #3 |
 | VAL-01 | Validação/desempenho | Meta não atingida | Medir e tratar a latência GNOME: captura observada em 520–531 ms e primeiro quadro em 585–635 ms, contra meta < 150 ms; registrar decisão se a meta mudar |
 | VAL-02 | Validação/desempenho | Pendente | Medir renderer GPU em hardware real e 4K; decidir, com os resultados, se deixa de ser opt-in |
-| VAL-03 | Validação nativa | Pendente | Definir execução compatível com as regras de containers (ou obter autorização explícita para exceção) e completar o roteiro Windows de captura, atalhos, GIF, Ctrl+S, tray e encerramento; registrar SO/arquitetura e evidências |
+| VAL-03 | Validação nativa | Parcial | Evidência manual fornecida em Windows 11 x64 em 2026-11-20 cobre instalação com verificação SHA-256, início do daemon, Ctrl+2/desenho sobre vídeo e visualização do menu da tray. Ainda faltam evidências para execução do zoom, GIF, Ctrl+S, ações do menu, encerramento e validação do atualizador; registrar SO/arquitetura nos demais testes. O pacote observado era 0.6.1, não é aceite da candidata 1.0.0 |
 | VAL-04 | Validação nativa | Pendente | Definir execução compatível com as regras de containers (ou obter autorização explícita para exceção) e validar no macOS captura, Live Zoom, permissões, instalação e atalhos; gravação não entra como critério até ser implementada |
 | VAL-05 | Compatibilidade/E2E | Parcial | Executar matriz Wayland em GNOME/KDE e outros compositores: portais naturalmente incompatíveis, consentimento real, atalhos físicos e tray; Sway isolado já cobre ScreenCast, gravação, ciclo de vida, recusa controlada de `GetAll` e escalas 1/1,5/2 |
 | VAL-06 | Hardware/E2E | Parcial | Validar conflitos de atalho, caneta/pressão, múltiplos monitores, escalas e GPUs em hardware real; X11/Windows e a configuração GNOME/X11 de dois monitores têm evidência local, sem equivaler à matriz completa |
 | VAL-07 | Compatibilidade | Pendente | Executar e registrar testes em Linux arm64 em hardware apropriado |
 
-**Evidência parcial no Windows em 2026-10-31:** o solicitante anexou quatro
-prints nesta conversa. Eles mostram a instalação por `install.ps1` com conferência
+**Evidência complementar no Windows em 2026-10-31:** o solicitante anexou quatro
+prints naquela sessão. Eles mostram a instalação por `install.ps1` com conferência
 do SHA-256, o daemon registrando Ctrl+1 e Ctrl+2, o menu da tray com Zoom,
 Desenhar e Sair e anotações sobre a tela. Também mostram dois problemas de
 orientação, já documentados no [README](../README.md#instalação): `PATH`

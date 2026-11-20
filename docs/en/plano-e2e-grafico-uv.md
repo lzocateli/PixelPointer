@@ -7,7 +7,7 @@
 | Date | 2026-10-30 |
 | Human authorization | Requester, in this conversation: authorization for isolated graphical E2E under the project rules |
 | Authorized decision | Allow a separate, isolated automated graphical suite |
-| Execution status (2026-11-04) | Virtual X11 passed 10/10; human video review was closed by maintainer decision without a recorded review. A local package received GNOME/X11 acceptance on two monitors. Isolated Sway validates ScreenCast/PipeWire, recording, lifecycle, controlled `GetAll` denial, repeated calls on one connection and scales 1/1.5/2. Capture/zoom/drawing were manually accepted on GNOME Wayland; Screenshot avoids the indicator, but observed latency misses the < 150 ms target. Current implementation and validation backlog is centralized in the [implementation plan, section 8](plano-implementacao.md#8-consolidated-pending-items) |
+| Execution status (2026-11-20) | Virtual X11 passed 10/10; a local package received GNOME/X11 acceptance on two monitors; isolated Sway validates ScreenCast/PipeWire, recording, lifecycle and scales 1/1.5/2. Capture/zoom/drawing have manual GNOME Wayland acceptance, with latency above target. Manual Windows 11 evidence for installation, daemon, Ctrl+2/drawing over video and tray menu is recorded in section 8. Open items are centralized in the [implementation plan, section 8](plano-implementacao.md#8-consolidated-pending-items) |
 | Functional reference version | v0.1.2, first functional version accepted as stable by the maintainer on 2026-10-30 on recorded GNOME X11/Wayland environments; not approval of the complete cross-platform matrix |
 | First target | Linux x64, X11 in a disposable desktop |
 | Expansion | GNOME X11, per-compositor Wayland and other systems after feasibility is established |
@@ -186,7 +186,8 @@ in the [implementation plan, section 8](plano-implementacao.md#8-consolidated-pe
 | GNOME X11 | Local features accepted by the maintainer on 2026-11-04 in package `0.3.0-local.cursor-monitor.5`, with two 1920×1080 displays at scale 1; see the acceptance record below. This approval does not complete the cross-platform matrix |
 | Wayland | Isolated Sway validates ScreenCast/PipeWire, recording, lifecycle, controlled `GetAll` denial, repeated calls on one connection and scales 1/1.5/2; token reuse was also exercised. GNOME Wayland has manual acceptance for capture/zoom/drawing; Screenshot avoids the indicator, with observed capture at 520–531 ms and first frame at 585–635 ms. Real consent is still required; mocks/XTEST through XWayland are not native evidence |
 | Linux arm64 | This record contains no execution on this architecture |
-| Windows/macOS | This record contains no native E2E on these systems. Any runner strategy/exception must follow project rules |
+| Windows 11 | Manual evidence supplied on 2026-11-20 covers verified installation, daemon, Ctrl+2/drawing over video and viewing the tray menu; it is not automated E2E and does not validate the rest of the checklist |
+| macOS | This record contains no native E2E on this system; any runner strategy/exception must follow project rules |
 | Pen/GPU/physical monitors | Use on both 1920×1080 monitors at scale 1 was manually confirmed; this record does not establish pen or full GPU/scale/topology coverage |
 
 Main risks: rendering/focus/timing differences, panel without SNI, incomplete virtual
@@ -199,6 +200,23 @@ evidence. Initial X11 video review was closed by maintainer decision on
 2026-10-31, without a recorded review. Authorization allows building the suite,
 not approval of tools, security exceptions, cross-platform support or results
 that do not exist yet. Current open items remain in the central tracker.
+
+### Additional manual evidence on Windows 11
+
+On 2026-11-20, the maintainer supplied screenshots from a Windows 11 machine.
+The terminal shows installation of `pixelpointer-win-x64.zip` through
+`install.ps1` with SHA-256 verification, version `0.6.1+bc75a48…`, daemon
+startup and the `draw` command received from the Ctrl+2 global hotkey. One
+screenshot shows annotations over a playing video; another shows the tray menu
+with Zoom, Desenhar and Sair. This supplements the 2026-10-31 manual evidence
+and confirms this basic Windows workflow as reported by the maintainer.
+
+The images do not prove Ctrl+1 zoom execution, GIF recording, Ctrl+S, invoking
+menu items, exiting through the menu, automatic updates, other architectures
+or display scales. VAL-03 therefore remains partial in the
+[implementation plan](plano-implementacao.md#8-consolidated-pending-items).
+The screenshots were not copied into the repository, and personal profile
+paths or other profile data are not recorded.
 
 ### Functional acceptance of the local package on GNOME X11
 
