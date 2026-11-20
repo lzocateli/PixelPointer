@@ -1,5 +1,73 @@
 # Changelog
 
+## [1.0.0](https://github.com/lzocateli/PixelPointer/compare/v0.6.2...v1.0.0) (2026-11-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* **actions:** configurar Settings > Environments > distribution com revisores obrigatórios e refs main/v* antes de ativar os workflows integrados. Não há secrets novos nesse ambiente. Se o plano GitHub não suportar a proteção, os publicadores devem permanecer bloqueados. Não confundir release (credenciais), quality (aceite de teste), distribution (autorização de divulgação) e production (verificação posterior).
+
+### Adicionado
+
+* **actions:** exija autorização antes da distribuição pública ([#51](https://github.com/lzocateli/PixelPointer/issues/51)) ([060f141](https://github.com/lzocateli/PixelPointer/commit/060f1415be310041ae22b3b8e7d779c4661fd736))
+* **actions:** valide artefatos antes de autorizar publicação ([#68](https://github.com/lzocateli/PixelPointer/issues/68)) ([8699d59](https://github.com/lzocateli/PixelPointer/commit/8699d59399b1144f0b0b257cf1d48135b4953487))
+* **app:** adicione atualização opt-in com proveniência Sigstore verificada ([#59](https://github.com/lzocateli/PixelPointer/issues/59)) ([b49a5ec](https://github.com/lzocateli/PixelPointer/commit/b49a5ec3c5848d414d5b0c7318b2b3340bf94737))
+* **app:** adicione gravação de tela em GIF com Ctrl+5 ([#39](https://github.com/lzocateli/PixelPointer/issues/39)) ([8ad15b2](https://github.com/lzocateli/PixelPointer/commit/8ad15b258e39850d7add761248e590a38954ec60))
+* **app:** adicione Live Zoom no Windows com Ctrl+4 ([#41](https://github.com/lzocateli/PixelPointer/issues/41)) ([4e02a2d](https://github.com/lzocateli/PixelPointer/commit/4e02a2dd2fbad6a3105fec8c943244d06141a224))
+* **app:** adicione Live Zoom no X11 como lupa em janela ([#42](https://github.com/lzocateli/PixelPointer/issues/42)) ([f7df20e](https://github.com/lzocateli/PixelPointer/commit/f7df20ece05d908e286bc00b13ff7497f8830c7b))
+* **app:** adicione preparação explícita de primeiro uso ([#26](https://github.com/lzocateli/PixelPointer/issues/26)) ([3d114a4](https://github.com/lzocateli/PixelPointer/commit/3d114a45a035592f192d60f337419f32fd29765a))
+* **app:** adicione recorte de tela com Ctrl+6 ([#37](https://github.com/lzocateli/PixelPointer/issues/37)) ([698ff85](https://github.com/lzocateli/PixelPointer/commit/698ff85bda403dad9efc9dc006364475fd36f47b))
+* **app:** adicione timer de intervalo com Ctrl+3 ([#36](https://github.com/lzocateli/PixelPointer/issues/36)) ([d662f56](https://github.com/lzocateli/PixelPointer/commit/d662f5628baa35d0f02d8a6d10fce3aacb824919))
+* **app:** aplique preferências do settings.json nas sobreposições ([#13](https://github.com/lzocateli/PixelPointer/issues/13)) ([00e8238](https://github.com/lzocateli/PixelPointer/commit/00e82382f4ef9d023c123100ff1e13a7f20e02a0))
+* **app:** mostre versão e atalhos no menu da tray ([#54](https://github.com/lzocateli/PixelPointer/issues/54)) ([1cc6c4b](https://github.com/lzocateli/PixelPointer/commit/1cc6c4b4c37bb4673e1c81e5ee2660da82bc0be4))
+* **app:** zoom e desenho de tela com atalhos globais e entrega multiplataforma ([bd5553b](https://github.com/lzocateli/PixelPointer/commit/bd5553b72416b94c984f591c0cb0baf44ef632b8))
+* **capture:** capture no Wayland por ScreenCast e PipeWire sob demanda ([#16](https://github.com/lzocateli/PixelPointer/issues/16)) ([1316dd0](https://github.com/lzocateli/PixelPointer/commit/1316dd077335edec968a8575a0e256ebe29a9e52))
+* **capture:** grave a tela no Wayland por ScreenCast contínuo ([#40](https://github.com/lzocateli/PixelPointer/issues/40)) ([afc2142](https://github.com/lzocateli/PixelPointer/commit/afc214252152b123af321a4d8b43a8442ae59793))
+* **linux:** adicione Live Zoom Wayland e filtre auto-repeat X11 ([#45](https://github.com/lzocateli/PixelPointer/issues/45)) ([9f0fcee](https://github.com/lzocateli/PixelPointer/commit/9f0fcee0b57b1f0f1ac50be0ad02c2bd3aed89f1))
+* **linux:** adicione Live Zoom Wayland e filtre auto-repeat X11 ([#46](https://github.com/lzocateli/PixelPointer/issues/46)) ([3e833ad](https://github.com/lzocateli/PixelPointer/commit/3e833ad83934a1b80434dd9259db5b0f260c76dc))
+* **macos:** adicione Live Zoom com ScreenCaptureKit ([#44](https://github.com/lzocateli/PixelPointer/issues/44)) ([a03bfbc](https://github.com/lzocateli/PixelPointer/commit/a03bfbc96842bf5bfa2a025fc7efb1152c2e3450))
+* **macos:** use ScreenCaptureKit na captura estática ([#47](https://github.com/lzocateli/PixelPointer/issues/47)) ([1911d66](https://github.com/lzocateli/PixelPointer/commit/1911d66d285406081388a7187853564b756e3578))
+* **overlay:** abra a sobreposição no monitor do cursor ([#38](https://github.com/lzocateli/PixelPointer/issues/38)) ([6916222](https://github.com/lzocateli/PixelPointer/commit/6916222f433c673dd09d3405929bdbfb5d2eb276))
+* **overlay:** adicione caneta de desfoque ([#33](https://github.com/lzocateli/PixelPointer/issues/33)) ([dcb3e7b](https://github.com/lzocateli/PixelPointer/commit/dcb3e7be4ce5be10b13fb94ead05aed698dead94))
+* **overlay:** adicione linha, seta, retângulo e elipse ([#30](https://github.com/lzocateli/PixelPointer/issues/30)) ([98d76dd](https://github.com/lzocateli/PixelPointer/commit/98d76dd1b9b1395681db95d379f738eb1e1e2d17))
+* **overlay:** adicione marca-texto translúcido ([#32](https://github.com/lzocateli/PixelPointer/issues/32)) ([af46dae](https://github.com/lzocateli/PixelPointer/commit/af46dae996607c1318d38f1d03d424387036a005))
+* **overlay:** adicione texto na sobreposição ([#35](https://github.com/lzocateli/PixelPointer/issues/35)) ([fcfe508](https://github.com/lzocateli/PixelPointer/commit/fcfe508d04b0b06f384d5aa558fa5c40cc23cefb))
+* **overlay:** copie a imagem para a área de transferência com Ctrl+C ([#34](https://github.com/lzocateli/PixelPointer/issues/34)) ([75d8f02](https://github.com/lzocateli/PixelPointer/commit/75d8f027ffe4a140be25451ab6ba7b29edc2ac4f))
+* **packaging:** adicione purge e sincronize estados da tray ([#61](https://github.com/lzocateli/PixelPointer/issues/61)) ([9313a15](https://github.com/lzocateli/PixelPointer/commit/9313a155cd981990c16e85352a24a556b0670be2))
+* **rendering:** adicione renderização OpenGL opcional com retorno à CPU ([#15](https://github.com/lzocateli/PixelPointer/issues/15)) ([3f805fe](https://github.com/lzocateli/PixelPointer/commit/3f805fe2fadf455f814cf423ac33e10222aaf9c9))
+
+
+### Corrigido
+
+* **actions:** atualize Groundwork e corrija permissões de release ([#69](https://github.com/lzocateli/PixelPointer/issues/69)) ([ffd1323](https://github.com/lzocateli/PixelPointer/commit/ffd13237dc742b0f54369002ee26483ed7129a0d))
+* **actions:** corrija Homebrew e oriente a revisão no winget ([#75](https://github.com/lzocateli/PixelPointer/issues/75)) ([2e94cfa](https://github.com/lzocateli/PixelPointer/commit/2e94cfa40a1f11162e288a71e24d2c8653242ecb))
+* **actions:** exija fonte atualizada antes de criar releases ([#49](https://github.com/lzocateli/PixelPointer/issues/49)) ([84bc959](https://github.com/lzocateli/PixelPointer/commit/84bc959b59ab42f7a80182d80fbd76b15964333e))
+* **actions:** publique previews como GitHub Pre-release ([#18](https://github.com/lzocateli/PixelPointer/issues/18)) ([cdd125e](https://github.com/lzocateli/PixelPointer/commit/cdd125e17e03691970a9293eed8f870be3dbab12))
+* **app:** corrija captura por monitor e distribuição ([#57](https://github.com/lzocateli/PixelPointer/issues/57)) ([d540eb0](https://github.com/lzocateli/PixelPointer/commit/d540eb0e2549bfa4f3c39cba7a12a3cdff102f93))
+* Bump the nuget-production group with 2 updates ([#77](https://github.com/lzocateli/PixelPointer/issues/77)) ([893ac83](https://github.com/lzocateli/PixelPointer/commit/893ac83be2ea94dca20b930a0dba15338b4ec186))
+* Bump the nuget-production group with 3 updates ([#72](https://github.com/lzocateli/PixelPointer/issues/72)) ([2afa9c3](https://github.com/lzocateli/PixelPointer/commit/2afa9c36dda0083f3d3a6352401c451cac382a92))
+* **capture:** atualize a fonte após recuperação do ScreenCast ([#25](https://github.com/lzocateli/PixelPointer/issues/25)) ([6b35cfe](https://github.com/lzocateli/PixelPointer/commit/6b35cfe5da508e7e8c29f41af54cc1b477c4ca9f))
+* **capture:** capture a tela composta do monitor sem escurecimento ([#55](https://github.com/lzocateli/PixelPointer/issues/55)) ([bd9ec2c](https://github.com/lzocateli/PixelPointer/commit/bd9ec2c504edaa9e965daaff7c625882eec3cda5))
+* **capture:** salve o desenho X11 sem depender do portal ([#73](https://github.com/lzocateli/PixelPointer/issues/73)) ([1a76a43](https://github.com/lzocateli/PixelPointer/commit/1a76a43a5163a73c09d59829fb89c2b92ad70b80))
+* **capture:** trate falhas de Screenshot sem abortar a CLI ([#23](https://github.com/lzocateli/PixelPointer/issues/23)) ([05b0c40](https://github.com/lzocateli/PixelPointer/commit/05b0c4018de3127466807c9c2eb50cf4dbf29d1a))
+* **capture:** use o portal Screenshot no GNOME ([#28](https://github.com/lzocateli/PixelPointer/issues/28)) ([8049f13](https://github.com/lzocateli/PixelPointer/commit/8049f133d25c9d82907f70b57f70bcfe0e173a03))
+* **linux:** corrija falhas do aceite da preview.16 ([#27](https://github.com/lzocateli/PixelPointer/issues/27)) ([65b91b5](https://github.com/lzocateli/PixelPointer/commit/65b91b5295a131152b244ba6ed74e5152517e1d9))
+* **linux:** corrija integração X11 e ciclo de vida do desktop ([#4](https://github.com/lzocateli/PixelPointer/issues/4)) ([456d1df](https://github.com/lzocateli/PixelPointer/commit/456d1df4c711386f3bfcbbd0e179b58db70febc3))
+* **overlay:** restaure fullscreen no Wayland com HiDPI ([#24](https://github.com/lzocateli/PixelPointer/issues/24)) ([8f4028d](https://github.com/lzocateli/PixelPointer/commit/8f4028d7ebc6970abd1072913c37dcb843765c78))
+* **packaging:** ajuste instaladores e padronize ferramentas git gratuitas ([#63](https://github.com/lzocateli/PixelPointer/issues/63)) ([db1d40e](https://github.com/lzocateli/PixelPointer/commit/db1d40ebe8ff14b1cb4ee096814e79dc2950c232))
+* **packaging:** instale o ícone SVG em todas as plataformas ([#8](https://github.com/lzocateli/PixelPointer/issues/8)) ([f3ff01e](https://github.com/lzocateli/PixelPointer/commit/f3ff01e5a20687a1e7eacd070c0ad4e91e2266f5))
+* **packaging:** retorne sucesso após testes dos instaladores ([#67](https://github.com/lzocateli/PixelPointer/issues/67)) ([f8a0d67](https://github.com/lzocateli/PixelPointer/commit/f8a0d6737d832b890d8d1e90ba4fda0498f38568))
+
+
+### Desempenho
+
+* **capture:** agrupe consultas e valide o daemon Wayland ([#21](https://github.com/lzocateli/PixelPointer/issues/21)) ([df252e6](https://github.com/lzocateli/PixelPointer/commit/df252e66ad2d360b4ac402fa8b9a7decd0c6908a))
+
+
+### Documentação
+
+* registre o corte de escopo da versão 1.0.0 ([#78](https://github.com/lzocateli/PixelPointer/issues/78)) ([c315ef5](https://github.com/lzocateli/PixelPointer/commit/c315ef5810db0a4cd677d8eb041ba71c1ff8e557))
+
 ## [0.6.2](https://github.com/lzocateli/PixelPointer/compare/v0.6.1...v0.6.2) (2026-11-11)
 
 
